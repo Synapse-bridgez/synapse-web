@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg0: #0A0B0D;
+  --bg1: #0F1115;
+  --bg2: #14171D;
+  --bg3: #1A1E26;
+  --amber: #F5A623;
+  --amber-dim: rgba(245,166,35,0.12);
+  --border: rgba(245,166,35,0.15);
+  --dim: rgba(255,255,255,0.35);
+  --pending: #F5A623;
+  --processing: #4FC3F7;
+  --completed: #66BB6A;
+  --failed: #EF5350;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg0);
+  color: #fff;
+  font-family: 'IBM Plex Mono', monospace;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg0); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(1.3); }
+}
+
+@keyframes flowLine {
+  0%   { left: 0%; width: 28%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { left: 72%; width: 28%; opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in { animation: fadeIn 0.35s ease both; }
+
+.scanline-overlay {
+  position: relative;
+}
+.scanline-overlay::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.04) 2px,
+    rgba(0,0,0,0.04) 4px
+  );
+  z-index: 9999;
+}
