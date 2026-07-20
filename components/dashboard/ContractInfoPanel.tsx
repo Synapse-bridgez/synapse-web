@@ -6,12 +6,12 @@ import type { ContractInfo } from "@/lib/types";
 
 export function ContractInfoPanel({ info }: { info: ContractInfo }) {
   const rows: [string, string][] = [
-    ["version",      info.version],
-    ["network",      info.network],
-    ["address",      info.address],
-    ["admin",        info.admin],
+    ["version", info.version],
+    ["network", info.network],
+    ["address", info.address],
+    ["admin", info.admin],
     ["relay signer", info.relay_signer],
-    ["health",       info.health],
+    ["health", info.health],
   ];
 
   return (
@@ -20,12 +20,31 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
         <tbody>
           {rows.map(([k, v]) => (
             <tr key={k} style={{ borderBottom: `1px solid ${BORDER}` }}>
-              <td style={{ padding: "6px 0", fontSize: 11, color: DIM, fontFamily: "'IBM Plex Mono', monospace", width: "38%", verticalAlign: "top" }}>{k}</td>
-              <td style={{
-                padding: "6px 0 6px 8px", fontSize: 10, color: "#ccc",
-                fontFamily: "'IBM Plex Mono', monospace",
-                textAlign: "right", wordBreak: "break-all", maxWidth: 180,
-              }}>{v}</td>
+              <td
+                style={{
+                  padding: "6px 0",
+                  fontSize: 11,
+                  color: DIM,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  width: "38%",
+                  verticalAlign: "top",
+                }}
+              >
+                {k}
+              </td>
+              <td
+                style={{
+                  padding: "6px 0 6px 8px",
+                  fontSize: 10,
+                  color: "#ccc",
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  textAlign: "right",
+                  wordBreak: "break-all",
+                  maxWidth: 180,
+                }}
+              >
+                {v}
+              </td>
             </tr>
           ))}
         </tbody>

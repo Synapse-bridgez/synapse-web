@@ -11,27 +11,41 @@ interface PanelProps {
 
 export function Panel({ title, children, style, accentColor }: PanelProps) {
   return (
-    <div style={{
-      background: BG2,
-      border: `1px solid ${BORDER}`,
-      padding: "16px 18px",
-      position: "relative",
-      overflow: "hidden",
-      ...style,
-    }}>
+    <div
+      style={{
+        background: BG2,
+        border: `1px solid ${BORDER}`,
+        padding: "16px 18px",
+        position: "relative",
+        overflow: "hidden",
+        ...style,
+      }}
+    >
       {accentColor && (
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: 2,
-          background: accentColor, opacity: 0.75,
-        }} />
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 2,
+            background: accentColor,
+            opacity: 0.75,
+          }}
+        />
       )}
       {title && (
-        <div style={{
-          fontSize: 9, letterSpacing: "0.14em",
-          color: DIM,
-          fontFamily: "'IBM Plex Mono', monospace",
-          marginBottom: 12,
-        }}>{title}</div>
+        <div
+          style={{
+            fontSize: 9,
+            letterSpacing: "0.14em",
+            color: DIM,
+            fontFamily: "'IBM Plex Mono', monospace",
+            marginBottom: 12,
+          }}
+        >
+          {title}
+        </div>
       )}
       {children}
     </div>
