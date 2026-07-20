@@ -23,7 +23,8 @@ export function Pipeline({ txs }: PipelineProps) {
         {STAGES.map((s, i) => {
           const m = STATUS_META[s.key];
           const active = counts[s.key] > 0;
-          const prevActive = i > 0 && counts[STAGES[i - 1].key] > 0;
+          const prevStage = i > 0 ? STAGES[i - 1] : undefined;
+          const prevActive = prevStage !== undefined && counts[prevStage.key] > 0;
 
           return (
             <div key={s.key} style={{ display: "flex", alignItems: "center", flex: s.branch ? 0 : 1 }}>
@@ -43,7 +44,7 @@ export function Pipeline({ txs }: PipelineProps) {
                   {prevActive && (
                     <div style={{
                       position: "absolute", top: -1, height: 3,
-                      background: `linear-gradient(90deg, ${STATUS_META[STAGES[i - 1].key].color}99, transparent)`,
+                      background: `linear-gradient(90deg, ${prevStage ? STATUS_META[prevStage.key].color : "transparent"}99, transparent)`,
                       animation: "flowLine 1.8s linear infinite",
                     }} />
                   )}
