@@ -32,6 +32,8 @@ function AdminCard({
           <Field
             key={f.key}
             label={f.label}
+            value={vals[f.key] ?? ""}
+            onChange={v => setVals(p => ({ ...p, [f.key]: v }))}
             value={vals[f.key]}
             onChange={(v) => setVals((p) => ({ ...p, [f.key]: v }))}
             placeholder={f.placeholder}
