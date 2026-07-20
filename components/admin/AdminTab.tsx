@@ -4,9 +4,41 @@ import { Panel } from "@/components/ui/Panel";
 import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AMBER, BORDER, DIM, STATUS_META } from "@/lib/constants";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface FieldDef {
+  label: string;
+  key: string;
+  placeholder: string;
+}
+
+interface ConfirmConfig {
+  title: string;
+  message: string;
+  /** If set, user must retype this exact value before confirming */
+  retypeKey?: string;
+  accentColor?: string;
+}
+
+// ---------------------------------------------------------------------------
+// AdminCard
+// ---------------------------------------------------------------------------
+
 function AdminCard({
+  title, tip, fields, onSubmit, btnLabel, btnColor = AMBER, confirm,
+}: {
+  title: string;
+  tip: string;
+  fields: FieldDef[];
+  onSubmit: (vals: Record<string, string>) => void;
+  btnLabel: string;
+  btnColor?: string;
+  confirm?: ConfirmConfig;
   title,
   tip,
   fields,
@@ -24,8 +56,57 @@ function AdminCard({
   const [vals, setVals] = useState<Record<string, string>>(
     Object.fromEntries(fields.map((f) => [f.key, ""]))
   );
+  const [pendingVals, setPendingVals] = useState<Record<string, string> | null>(null);
+
+  function handleClick() {
+    if (confirm) {
+      setPendingVals({ ...vals });
+    } else {
+      onSubmit(vals);
+    }
+  }
+
+  function handleConfirm() {
+    if (pendingVals) onSubmit(pendingVals);
+    setPendingVals(null);
+  }
+
+  const retypeValue = confirm?.retypeKey && pendingVals
+    ? pendingVals[confirm.retypeKey]
+    : undefined;
 
   return (
+    <>
+      <Panel title={title}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+          {fields.map(f => (
+            <Field
+              key={f.key}
+              label={f.label}
+              value={vals[f.key]}
+              onChange={v => setVals(p => ({ ...p, [f.key]: v }))}
+              placeholder={f.placeholder}
+            />
+          ))}
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <ActionButton label={btnLabel} color={btnColor} onClick={handleClick} />
+        </div>
+        <SorobanTip>{tip}</SorobanTip>
+      </Panel>
+
+      {pendingVals && confirm && (
+        <ConfirmDialog
+          title={confirm.title}
+          message={confirm.message}
+          retypeValue={retypeValue}
+          retypePlaceholder={retypeValue ? `paste or type: ${retypeValue}` : undefined}
+          accentColor={confirm.accentColor ?? btnColor}
+          onConfirm={handleConfirm}
+          onCancel={() => setPendingVals(null)}
+        />
+      )}
+    </>
     <Panel title={title}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
         {fields.map((f) => (
@@ -47,6 +128,10 @@ function AdminCard({
     </Panel>
   );
 }
+
+// ---------------------------------------------------------------------------
+// AdminTab
+// ---------------------------------------------------------------------------
 
 export function AdminTab() {
   return (
@@ -85,17 +170,27 @@ export function AdminTab() {
         }
       />
 
-      {/* Transfer admin */}
+      {/* Transfer admin — requires retype confirmation */}
       <AdminCard
         title="TRANSFER ADMIN"
         tip="transfer_admin(new_admin: Address) — caller must be current admin; irreversible if wrong address"
         fields={[{ label: "new_admin", key: "new_admin", placeholder: "G… new admin address" }]}
         btnLabel="TRANSFER →"
         btnColor={STATUS_META.FAILED.color}
+        confirm={{
+          title: "TRANSFER ADMIN — IRREVERSIBLE",
+          message:
+            "You are transferring admin rights to a new address. " +
+            "If the address is wrong you will permanently lose access to all admin functions. " +
+            "Retype the destination address exactly to continue.",
+          retypeKey: "new_admin",
+          accentColor: STATUS_META.FAILED.color,
+        }}
+        onSubmit={v => alert(`⬡ SOROBAN: transfer_admin(new_admin: "${v.new_admin}")`)}
         onSubmit={(v) => alert(`⬡ SOROBAN: transfer_admin(new_admin: "${v.new_admin}")`)}
       />
 
-      {/* Set relay signer */}
+      {/* Set relay signer — gated confirm (no retype required) */}
       <AdminCard
         title="SET RELAY SIGNER"
         tip="set_relay_signer(new_signer: Address) — caller must be current admin"
@@ -104,6 +199,15 @@ export function AdminTab() {
         ]}
         btnLabel="SET SIGNER →"
         btnColor={STATUS_META.PROCESSING.color}
+        confirm={{
+          title: "REPLACE RELAY SIGNER",
+          message:
+            "You are replacing the relay signer address. " +
+            "The current relay signer will immediately lose the ability to submit transactions. " +
+            "Confirm only if you have the new signer ready.",
+          accentColor: STATUS_META.PROCESSING.color,
+        }}
+        onSubmit={v => alert(`⬡ SOROBAN: set_relay_signer(new_signer: "${v.new_signer}")`)}
         onSubmit={(v) => alert(`⬡ SOROBAN: set_relay_signer(new_signer: "${v.new_signer}")`)}
       />
 
