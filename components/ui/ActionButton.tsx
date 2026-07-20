@@ -25,11 +25,11 @@ export function ActionButton({ label, color, onClick, fullWidth }: ActionButtonP
         letterSpacing: "0.06em",
         transition: "all 0.15s",
       }}
-      onMouseEnter={e => {
+      onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background = color + "22";
         (e.currentTarget as HTMLButtonElement).style.borderColor = color + "99";
       }}
-      onMouseLeave={e => {
+      onMouseLeave={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background = "transparent";
         (e.currentTarget as HTMLButtonElement).style.borderColor = color + "55";
       }}

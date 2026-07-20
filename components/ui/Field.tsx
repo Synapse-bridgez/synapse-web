@@ -12,13 +12,20 @@ interface FieldProps {
 export function Field({ label, value, onChange, placeholder, type = "text" }: FieldProps) {
   return (
     <div>
-      <div style={{ fontSize: 9, color: DIM, fontFamily: "'IBM Plex Mono', monospace", marginBottom: 4 }}>
+      <div
+        style={{
+          fontSize: 9,
+          color: DIM,
+          fontFamily: "'IBM Plex Mono', monospace",
+          marginBottom: 4,
+        }}
+      >
         {label}
       </div>
       <input
         type={type}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         style={{
           width: "100%",
@@ -31,8 +38,8 @@ export function Field({ label, value, onChange, placeholder, type = "text" }: Fi
           outline: "none",
           transition: "border-color 0.15s",
         }}
-        onFocus={e => (e.target.style.borderColor = "rgba(245,166,35,0.45)")}
-        onBlur={e => (e.target.style.borderColor = BORDER)}
+        onFocus={(e) => (e.target.style.borderColor = "rgba(245,166,35,0.45)")}
+        onBlur={(e) => (e.target.style.borderColor = BORDER)}
       />
     </div>
   );
