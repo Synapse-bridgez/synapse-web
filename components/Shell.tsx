@@ -4,6 +4,7 @@ import { DashboardTab } from "./dashboard/DashboardTab";
 import { TransactionsTab } from "./transactions/TransactionsTab";
 import { AdminTab } from "./admin/AdminTab";
 import { DocsTab } from "./docs/DocsTab";
+import { TabErrorBoundary } from "@/components/ui/TabErrorBoundary";
 import { AMBER, BG1, BORDER, DIM } from "@/lib/constants";
 import { STATUS_META } from "@/lib/constants";
 
@@ -138,6 +139,27 @@ export function Shell() {
       </nav>
 
       {/* ── Body ── */}
+      <main style={{ flex: 1, maxWidth: 1140, width: "100%", margin: "0 auto", padding: "22px 28px" }}>
+        {tab === "dashboard" && (
+          <TabErrorBoundary title="Dashboard tab error">
+            <DashboardTab />
+          </TabErrorBoundary>
+        )}
+        {tab === "transactions" && (
+          <TabErrorBoundary title="Transactions tab error">
+            <TransactionsTab />
+          </TabErrorBoundary>
+        )}
+        {tab === "admin" && (
+          <TabErrorBoundary title="Admin tab error">
+            <AdminTab />
+          </TabErrorBoundary>
+        )}
+        {tab === "docs" && (
+          <TabErrorBoundary title="Docs tab error">
+            <DocsTab />
+          </TabErrorBoundary>
+        )}
       <main
         style={{ flex: 1, maxWidth: 1140, width: "100%", margin: "0 auto", padding: "22px 28px" }}
       >
