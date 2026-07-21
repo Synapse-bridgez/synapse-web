@@ -18,52 +18,126 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
         <thead>
           <tr>
-            {HEADERS.map(h => (
-              <th key={h} style={{
-                padding: "4px 8px 10px", fontSize: 9, letterSpacing: "0.1em",
-                color: DIM, fontFamily: "'IBM Plex Mono', monospace",
-                textAlign: "left", borderBottom: `1px solid ${BORDER}`, whiteSpace: "nowrap",
-              }}>{h}</th>
+            {HEADERS.map((h) => (
+              <th
+                key={h}
+                style={{
+                  padding: "4px 8px 10px",
+                  fontSize: 9,
+                  letterSpacing: "0.1em",
+                  color: DIM,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  textAlign: "left",
+                  borderBottom: `1px solid ${BORDER}`,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {h}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {txs.map(tx => (
+          {txs.map((tx) => (
             <tr
               key={tx.id}
               onClick={() => onSelect(tx)}
-              style={{ cursor: "pointer", borderBottom: `1px solid ${BORDER}`, transition: "background 0.15s" }}
-              onMouseEnter={e => (e.currentTarget.style.background = BG3)}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              style={{
+                cursor: "pointer",
+                borderBottom: `1px solid ${BORDER}`,
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = BG3)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <td style={{ padding: "9px 8px" }}>
                 <div style={{ display: "flex", alignItems: "center" }}>
-                  <span style={{ fontSize: 10, color: AMBER, fontFamily: "'IBM Plex Mono', monospace" }}>{shortId(tx.id)}</span>
+                  <span
+                    style={{ fontSize: 10, color: AMBER, fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
+                    {shortId(tx.id)}
+                  </span>
                   <CopyButton value={tx.id} label="Tx ID" style={{ marginLeft: 4 }} />
                 </div>
               </td>
-              <td style={{ padding: "9px 8px", fontSize: 10, color: "#ccc", fontFamily: "'IBM Plex Mono', monospace" }}>{tx.asset}</td>
-              <td style={{ padding: "9px 8px", fontSize: 10, color: "#fff", fontFamily: "'IBM Plex Mono', monospace" }}>{tx.amount.toFixed(1)}</td>
+              <td
+                style={{
+                  padding: "9px 8px",
+                  fontSize: 10,
+                  color: "#ccc",
+                  fontFamily: "'IBM Plex Mono', monospace",
+                }}
+              >
+                {tx.asset}
+              </td>
+              <td
+                style={{
+                  padding: "9px 8px",
+                  fontSize: 10,
+                  color: "#fff",
+                  fontFamily: "'IBM Plex Mono', monospace",
+                }}
+              >
+                {tx.amount.toFixed(1)}
+              </td>
               <td style={{ padding: "9px 8px" }}>
                 <div style={{ display: "flex", alignItems: "center" }}>
-                  <span style={{ fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}>{tx.from.slice(0, 10)}…</span>
+                  <span
+                    style={{ fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
+                    {tx.from.slice(0, 10)}…
+                  </span>
                   <CopyButton value={tx.from} label="From address" style={{ marginLeft: 4 }} />
                 </div>
               </td>
               <td style={{ padding: "9px 8px" }}>
                 <div style={{ display: "flex", alignItems: "center" }}>
-                  <span style={{ fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}>{tx.to.slice(0, 10)}…</span>
+                  <span
+                    style={{ fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
+                    {tx.to.slice(0, 10)}…
+                  </span>
                   <CopyButton value={tx.to} label="To address" style={{ marginLeft: 4 }} />
                 </div>
               </td>
-              <td style={{ padding: "9px 8px" }}><Badge status={tx.status} /></td>
-              <td style={{ padding: "9px 8px", fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace", textAlign: "center" }}>{tx.retries}</td>
-              <td style={{ padding: "9px 8px", fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}>{elapsed(tx.timestamp)}</td>
+              <td style={{ padding: "9px 8px" }}>
+                <Badge status={tx.status} />
+              </td>
+              <td
+                style={{
+                  padding: "9px 8px",
+                  fontSize: 10,
+                  color: DIM,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  textAlign: "center",
+                }}
+              >
+                {tx.retries}
+              </td>
+              <td
+                style={{
+                  padding: "9px 8px",
+                  fontSize: 10,
+                  color: DIM,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                }}
+              >
+                {elapsed(tx.timestamp)}
+              </td>
             </tr>
           ))}
           {txs.length === 0 && (
             <tr>
-              <td colSpan={8} style={{ padding: 24, textAlign: "center", color: DIM, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}>
+              <td
+                colSpan={8}
+                style={{
+                  padding: 24,
+                  textAlign: "center",
+                  color: DIM,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 11,
+                }}
+              >
                 no transactions match filter
               </td>
             </tr>

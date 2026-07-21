@@ -15,46 +15,78 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
   const m = STATUS_META[tx.status];
 
   const fields: [string, string][] = [
-    ["id",           tx.id],
-    ["asset",        tx.asset],
-    ["amount",       `${tx.amount} USDC`],
-    ["from",         tx.from],
-    ["to",           tx.to],
-    ["memo",         tx.memo],
+    ["id", tx.id],
+    ["asset", tx.asset],
+    ["amount", `${tx.amount} USDC`],
+    ["from", tx.from],
+    ["to", tx.to],
+    ["memo", tx.memo],
     ["callback_url", tx.callback_url],
-    ["retries",      String(tx.retries)],
-    ["created_at",   new Date(tx.created_at).toISOString()],
-    ["status",       tx.status],
+    ["retries", String(tx.retries)],
+    ["created_at", new Date(tx.created_at).toISOString()],
+    ["status", tx.status],
   ];
 
   return (
     <div
       style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
-        zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.8)",
+        zIndex: 200,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
       onClick={onClose}
     >
       <div
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         className="animate-fade-in"
         style={{
-          background: BG1, border: `1px solid ${m.color}44`,
-          width: 560, maxHeight: "82vh", overflowY: "auto",
-          padding: 24, position: "relative",
+          background: BG1,
+          border: `1px solid ${m.color}44`,
+          width: 560,
+          maxHeight: "82vh",
+          overflowY: "auto",
+          padding: 24,
+          position: "relative",
         }}
       >
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: AMBER, letterSpacing: "0.1em" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 11,
+              color: AMBER,
+              letterSpacing: "0.1em",
+            }}
+          >
             TX DETAIL
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Badge status={tx.status} />
             <button
               onClick={onClose}
-              style={{ background: "none", border: "none", color: DIM, cursor: "pointer", fontSize: 18, lineHeight: 1 }}
-            >✕</button>
+              style={{
+                background: "none",
+                border: "none",
+                color: DIM,
+                cursor: "pointer",
+                fontSize: 18,
+                lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
           </div>
         </div>
 
@@ -63,8 +95,27 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
           <tbody>
             {fields.map(([k, v]) => (
               <tr key={k} style={{ borderBottom: `1px solid ${BORDER}` }}>
-                <td style={{ padding: "6px 0", fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace", width: "28%", verticalAlign: "top" }}>{k}</td>
-                <td style={{ padding: "6px 0 6px 8px", fontSize: 10, color: "#ddd", fontFamily: "'IBM Plex Mono', monospace", wordBreak: "break-all" }}>
+                <td
+                  style={{
+                    padding: "6px 0",
+                    fontSize: 10,
+                    color: DIM,
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    width: "28%",
+                    verticalAlign: "top",
+                  }}
+                >
+                  {k}
+                </td>
+                <td
+                  style={{
+                    padding: "6px 0 6px 8px",
+                    fontSize: 10,
+                    color: "#ddd",
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    wordBreak: "break-all",
+                  }}
+                >
                   <span style={{ verticalAlign: "middle" }}>{v}</span>
                   {(k === "id" || k === "from" || k === "to") && (
                     <CopyButton
@@ -103,7 +154,9 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
           />
         </div>
 
-        <SorobanTip>get_transaction(tx_id) → full Transaction struct; actions require relay_signer signing</SorobanTip>
+        <SorobanTip>
+          get_transaction(tx_id) → full Transaction struct; actions require relay_signer signing
+        </SorobanTip>
       </div>
     </div>
   );
