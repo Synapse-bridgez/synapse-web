@@ -40,13 +40,11 @@ export default function NotFound() {
           404
         </div>
 
-        <h1 style={{ margin: "16px 0 10px", fontSize: 28, color: "#fff" }}>
-          Route not found
-        </h1>
+        <h1 style={{ margin: "16px 0 10px", fontSize: 28, color: "#fff" }}>Route not found</h1>
 
         <p style={{ margin: 0, color: DIM, lineHeight: 1.6 }}>
-          The page you requested could not be located. Head back to the Synapse core
-          dashboard to continue.
+          The page you requested could not be located. Head back to the Synapse core dashboard to
+          continue.
         </p>
 
         <Link

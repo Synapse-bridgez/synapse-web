@@ -52,13 +52,11 @@ export default function GlobalError({
           Application error
         </div>
 
-        <h1 style={{ margin: "16px 0 10px", fontSize: 28, color: "#fff" }}>
-          Something went wrong
-        </h1>
+        <h1 style={{ margin: "16px 0 10px", fontSize: 28, color: "#fff" }}>Something went wrong</h1>
 
         <p style={{ margin: 0, color: DIM, lineHeight: 1.6 }}>
-          The app hit an unexpected render error. You can safely retry this route and
-          recover the interface without restarting the whole page.
+          The app hit an unexpected render error. You can safely retry this route and recover the
+          interface without restarting the whole page.
         </p>
 
         <button

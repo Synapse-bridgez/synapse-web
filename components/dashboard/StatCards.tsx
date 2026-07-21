@@ -36,9 +36,9 @@ export function StatCards({ txs }: StatCardsProps) {
   ];
 
   return (
-    <div style={{ display: "flex", gap: 8 }}>
+    <div className="stat-cards-grid">
       {cards.map((c) => (
-        <Panel key={c.label} accentColor={c.color} style={{ flex: 1, minWidth: 120 }}>
+        <Panel key={c.label} accentColor={c.color} style={{ minWidth: 120 }}>
           <div
             style={{
               fontSize: 9,

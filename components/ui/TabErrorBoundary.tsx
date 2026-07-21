@@ -66,8 +66,8 @@ export class TabErrorBoundary extends Component<Props, State> {
             </h2>
 
             <p style={{ margin: 0, color: DIM, lineHeight: 1.6 }}>
-              An unexpected error stopped this panel from rendering. You can retry the
-              tab without losing the rest of the shell.
+              An unexpected error stopped this panel from rendering. You can retry the tab without
+              losing the rest of the shell.
             </p>
 
             <button

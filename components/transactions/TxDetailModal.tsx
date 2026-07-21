@@ -2,6 +2,7 @@
 import { Badge } from "@/components/ui/Badge";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SorobanTip } from "@/components/ui/SorobanTip";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { STATUS_META, AMBER, BG1, BORDER, DIM } from "@/lib/constants";
 import type { Transaction } from "@/lib/types";
 
@@ -115,7 +116,14 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
                     wordBreak: "break-all",
                   }}
                 >
-                  {v}
+                  <span style={{ verticalAlign: "middle" }}>{v}</span>
+                  {(k === "id" || k === "from" || k === "to") && (
+                    <CopyButton
+                      value={v}
+                      label={k === "id" ? "Tx ID" : k === "from" ? "From address" : "To address"}
+                      style={{ marginLeft: 6, verticalAlign: "middle" }}
+                    />
+                  )}
                 </td>
               </tr>
             ))}

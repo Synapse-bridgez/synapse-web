@@ -30,7 +30,13 @@ interface ConfirmConfig {
 // ---------------------------------------------------------------------------
 
 function AdminCard({
-  title, tip, fields, onSubmit, btnLabel, btnColor = AMBER, confirm,
+  title,
+  tip,
+  fields,
+  onSubmit,
+  btnLabel,
+  btnColor = AMBER,
+  confirm,
 }: {
   title: string;
   tip: string;
@@ -39,19 +45,6 @@ function AdminCard({
   btnLabel: string;
   btnColor?: string;
   confirm?: ConfirmConfig;
-  title,
-  tip,
-  fields,
-  onSubmit,
-  btnLabel,
-  btnColor = AMBER,
-}: {
-  title: string;
-  tip: string;
-  fields: { label: string; key: string; placeholder: string }[];
-  onSubmit: (vals: Record<string, string>) => void;
-  btnLabel: string;
-  btnColor?: string;
 }) {
   const [vals, setVals] = useState<Record<string, string>>(
     Object.fromEntries(fields.map((f) => [f.key, ""]))
@@ -71,20 +64,19 @@ function AdminCard({
     setPendingVals(null);
   }
 
-  const retypeValue = confirm?.retypeKey && pendingVals
-    ? pendingVals[confirm.retypeKey]
-    : undefined;
+  const retypeValue =
+    confirm?.retypeKey && pendingVals ? pendingVals[confirm.retypeKey] : undefined;
 
   return (
     <>
       <Panel title={title}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-          {fields.map(f => (
+          {fields.map((f) => (
             <Field
               key={f.key}
               label={f.label}
-              value={vals[f.key]}
-              onChange={v => setVals(p => ({ ...p, [f.key]: v }))}
+              value={vals[f.key] ?? ""}
+              onChange={(v) => setVals((p) => ({ ...p, [f.key]: v }))}
               placeholder={f.placeholder}
             />
           ))}
@@ -107,25 +99,6 @@ function AdminCard({
         />
       )}
     </>
-    <Panel title={title}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-        {fields.map((f) => (
-          <Field
-            key={f.key}
-            label={f.label}
-            value={vals[f.key] ?? ""}
-            onChange={v => setVals(p => ({ ...p, [f.key]: v }))}
-            value={vals[f.key]}
-            onChange={(v) => setVals((p) => ({ ...p, [f.key]: v }))}
-            placeholder={f.placeholder}
-          />
-        ))}
-      </div>
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <ActionButton label={btnLabel} color={btnColor} onClick={() => onSubmit(vals)} />
-      </div>
-      <SorobanTip>{tip}</SorobanTip>
-    </Panel>
   );
 }
 
@@ -186,7 +159,6 @@ export function AdminTab() {
           retypeKey: "new_admin",
           accentColor: STATUS_META.FAILED.color,
         }}
-        onSubmit={v => alert(`⬡ SOROBAN: transfer_admin(new_admin: "${v.new_admin}")`)}
         onSubmit={(v) => alert(`⬡ SOROBAN: transfer_admin(new_admin: "${v.new_admin}")`)}
       />
 
@@ -207,7 +179,6 @@ export function AdminTab() {
             "Confirm only if you have the new signer ready.",
           accentColor: STATUS_META.PROCESSING.color,
         }}
-        onSubmit={v => alert(`⬡ SOROBAN: set_relay_signer(new_signer: "${v.new_signer}")`)}
         onSubmit={(v) => alert(`⬡ SOROBAN: set_relay_signer(new_signer: "${v.new_signer}")`)}
       />
 

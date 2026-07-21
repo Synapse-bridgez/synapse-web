@@ -18,18 +18,7 @@ export function Shell() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {/* ── Header ── */}
-      <header
-        style={{
-          background: BG1,
-          borderBottom: `1px solid ${BORDER}`,
-          padding: "0 28px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          height: 54,
-          flexShrink: 0,
-        }}
-      >
+      <header className="shell-header">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.14em", color: "#fff" }}>
             SYNAPSE
@@ -99,16 +88,7 @@ export function Shell() {
       </header>
 
       {/* ── Tab Bar ── */}
-      <nav
-        style={{
-          background: BG1,
-          borderBottom: `1px solid ${BORDER}`,
-          padding: "0 28px",
-          display: "flex",
-          gap: 0,
-          flexShrink: 0,
-        }}
-      >
+      <nav className="shell-nav">
         {TABS.map((t) => (
           <button
             key={t}
@@ -139,7 +119,7 @@ export function Shell() {
       </nav>
 
       {/* ── Body ── */}
-      <main style={{ flex: 1, maxWidth: 1140, width: "100%", margin: "0 auto", padding: "22px 28px" }}>
+      <main className="shell-main">
         {tab === "dashboard" && (
           <TabErrorBoundary title="Dashboard tab error">
             <DashboardTab />
@@ -160,13 +140,6 @@ export function Shell() {
             <DocsTab />
           </TabErrorBoundary>
         )}
-      <main
-        style={{ flex: 1, maxWidth: 1140, width: "100%", margin: "0 auto", padding: "22px 28px" }}
-      >
-        {tab === "dashboard" && <DashboardTab />}
-        {tab === "transactions" && <TransactionsTab />}
-        {tab === "admin" && <AdminTab />}
-        {tab === "docs" && <DocsTab />}
       </main>
 
       {/* ── Footer ── */}

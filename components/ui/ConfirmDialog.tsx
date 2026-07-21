@@ -59,7 +59,8 @@ export function ConfirmDialog({
       <div
         onClick={onCancel}
         style={{
-          position: "fixed", inset: 0,
+          position: "fixed",
+          inset: 0,
           background: "rgba(0,0,0,0.72)",
           backdropFilter: "blur(2px)",
           zIndex: 1000,
@@ -73,7 +74,8 @@ export function ConfirmDialog({
         aria-labelledby="confirm-dialog-title"
         style={{
           position: "fixed",
-          top: "50%", left: "50%",
+          top: "50%",
+          left: "50%",
           transform: "translate(-50%, -50%)",
           zIndex: 1001,
           width: "min(480px, calc(100vw - 32px))",
@@ -90,7 +92,8 @@ export function ConfirmDialog({
           <div
             id="confirm-dialog-title"
             style={{
-              fontSize: 11, fontWeight: 700,
+              fontSize: 11,
+              fontWeight: 700,
               letterSpacing: "0.12em",
               color: accentColor,
               marginBottom: 10,
@@ -100,30 +103,37 @@ export function ConfirmDialog({
           </div>
 
           {/* Message */}
-          <p style={{
-            fontSize: 12, lineHeight: 1.65,
-            color: "rgba(255,255,255,0.65)",
-            margin: "0 0 18px",
-            ...mono,
-          }}>
+          <p
+            style={{
+              fontSize: 12,
+              lineHeight: 1.65,
+              color: "rgba(255,255,255,0.65)",
+              margin: "0 0 18px",
+              ...mono,
+            }}
+          >
             {message}
           </p>
 
           {/* Retype confirmation input */}
           {needsRetype && (
             <div style={{ marginBottom: 20 }}>
-              <label style={{
-                display: "block",
-                fontSize: 10, letterSpacing: "0.1em",
-                color: DIM, marginBottom: 6,
-              }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 10,
+                  letterSpacing: "0.1em",
+                  color: DIM,
+                  marginBottom: 6,
+                }}
+              >
                 TYPE THE ADDRESS BELOW TO CONFIRM
               </label>
               <input
                 ref={inputRef}
                 type="text"
                 value={typed}
-                onChange={e => setTyped(e.target.value)}
+                onChange={(e) => setTyped(e.target.value)}
                 placeholder={retypePlaceholder ?? retypeValue}
                 spellCheck={false}
                 autoComplete="off"
@@ -141,10 +151,14 @@ export function ConfirmDialog({
                 }}
               />
               {typed.length > 0 && typed !== retypeValue && (
-                <div style={{
-                  fontSize: 10, color: STATUS_META.FAILED.color,
-                  marginTop: 5, letterSpacing: "0.04em",
-                }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: STATUS_META.FAILED.color,
+                    marginTop: 5,
+                    letterSpacing: "0.04em",
+                  }}
+                >
                   address mismatch
                 </div>
               )}
@@ -153,15 +167,13 @@ export function ConfirmDialog({
 
           {/* Actions */}
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <ActionButton
-              label="CANCEL"
-              color={DIM.replace("0.35", "0.55")}
-              onClick={onCancel}
-            />
+            <ActionButton label="CANCEL" color={DIM.replace("0.35", "0.55")} onClick={onCancel} />
             <ActionButton
               label="CONFIRM →"
               color={canConfirm ? accentColor : DIM}
-              onClick={() => { if (canConfirm) onConfirm(); }}
+              onClick={() => {
+                if (canConfirm) onConfirm();
+              }}
             />
           </div>
         </div>

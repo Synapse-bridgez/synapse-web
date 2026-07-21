@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AMBER, BG0 } from "@/lib/constants";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 const siteUrl =
@@ -52,7 +53,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="scanline-overlay">{children}</body>
+      <body className="scanline-overlay">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }
