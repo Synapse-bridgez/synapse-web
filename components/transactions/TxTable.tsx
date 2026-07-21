@@ -1,5 +1,6 @@
 "use client";
 import { Badge } from "@/components/ui/Badge";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
 import { shortId, elapsed } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
@@ -35,11 +36,26 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
               onMouseEnter={e => (e.currentTarget.style.background = BG3)}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
             >
-              <td style={{ padding: "9px 8px", fontSize: 10, color: AMBER, fontFamily: "'IBM Plex Mono', monospace" }}>{shortId(tx.id)}</td>
+              <td style={{ padding: "9px 8px" }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 10, color: AMBER, fontFamily: "'IBM Plex Mono', monospace" }}>{shortId(tx.id)}</span>
+                  <CopyButton value={tx.id} label="Tx ID" style={{ marginLeft: 4 }} />
+                </div>
+              </td>
               <td style={{ padding: "9px 8px", fontSize: 10, color: "#ccc", fontFamily: "'IBM Plex Mono', monospace" }}>{tx.asset}</td>
               <td style={{ padding: "9px 8px", fontSize: 10, color: "#fff", fontFamily: "'IBM Plex Mono', monospace" }}>{tx.amount.toFixed(1)}</td>
-              <td style={{ padding: "9px 8px", fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tx.from.slice(0, 10)}…</td>
-              <td style={{ padding: "9px 8px", fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tx.to.slice(0, 10)}…</td>
+              <td style={{ padding: "9px 8px" }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}>{tx.from.slice(0, 10)}…</span>
+                  <CopyButton value={tx.from} label="From address" style={{ marginLeft: 4 }} />
+                </div>
+              </td>
+              <td style={{ padding: "9px 8px" }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}>{tx.to.slice(0, 10)}…</span>
+                  <CopyButton value={tx.to} label="To address" style={{ marginLeft: 4 }} />
+                </div>
+              </td>
               <td style={{ padding: "9px 8px" }}><Badge status={tx.status} /></td>
               <td style={{ padding: "9px 8px", fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace", textAlign: "center" }}>{tx.retries}</td>
               <td style={{ padding: "9px 8px", fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}>{elapsed(tx.timestamp)}</td>

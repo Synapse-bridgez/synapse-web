@@ -17,9 +17,9 @@ export function StatCards({ txs }: StatCardsProps) {
   ];
 
   return (
-    <div style={{ display: "flex", gap: 8 }}>
+    <div className="stat-cards-grid">
       {cards.map(c => (
-        <Panel key={c.label} accentColor={c.color} style={{ flex: 1, minWidth: 120 }}>
+        <Panel key={c.label} accentColor={c.color} style={{ minWidth: 120 }}>
           <div style={{ fontSize: 9, letterSpacing: "0.14em", color: DIM, fontFamily: "'IBM Plex Mono', monospace", marginBottom: 8 }}>{c.label}</div>
           <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'IBM Plex Mono', monospace", color: c.color ?? "#fff", lineHeight: 1, marginBottom: 4 }}>{c.value}</div>
           <div style={{ fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}>{c.sub}</div>

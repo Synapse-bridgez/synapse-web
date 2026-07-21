@@ -2,6 +2,7 @@
 import { Panel } from "@/components/ui/Panel";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { Badge } from "@/components/ui/Badge";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
 import { shortId, elapsed } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
@@ -37,7 +38,12 @@ export function RecentTxTable({ txs, onSelect }: RecentTxTableProps) {
               onMouseEnter={e => (e.currentTarget.style.background = BG3)}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
             >
-              <td style={{ padding: "8px", fontSize: 11, color: AMBER, fontFamily: "'IBM Plex Mono', monospace" }}>{shortId(tx.id)}</td>
+              <td style={{ padding: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 11, color: AMBER, fontFamily: "'IBM Plex Mono', monospace" }}>{shortId(tx.id)}</span>
+                  <CopyButton value={tx.id} label="Tx ID" style={{ marginLeft: 4 }} />
+                </div>
+              </td>
               <td style={{ padding: "8px", fontSize: 11, color: "#ccc", fontFamily: "'IBM Plex Mono', monospace" }}>{tx.asset}</td>
               <td style={{ padding: "8px", fontSize: 11, color: "#fff", fontFamily: "'IBM Plex Mono', monospace" }}>{tx.amount.toFixed(1)}</td>
               <td style={{ padding: "8px" }}><Badge status={tx.status} /></td>

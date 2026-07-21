@@ -17,7 +17,7 @@ export function DashboardTab() {
       {selected && <TxDetailModal tx={selected} onClose={() => setSelected(null)} />}
       <StatCards txs={txs} />
       <Pipeline txs={txs} />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.45fr", gap: 12 }}>
+      <div className="dashboard-grid">
         <ContractInfoPanel info={MOCK_CONTRACT_INFO} />
         <RecentTxTable txs={txs} onSelect={setSelected} />
       </div>
