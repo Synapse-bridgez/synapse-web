@@ -28,6 +28,7 @@ export const STATUS_META: Record<TxStatus, StatusMeta> = {
 };
 
 export const AMBER = "#F5A623";
+export const NEUTRAL = "#fff";
 export const BG0 = "#0A0B0D";
 export const BG1 = "#0F1115";
 export const BG2 = "#14171D";
