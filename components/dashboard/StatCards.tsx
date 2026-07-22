@@ -1,6 +1,6 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
-import { STATUS_META, DIM } from "@/lib/constants";
+import { STATUS_META, DIM, NEUTRAL } from "@/lib/constants";
 import type { Transaction } from "@/lib/types";
 
 interface StatCardsProps {
@@ -14,7 +14,7 @@ export function StatCards({ txs }: StatCardsProps) {
   });
 
   const cards = [
-    { label: "TOTAL TXS", value: txs.length, sub: "mock data", color: undefined },
+    { label: "TOTAL TXS", value: txs.length, sub: "mock data", color: NEUTRAL },
     {
       label: "PENDING",
       value: counts.PENDING,
@@ -55,7 +55,7 @@ export function StatCards({ txs }: StatCardsProps) {
               fontSize: 28,
               fontWeight: 700,
               fontFamily: "'IBM Plex Mono', monospace",
-              color: c.color ?? "#fff",
+              color: c.color,
               lineHeight: 1,
               marginBottom: 4,
             }}
