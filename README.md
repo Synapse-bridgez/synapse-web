@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Synapse Core
 
-## Getting Started
+A Soroban transaction-lifecycle dashboard built with Next.js 16 and React 19.
+Synapse Core lets you inspect, trace, and (eventually) drive transactions through
+a Soroban smart contract deployed on Stellar Testnet — from registration through
+completion or failure.
 
-First, run the development server:
+> **Current state: static mock, no backend yet.**
+> All data is served from `lib/mock-data.ts`. Wallet connection and on-chain calls
+> are stubbed with `alert()` placeholders. Real Soroban RPC integration is tracked
+> in the open issues below.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## What's inside
+
+```
+synapse-web/
+├── app/
+│   ├── layout.tsx          # Root layout — metadata, ToastProvider, global CSS
+│   ├── page.tsx            # Entry point — renders <Shell />
+│   ├── globals.css         # Base styles, scanline overlay, utility classes
+│   └── error.tsx / not-found.tsx
+├── components/
+│   ├── Shell.tsx           # Top-level shell: header, tab bar, footer
+│   ├── dashboard/
+│   │   ├── DashboardTab.tsx        # Composes the dashboard view
+│   │   ├── StatCards.tsx           # PENDING / PROCESSING / COMPLETED / FAILED counts
+│   │   ├── Pipeline.tsx            # Visual pipeline of tx status flow
+│   │   ├── ContractInfoPanel.tsx   # Contract address, admin, relay signer, health
+│   │   └── RecentTxTable.tsx       # Last-N transactions with click-to-detail
+│   ├── transactions/
+│   │   ├── TransactionsTab.tsx     # Full transaction list with filters
+│   │   ├── TxTable.tsx             # Sortable/paginated tx table
+│   │   └── TxDetailModal.tsx       # Overlay with full tx fields
+│   ├── admin/
+│   │   └── AdminTab.tsx    # initialize / transfer_admin / set_relay_signer / diagnostics
+│   ├── docs/
+│   │   └── DocsTab.tsx     # ABI reference rendered from lib/constants.ABI_ENDPOINTS
+│   └── ui/
+│       ├── ActionButton.tsx
+│       ├── Badge.tsx
+│       ├── ConfirmDialog.tsx
+│       ├── CopyButton.tsx
+│       ├── Field.tsx
+│       ├── Panel.tsx
+│       ├── SorobanTip.tsx
+│       ├── TabErrorBoundary.tsx
+│       └── Toast.tsx
+├── lib/
+│   ├── mock-data.ts        # ← mock entry point: MOCK_TXS + MOCK_CONTRACT_INFO
+│   ├── types.ts            # Transaction, ContractInfo, TxStatus, CallbackPayload
+│   ├── constants.ts        # STATUS_META, colour tokens, ABI_ENDPOINTS
+│   └── utils.ts            # Shared helpers (cn, etc.)
+└── public/                 # Static assets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Mock-data entry point
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`lib/mock-data.ts` exports two objects consumed by every tab:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Export               | Used by                                                           |
+| -------------------- | ----------------------------------------------------------------- |
+| `MOCK_TXS`           | DashboardTab, TransactionsTab (stat cards, pipeline, tables)      |
+| `MOCK_CONTRACT_INFO` | ContractInfoPanel (address, admin, relay_signer, health, version) |
 
-## Learn More
+To add a transaction, append an entry to the `MOCK_TXS` array. Status must be
+one of `"PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"`.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Getting started
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
+Open [http://localhost:3000](http://localhost:3000). The app starts on the
+**dashboard** tab showing mock data.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Other scripts:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build        # Production build
+npm run lint         # ESLint
+npm run format       # Prettier (writes)
+npm run format:check # Prettier (CI check)
+npx tsc --noEmit     # Type-check without emitting
+```
+
+---
+
+## Adding a new tab
+
+1. Create `components/<name>/<Name>Tab.tsx` and export a `<NameTab />` component.
+2. Add the tab key to the `TABS` array in `components/Shell.tsx`.
+3. Add a matching `{tab === "<name>" && <NameTab />}` render block in `Shell.tsx`.
+4. Wrap it in `<TabErrorBoundary>` like the existing tabs.
+
+---
+
+## Roadmap / open issues
+
+Real Soroban RPC integration, wallet wiring, and backend work are tracked in the
+upstream repo's issue tracker:
+
+- [Synapse-bridgez/synapse-web — open issues](https://github.com/Synapse-bridgez/synapse-web/issues)
+
+Notable milestones on the path to a working testnet client:
+
+- Replace `alert()` stubs in `AdminTab` with real `TransactionBuilder` + sign + submit calls
+- Wire `MOCK_TXS` / `MOCK_CONTRACT_INFO` to live `SorobanRpc.Server` reads
+- Integrate `@creit-tech/stellar-wallets-kit` (Freighter / xBull) for wallet connection
+- Backend relay service for `register_transaction`, `start_processing`, `complete_transaction`,
+  `fail_transaction`, and `register_callback` webhooks
+
+---
+
+## Tech stack
+
+|                |                                           |
+| -------------- | ----------------------------------------- |
+| Framework      | Next.js 16 (App Router)                   |
+| UI             | React 19, inline styles + Tailwind CSS v4 |
+| Font           | IBM Plex Mono                             |
+| Language       | TypeScript 5                              |
+| Linting        | ESLint + Prettier + Husky pre-commit      |
+| CI             | GitHub Actions (lint → typecheck → build) |
+| Target network | Stellar Testnet (Soroban)                 |
