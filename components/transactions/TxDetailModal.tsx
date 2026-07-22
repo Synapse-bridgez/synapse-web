@@ -4,6 +4,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { STATUS_META, AMBER, BG1, BORDER, DIM } from "@/lib/constants";
+import { formatAmount } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
 interface TxDetailModalProps {
@@ -17,7 +18,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
   const fields: [string, string][] = [
     ["id", tx.id],
     ["asset", tx.asset],
-    ["amount", `${tx.amount} USDC`],
+    ["amount", `${formatAmount(tx.amount)} USDC`],
     ["from", tx.from],
     ["to", tx.to],
     ["memo", tx.memo],

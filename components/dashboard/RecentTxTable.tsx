@@ -5,7 +5,7 @@ import { SorobanTip } from "@/components/ui/SorobanTip";
 import { Badge } from "@/components/ui/Badge";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
-import { shortId, elapsed } from "@/lib/utils";
+import { shortId, elapsed, formatAmount } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
 interface RecentTxTableProps {
@@ -70,7 +70,7 @@ const RecentTxRow = memo(function RecentTxRow({ tx, onSelect }: RecentTxRowProps
         </div>
       </td>
       <td style={ASSET_STYLE}>{tx.asset}</td>
-      <td style={AMOUNT_STYLE}>{tx.amount.toFixed(1)}</td>
+      <td style={AMOUNT_STYLE}>{formatAmount(tx.amount)}</td>
       <td style={CELL_STYLE}>
         <Badge status={tx.status} />
       </td>
