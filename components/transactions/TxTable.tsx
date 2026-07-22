@@ -3,7 +3,7 @@ import { memo, type CSSProperties } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
-import { shortId, elapsed } from "@/lib/utils";
+import { shortId, elapsed, formatAmount } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
 interface TxTableProps {
@@ -73,7 +73,7 @@ const TxRow = memo(function TxRow({ tx, onSelect }: TxRowProps) {
         </div>
       </td>
       <td style={ASSET_STYLE}>{tx.asset}</td>
-      <td style={AMOUNT_STYLE}>{tx.amount.toFixed(1)}</td>
+      <td style={AMOUNT_STYLE}>{formatAmount(tx.amount)}</td>
       <td style={CELL_STYLE}>
         <div style={FLEX_CELL_STYLE}>
           <span style={ADDRESS_STYLE}>{tx.from.slice(0, 10)}…</span>
