@@ -1,10 +1,12 @@
 "use client";
+import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { STATUS_META, AMBER, BG1, BORDER, DIM } from "@/lib/constants";
 import { formatAmount } from "@/lib/utils";
+import { STATUS_META, AMBER, BG1, BG2, BORDER, DIM } from "@/lib/constants";
 import type { Transaction } from "@/lib/types";
 
 interface TxDetailModalProps {
@@ -13,6 +15,8 @@ interface TxDetailModalProps {
 }
 
 export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
+  const [showFailPrompt, setShowFailPrompt] = useState(false);
+  const [failReason, setFailReason] = useState("");
   const m = STATUS_META[tx.status];
 
   const fields: [string, string][] = [
@@ -132,28 +136,119 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
         </table>
 
         {/* Action buttons */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <ActionButton
-            label="START PROCESSING"
-            color={STATUS_META.PROCESSING.color}
-            onClick={() => alert(`⬡ SOROBAN: start_processing(tx_id: "${tx.id}")`)}
-          />
-          <ActionButton
-            label="COMPLETE"
-            color={STATUS_META.COMPLETED.color}
-            onClick={() => alert(`⬡ SOROBAN: complete_transaction(tx_id: "${tx.id}")`)}
-          />
-          <ActionButton
-            label="FAIL"
-            color={STATUS_META.FAILED.color}
-            onClick={() => alert(`⬡ SOROBAN: fail_transaction(tx_id: "${tx.id}", reason: "…")`)}
-          />
-          <ActionButton
-            label="DUPLICATE?"
-            color={AMBER}
-            onClick={() => alert(`⬡ SOROBAN: is_duplicate(tx_id: "${tx.id}")`)}
-          />
-        </div>
+        {showFailPrompt ? (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: 16,
+              background: BG2,
+              border: `1px solid ${STATUS_META.FAILED.color}33`,
+              borderRadius: 4,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 10,
+                color: STATUS_META.FAILED.color,
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                marginBottom: 8,
+              }}
+            >
+              FAIL TRANSACTION REASON
+            </div>
+            <textarea
+              value={failReason}
+              onChange={(e) => setFailReason(e.target.value)}
+              placeholder="Enter failure reason..."
+              style={{
+                width: "100%",
+                height: 72,
+                background: BG1,
+                border: `1px solid ${BORDER}`,
+                color: "#fff",
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 11,
+                padding: "8px 10px",
+                resize: "none",
+                outline: "none",
+                marginBottom: 12,
+                boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                disabled={!failReason.trim()}
+                onClick={() => {
+                  alert(`⬡ SOROBAN: fail_transaction(tx_id: "${tx.id}", reason: "${failReason.trim()}")`);
+                  setShowFailPrompt(false);
+                  setFailReason("");
+                }}
+                style={{
+                  flex: 1,
+                  padding: "9px 12px",
+                  background: failReason.trim() ? STATUS_META.FAILED.color : "transparent",
+                  border: `1px solid ${STATUS_META.FAILED.color}`,
+                  color: failReason.trim() ? "#000" : STATUS_META.FAILED.color,
+                  opacity: failReason.trim() ? 1 : 0.4,
+                  cursor: failReason.trim() ? "pointer" : "not-allowed",
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: "0.06em",
+                  transition: "all 0.15s",
+                }}
+              >
+                SUBMIT FAILURE
+              </button>
+              <button
+                onClick={() => {
+                  setShowFailPrompt(false);
+                  setFailReason("");
+                }}
+                style={{
+                  flex: 1,
+                  padding: "9px 12px",
+                  background: "transparent",
+                  border: `1px solid ${DIM}`,
+                  color: DIM,
+                  cursor: "pointer",
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: "0.06em",
+                  transition: "all 0.15s",
+                }}
+              >
+                CANCEL
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <ActionButton
+              label="START PROCESSING"
+              color={STATUS_META.PROCESSING.color}
+              onClick={() => alert(`⬡ SOROBAN: start_processing(tx_id: "${tx.id}")`)}
+            />
+            <ActionButton
+              label="COMPLETE"
+              color={STATUS_META.COMPLETED.color}
+              onClick={() => alert(`⬡ SOROBAN: complete_transaction(tx_id: "${tx.id}")`)}
+            />
+            <ActionButton
+              label="FAIL"
+              color={STATUS_META.FAILED.color}
+              onClick={() => setShowFailPrompt(true)}
+            />
+            <ActionButton
+              label="DUPLICATE?"
+              color={AMBER}
+              onClick={() => alert(`⬡ SOROBAN: is_duplicate(tx_id: "${tx.id}")`)}
+            />
+          </div>
+        )}
 
         <SorobanTip>
           get_transaction(tx_id) → full Transaction struct; actions require relay_signer signing
