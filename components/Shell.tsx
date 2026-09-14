@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { DashboardTab } from "./dashboard/DashboardTab";
 import { TransactionsTab } from "./transactions/TransactionsTab";
 import { AdminTab } from "./admin/AdminTab";

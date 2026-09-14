@@ -6,7 +6,7 @@ import { Panel } from "@/components/ui/Panel";
 import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
-import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
+import { AMBER, BG3, BORDER } from "@/lib/constants";
 import { MOCK_TXS } from "@/lib/mock-data";
 import type { Transaction } from "@/lib/types";
 
