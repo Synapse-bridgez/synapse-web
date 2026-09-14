@@ -25,6 +25,7 @@ export function Shell() {
             SYNAPSE
           </span>
           <span
+            aria-hidden="true"
             style={{
               width: 9,
               height: 9,
@@ -52,6 +53,7 @@ export function Shell() {
             TESTNET
           </span>
           <span
+            aria-hidden="true"
             style={{
               width: 8,
               height: 8,
@@ -89,10 +91,12 @@ export function Shell() {
       </header>
 
       {/* ── Tab Bar ── */}
-      <nav className="shell-nav">
+      <nav className="shell-nav" role="tablist" aria-label="Sections">
         {TABS.map((t) => (
           <button
             key={t}
+            role="tab"
+            aria-selected={tab === t}
             onClick={() => setTab(t)}
             style={{
               padding: "12px 22px",
