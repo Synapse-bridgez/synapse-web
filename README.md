@@ -1,14 +1,17 @@
 # Synapse Core
 
 A Soroban transaction-lifecycle dashboard built with Next.js 16 and React 19.
-Synapse Core lets you inspect, trace, and (eventually) drive transactions through
-a Soroban smart contract deployed on Stellar Testnet — from registration through
+Synapse Core lets you inspect, trace, and drive transactions through a Soroban
+smart contract deployed on Stellar Testnet — from registration through
 completion or failure.
 
-> **Current state: static mock, no backend yet.**
-> All data is served from `lib/mock-data.ts`. Wallet connection and on-chain calls
-> are stubbed with `alert()` placeholders. Real Soroban RPC integration is tracked
-> in the open issues below.
+> **Current state: real wallet + contract calls, mock data as fallback.**
+> Connect a Freighter or xBull wallet and every action (admin functions, transaction
+> lifecycle actions, callback registration, diagnostics) submits a real signed
+> transaction or read-only simulation against `NEXT_PUBLIC_CONTRACT_ID`. Without a
+> connected wallet or a configured contract, the dashboard and transaction list fall
+> back to `lib/mock-data.ts` so the UI is still explorable. A standalone backend relay
+> service is still tracked in the open issues below.
 
 ---
 
@@ -48,24 +51,37 @@ synapse-web/
 │       ├── TabErrorBoundary.tsx
 │       └── Toast.tsx
 ├── lib/
-│   ├── mock-data.ts        # ← mock entry point: MOCK_TXS + MOCK_CONTRACT_INFO
+│   ├── mock-data.ts        # Fallback data: MOCK_TXS + MOCK_CONTRACT_INFO
 │   ├── types.ts            # Transaction, ContractInfo, TxStatus, CallbackPayload
 │   ├── constants.ts        # STATUS_META, colour tokens, ABI_ENDPOINTS
-│   └── utils.ts            # Shared helpers (cn, etc.)
+│   ├── utils.ts            # Shared helpers (shortId, elapsed, formatAmount)
+│   ├── wallet/
+│   │   ├── kit.ts              # StellarWalletsKit init (Freighter + xBull)
+│   │   ├── storage.ts          # Selected-wallet-id localStorage helpers
+│   │   └── WalletProvider.tsx  # useWallet() context: address/connect/disconnect
+│   └── soroban/
+│       ├── args.ts               # addressArg/stringArg/structArg ScVal encoders
+│       ├── contract.ts           # invokeContract / simulateContractCall
+│       ├── events.ts             # RPC event poller (TransactionRegistered/StatusChanged)
+│       ├── SorobanProvider.tsx   # useSorobanEvents()/useSorobanHealth() context
+│       ├── transactionMerge.ts   # Merges mock baseline with live events
+│       ├── useLiveTransactions.ts
+│       └── useLiveContractInfo.ts
 └── public/                 # Static assets
 ```
 
-### Mock-data entry point
+### Mock data as fallback
 
-`lib/mock-data.ts` exports two objects consumed by every tab:
+`lib/mock-data.ts` exports the baseline data every tab renders when no wallet is
+connected or `NEXT_PUBLIC_CONTRACT_ID` isn't configured:
 
-| Export               | Used by                                                           |
-| -------------------- | ----------------------------------------------------------------- |
-| `MOCK_TXS`           | DashboardTab, TransactionsTab (stat cards, pipeline, tables)      |
-| `MOCK_CONTRACT_INFO` | ContractInfoPanel (address, admin, relay_signer, health, version) |
+| Export               | Used by                                                                        |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `MOCK_TXS`           | `useLiveTransactions` baseline (stat cards, pipeline, tables)                  |
+| `MOCK_CONTRACT_INFO` | `useLiveContractInfo` baseline (address, admin, relay_signer, health, version) |
 
-To add a transaction, append an entry to the `MOCK_TXS` array. Status must be
-one of `"PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"`.
+Once a wallet is connected and a contract is configured, live RPC events and reads
+take over — see `lib/soroban/transactionMerge.ts` and `lib/soroban/useLiveContractInfo.ts`.
 
 ---
 
@@ -77,13 +93,17 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The app starts on the
-**dashboard** tab showing mock data.
+**dashboard** tab showing mock data. Connect a Freighter or xBull wallet and set
+`NEXT_PUBLIC_CONTRACT_ID` (plus optionally `NEXT_PUBLIC_SOROBAN_RPC_URL`) to switch
+to live contract data instead.
 
 Other scripts:
 
 ```bash
 npm run build        # Production build
 npm run lint         # ESLint
+npm run test         # Run the test suite once
+npm run test:watch   # Run the test suite in watch mode
 npm run format       # Prettier (writes)
 npm run format:check # Prettier (CI check)
 npx tsc --noEmit     # Type-check without emitting
@@ -102,29 +122,35 @@ npx tsc --noEmit     # Type-check without emitting
 
 ## Roadmap / open issues
 
-Real Soroban RPC integration, wallet wiring, and backend work are tracked in the
-upstream repo's issue tracker:
+Remaining backend and contract-ABI work is tracked in the upstream repo's issue
+tracker:
 
 - [Synapse-bridgez/synapse-web — open issues](https://github.com/Synapse-bridgez/synapse-web/issues)
 
 Notable milestones on the path to a working testnet client:
 
-- Replace `alert()` stubs in `AdminTab` with real `TransactionBuilder` + sign + submit calls
-- Wire `MOCK_TXS` / `MOCK_CONTRACT_INFO` to live `SorobanRpc.Server` reads
-- Integrate `@creit-tech/stellar-wallets-kit` (Freighter / xBull) for wallet connection
-- Backend relay service for `register_transaction`, `start_processing`, `complete_transaction`,
-  `fail_transaction`, and `register_callback` webhooks
+- [x] Replace `alert()` stubs across `AdminTab`, `TxDetailModal`, and `TransactionsTab` with real
+      `TransactionBuilder` + sign + submit calls (`lib/soroban/contract.ts`)
+- [x] Wire `MOCK_TXS` / `MOCK_CONTRACT_INFO` to live `rpc.Server` reads (`useLiveTransactions`,
+      `useLiveContractInfo`), falling back to mock data when no wallet/contract is configured
+- [x] Integrate `@creit.tech/stellar-wallets-kit` (Freighter / xBull) for wallet connection
+      (`lib/wallet/`)
+- [ ] Backend relay service for `register_transaction`, `start_processing`, `complete_transaction`,
+      `fail_transaction`, and `register_callback` webhooks
+- [ ] Fetch `admin` / `relay_signer` from the deployed contract once it exposes a getter for them
+      (currently sourced from `lib/mock-data.ts` / env, since the ABI has none)
 
 ---
 
 ## Tech stack
 
-|                |                                           |
-| -------------- | ----------------------------------------- |
-| Framework      | Next.js 16 (App Router)                   |
-| UI             | React 19, inline styles + Tailwind CSS v4 |
-| Font           | IBM Plex Mono                             |
-| Language       | TypeScript 5                              |
-| Linting        | ESLint + Prettier + Husky pre-commit      |
-| CI             | GitHub Actions (lint → typecheck → build) |
-| Target network | Stellar Testnet (Soroban)                 |
+|                |                                                  |
+| -------------- | ------------------------------------------------ |
+| Framework      | Next.js 16 (App Router)                          |
+| UI             | React 19, inline styles + Tailwind CSS v4        |
+| Font           | IBM Plex Mono                                    |
+| Language       | TypeScript 5                                     |
+| Linting        | ESLint + Prettier + Husky pre-commit             |
+| Testing        | Vitest + Testing Library                         |
+| CI             | GitHub Actions (lint → typecheck → test → build) |
+| Target network | Stellar Testnet (Soroban)                        |
