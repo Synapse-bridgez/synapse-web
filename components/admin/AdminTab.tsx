@@ -1,11 +1,19 @@
 "use client";
 import { useState } from "react";
+import { scValToNative } from "@stellar/stellar-sdk";
 import { Panel } from "@/components/ui/Panel";
 import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
+import { useWallet } from "@/lib/wallet/WalletProvider";
+import { addressArg, invokeContract, simulateContractCall } from "@/lib/soroban/contract";
+import { shortId } from "@/lib/utils";
 import { AMBER, BORDER, DIM, STATUS_META } from "@/lib/constants";
+
+const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
+const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,6 +130,49 @@ function AdminCard({
 // ---------------------------------------------------------------------------
 
 export function AdminTab() {
+  const { address, connect } = useWallet();
+  const { toast } = useToast();
+
+  async function runAdminCall(method: string, args: ReturnType<typeof addressArg>[]) {
+    if (!CONTRACT_ID) {
+      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+      return;
+    }
+    if (!address) {
+      toast("Connect a wallet before submitting admin transactions", "error");
+      await connect();
+      return;
+    }
+    try {
+      const result = await invokeContract(RPC_URL, CONTRACT_ID, address, method, args);
+      toast(
+        `${method}() ${result.status === "SUCCESS" ? "succeeded" : "failed"} · tx ${shortId(result.hash)}`,
+        result.status === "SUCCESS" ? "success" : "error"
+      );
+    } catch (err) {
+      toast(err instanceof Error ? err.message : `${method}() failed`, "error");
+    }
+  }
+
+  async function runDiagnostic(method: string) {
+    if (!CONTRACT_ID) {
+      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+      return;
+    }
+    if (!address) {
+      toast("Connect a wallet to run read-only diagnostics", "error");
+      await connect();
+      return;
+    }
+    try {
+      const simulated = await simulateContractCall(RPC_URL, CONTRACT_ID, address, method);
+      const value = simulated.result ? scValToNative(simulated.result.retval) : undefined;
+      toast(`${method}() → ${JSON.stringify(value)}`, "info");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : `${method}() failed`, "error");
+    }
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="animate-fade-in">
       {/* Warning banner */}
@@ -154,7 +205,7 @@ export function AdminTab() {
         ]}
         btnLabel="INITIALIZE →"
         onSubmit={(v) =>
-          alert(`⬡ SOROBAN: initialize(admin: "${v.admin}", relay_signer: "${v.relay_signer}")`)
+          runAdminCall("initialize", [addressArg(v.admin ?? ""), addressArg(v.relay_signer ?? "")])
         }
       />
 
@@ -174,7 +225,7 @@ export function AdminTab() {
           retypeKey: "new_admin",
           accentColor: STATUS_META.FAILED.color,
         }}
-        onSubmit={(v) => alert(`⬡ SOROBAN: transfer_admin(new_admin: "${v.new_admin}")`)}
+        onSubmit={(v) => runAdminCall("transfer_admin", [addressArg(v.new_admin ?? "")])}
       />
 
       {/* Set relay signer — gated confirm (no retype required) */}
@@ -194,16 +245,14 @@ export function AdminTab() {
             "Confirm only if you have the new signer ready.",
           accentColor: STATUS_META.PROCESSING.color,
         }}
-        onSubmit={(v) => alert(`⬡ SOROBAN: set_relay_signer(new_signer: "${v.new_signer}")`)}
+        onSubmit={(v) => runAdminCall("set_relay_signer", [addressArg(v.new_signer ?? "")])}
       />
 
       {/* Diagnostics */}
       <Panel title="DIAGNOSTICS">
         <div style={{ display: "flex", gap: 10 }}>
           <button
-            onClick={() =>
-              alert("⬡ SOROBAN: health() → read-only simulation, returns health string")
-            }
+            onClick={() => runDiagnostic("health")}
             style={{
               flex: 1,
               padding: "10px 0",
@@ -227,9 +276,7 @@ export function AdminTab() {
             health()
           </button>
           <button
-            onClick={() =>
-              alert("⬡ SOROBAN: version() → read-only simulation, returns semver string")
-            }
+            onClick={() => runDiagnostic("version")}
             style={{
               flex: 1,
               padding: "10px 0",
@@ -254,7 +301,7 @@ export function AdminTab() {
           </button>
         </div>
         <SorobanTip>
-          health() + version() → read-only simulations via SorobanRpc.Server; no signing required
+          health() + version() → read-only simulations via rpc.Server; no signing required
         </SorobanTip>
       </Panel>
     </div>
