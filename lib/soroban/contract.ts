@@ -1,33 +1,20 @@
 import {
-  Address,
   BASE_FEE,
   Contract,
   TransactionBuilder,
-  nativeToScVal,
   rpc,
   xdr,
   type Transaction,
 } from "@stellar/stellar-sdk";
 import { StellarWalletsKit } from "@/lib/wallet/kit";
 
+export { addressArg, stringArg, structArg } from "./args";
+
 const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 
 export interface ContractCallResult {
   status: "SUCCESS" | "FAILED";
   hash: string;
-}
-
-export function addressArg(value: string) {
-  return new Address(value).toScVal();
-}
-
-export function stringArg(value: string) {
-  return nativeToScVal(value, { type: "string" });
-}
-
-/** Encodes a plain object as an ScVal map — used for #[contracttype] struct arguments. */
-export function structArg(value: Record<string, unknown>) {
-  return nativeToScVal(value);
 }
 
 /**
