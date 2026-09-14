@@ -97,6 +97,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={() => removeToast(t.id)}
+                aria-label="Dismiss notification"
                 style={{
                   background: "none",
                   border: "none",

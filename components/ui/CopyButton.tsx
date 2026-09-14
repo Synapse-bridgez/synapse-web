@@ -15,8 +15,9 @@ export function CopyButton({ value, label = "Value", style }: CopyButtonProps) {
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering row clicks / modal closures
     if (!value) return;
-    
-    navigator.clipboard.writeText(value)
+
+    navigator.clipboard
+      .writeText(value)
       .then(() => {
         toast(`${label} copied to clipboard`, "success");
       })
@@ -30,6 +31,7 @@ export function CopyButton({ value, label = "Value", style }: CopyButtonProps) {
     <button
       onClick={handleCopy}
       title={`Copy ${label}`}
+      aria-label={`Copy ${label}`}
       style={{
         background: "none",
         border: "none",

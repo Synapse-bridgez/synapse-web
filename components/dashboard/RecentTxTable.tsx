@@ -74,7 +74,9 @@ const RecentTxRow = memo(function RecentTxRow({ tx, onSelect }: RecentTxRowProps
       <td style={CELL_STYLE}>
         <Badge status={tx.status} />
       </td>
-      <td style={AGE_STYLE}>{elapsed(tx.timestamp)}</td>
+      <td style={AGE_STYLE} suppressHydrationWarning>
+        {elapsed(tx.timestamp)}
+      </td>
     </tr>
   );
 }, hasSameRenderedData);
