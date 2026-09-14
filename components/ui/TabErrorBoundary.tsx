@@ -1,7 +1,7 @@
 "use client";
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { AMBER, BG1, BG2, BORDER, DIM } from "@/lib/constants";
+import { AMBER, BG1, BG2, BORDER, DIM, MONO } from "@/lib/constants";
 
 type Props = {
   children: ReactNode;
@@ -80,7 +80,7 @@ export class TabErrorBoundary extends Component<Props, State> {
                 border: "none",
                 cursor: "pointer",
                 fontWeight: 700,
-                fontFamily: "'IBM Plex Mono', monospace",
+                fontFamily: MONO,
                 letterSpacing: "0.08em",
               }}
             >

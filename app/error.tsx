@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { AMBER, BG1, BG2, BORDER, DIM } from "@/lib/constants";
+import { AMBER, BG1, BG2, BORDER, DIM, MONO } from "@/lib/constants";
 
 export default function GlobalError({
   error,
@@ -69,7 +69,7 @@ export default function GlobalError({
             border: "none",
             cursor: "pointer",
             fontWeight: 700,
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: MONO,
             letterSpacing: "0.08em",
           }}
         >

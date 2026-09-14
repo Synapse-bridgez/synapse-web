@@ -36,6 +36,19 @@ export const BG3 = "#1A1E26";
 export const BORDER = "rgba(245,166,35,0.15)";
 export const DIM = "rgba(255,255,255,0.35)";
 
+/**
+ * The app's monospace stack.
+ *
+ * The variable is defined by `next/font` in `app/layout.tsx`, which self-hosts
+ * the face and generates its own family name — so the literal string
+ * "IBM Plex Mono" no longer resolves to anything and must not be used.
+ *
+ * Form controls do not inherit `font-family` from `body`, so buttons, inputs
+ * and selects still need this applied explicitly rather than relying on the
+ * cascade.
+ */
+export const MONO = "var(--font-ibm-plex-mono), monospace";
+
 export const ABI_ENDPOINTS = [
   {
     name: "initialize",

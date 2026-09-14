@@ -1,5 +1,5 @@
 "use client";
-import { BG2, BORDER, DIM } from "@/lib/constants";
+import { BG2, BORDER, DIM, MONO } from "@/lib/constants";
 import type { CSSProperties, ReactNode } from "react";
 
 interface PanelProps {
@@ -40,7 +40,7 @@ export function Panel({ title, children, style, accentColor }: PanelProps) {
             fontSize: 9,
             letterSpacing: "0.14em",
             color: DIM,
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: MONO,
             marginBottom: 12,
           }}
         >
