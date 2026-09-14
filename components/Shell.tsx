@@ -1,20 +1,37 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DashboardTab } from "./dashboard/DashboardTab";
 import { TransactionsTab } from "./transactions/TransactionsTab";
 import { AdminTab } from "./admin/AdminTab";
 import { DocsTab } from "./docs/DocsTab";
 import { TabErrorBoundary } from "@/components/ui/TabErrorBoundary";
-import { AMBER, BG1, BORDER, DIM, STATUS_META } from "@/lib/constants";
+import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
+import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useToast } from "@/components/ui/Toast";
+import { shortId } from "@/lib/utils";
 
 type Tab = "dashboard" | "transactions" | "admin" | "docs";
 const TABS: Tab[] = ["dashboard", "transactions", "admin", "docs"];
 
 export function Shell() {
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [connected, setConnected] = useState(false);
   const { status: rpcStatus, lastEventAge, health: rpcHealth } = useSorobanStatus();
+  const { address, connecting, error, connect, disconnect } = useWallet();
+  const connected = address !== null;
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (error) toast(error, "error");
+  }, [error, toast]);
+
+  const prevAddress = useRef<string | null>(null);
+  useEffect(() => {
+    if (address && !prevAddress.current) {
+      toast(`Wallet connected: ${shortId(address)}`, "success");
+    }
+    prevAddress.current = address;
+  }, [address, toast]);
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
@@ -65,18 +82,20 @@ export function Shell() {
             }}
           />
           <button
-            onClick={() => setConnected((v) => !v)}
+            onClick={() => (connected ? disconnect() : connect())}
+            disabled={connecting}
             style={{
               padding: "7px 18px",
               background: connected ? "transparent" : "rgba(245,166,35,0.08)",
               border: `1px solid ${connected ? BORDER : AMBER}`,
               color: connected ? "#aaa" : AMBER,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               fontWeight: 600,
-              cursor: "pointer",
+              cursor: connecting ? "wait" : "pointer",
               letterSpacing: "0.06em",
               transition: "all 0.2s",
+              opacity: connecting ? 0.6 : 1,
             }}
             onMouseEnter={(e) => {
               if (!connected) e.currentTarget.style.background = "rgba(245,166,35,0.16)";
@@ -85,7 +104,7 @@ export function Shell() {
               if (!connected) e.currentTarget.style.background = "rgba(245,166,35,0.08)";
             }}
           >
-            {connected ? "GMOCK…WALLET" : "connect wallet"}
+            {connecting ? "connecting…" : connected ? shortId(address) : "connect wallet"}
           </button>
         </div>
       </header>
@@ -103,7 +122,7 @@ export function Shell() {
               background: "none",
               border: "none",
               cursor: "pointer",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               letterSpacing: "0.1em",
               color: tab === t ? "#fff" : DIM,

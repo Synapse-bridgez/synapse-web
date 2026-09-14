@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/Badge";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { CopyButton } from "@/components/ui/CopyButton";
+import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import { formatAmount } from "@/lib/utils";
 import { STATUS_META, AMBER, BG1, BG2, BORDER, DIM } from "@/lib/constants";
 import { formatAmount } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
@@ -68,7 +70,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
         >
           <span
             style={{
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               color: AMBER,
               letterSpacing: "0.1em",
@@ -105,7 +107,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
                     padding: "6px 0",
                     fontSize: 10,
                     color: DIM,
-                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontFamily: MONO,
                     width: "28%",
                     verticalAlign: "top",
                   }}
@@ -117,7 +119,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
                     padding: "6px 0 6px 8px",
                     fontSize: 10,
                     color: "#ddd",
-                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontFamily: MONO,
                     wordBreak: "break-all",
                   }}
                 >
@@ -148,7 +150,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
           >
             <div
               style={{
-                fontFamily: "'IBM Plex Mono', monospace",
+                fontFamily: MONO,
                 fontSize: 10,
                 color: STATUS_META.FAILED.color,
                 fontWeight: 600,
@@ -168,7 +170,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
                 background: BG1,
                 border: `1px solid ${BORDER}`,
                 color: "#fff",
-                fontFamily: "'IBM Plex Mono', monospace",
+                fontFamily: MONO,
                 fontSize: 11,
                 padding: "8px 10px",
                 resize: "none",
@@ -195,7 +197,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
                   color: failReason.trim() ? "#000" : STATUS_META.FAILED.color,
                   opacity: failReason.trim() ? 1 : 0.4,
                   cursor: failReason.trim() ? "pointer" : "not-allowed",
-                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontFamily: MONO,
                   fontSize: 10,
                   fontWeight: 600,
                   letterSpacing: "0.06em",
@@ -216,7 +218,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
                   border: `1px solid ${DIM}`,
                   color: DIM,
                   cursor: "pointer",
-                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontFamily: MONO,
                   fontSize: 10,
                   fontWeight: 600,
                   letterSpacing: "0.06em",

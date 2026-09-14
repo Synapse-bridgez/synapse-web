@@ -2,7 +2,7 @@
 import { memo, useState, type CSSProperties } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { CopyButton } from "@/components/ui/CopyButton";
-import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
+import { AMBER, BG3, BORDER, DIM, MONO } from "@/lib/constants";
 import { shortId, elapsed, formatAmount } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
@@ -24,14 +24,14 @@ const FLEX_CELL_STYLE: CSSProperties = { display: "flex", alignItems: "center" }
 const ID_STYLE: CSSProperties = {
   fontSize: 10,
   color: AMBER,
-  fontFamily: "'IBM Plex Mono', monospace",
+  fontFamily: MONO,
 };
 const COPY_BUTTON_STYLE: CSSProperties = { marginLeft: 4 };
 const ASSET_STYLE: CSSProperties = {
   ...CELL_STYLE,
   fontSize: 10,
   color: "#ccc",
-  fontFamily: "'IBM Plex Mono', monospace",
+  fontFamily: MONO,
 };
 const AMOUNT_STYLE: CSSProperties = { ...ASSET_STYLE, color: "#fff" };
 const ADDRESS_STYLE: CSSProperties = { ...ID_STYLE, color: DIM };
@@ -112,28 +112,47 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
   const pageTxs = txs.slice(start, start + PAGE_SIZE);
 
   return (
-    <div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-          <thead>
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+        <thead>
+          <tr>
+            {HEADERS.map((header) => (
+              <th
+                key={header}
+                style={{
+                  padding: "4px 8px 10px",
+                  fontSize: 9,
+                  letterSpacing: "0.1em",
+                  color: DIM,
+                  fontFamily: MONO,
+                  textAlign: "left",
+                  borderBottom: `1px solid ${BORDER}`,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {txs.map((tx) => (
+            <TxRow key={tx.id} tx={tx} onSelect={onSelect} />
+          ))}
+          {txs.length === 0 && (
             <tr>
-              {HEADERS.map((header) => (
-                <th
-                  key={header}
-                  style={{
-                    padding: "4px 8px 10px",
-                    fontSize: 9,
-                    letterSpacing: "0.1em",
-                    color: DIM,
-                    fontFamily: "'IBM Plex Mono', monospace",
-                    textAlign: "left",
-                    borderBottom: `1px solid ${BORDER}`,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {header}
-                </th>
-              ))}
+              <td
+                colSpan={8}
+                style={{
+                  padding: 24,
+                  textAlign: "center",
+                  color: DIM,
+                  fontFamily: MONO,
+                  fontSize: 11,
+                }}
+              >
+                no transactions match filter
+              </td>
             </tr>
           </thead>
           <tbody>

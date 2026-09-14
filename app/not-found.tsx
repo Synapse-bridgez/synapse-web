@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AMBER, BG1, BG2, BORDER, DIM } from "@/lib/constants";
+import { AMBER, BG1, BG2, BORDER, DIM, MONO } from "@/lib/constants";
 
 export default function NotFound() {
   return (
@@ -57,7 +57,7 @@ export default function NotFound() {
             color: "#0A0B0D",
             textDecoration: "none",
             fontWeight: 700,
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: MONO,
             letterSpacing: "0.08em",
           }}
         >

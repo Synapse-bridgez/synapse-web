@@ -6,7 +6,7 @@ import { Panel } from "@/components/ui/Panel";
 import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
-import { AMBER, BG3, BORDER } from "@/lib/constants";
+import { AMBER, BG3, BORDER, DIM, MONO } from "@/lib/constants";
 import { MOCK_TXS } from "@/lib/mock-data";
 import type { Transaction } from "@/lib/types";
 
@@ -14,8 +14,9 @@ export function TransactionsTab() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [cb, setCb] = useState({ tx_id: "", callback_url: "", secret: "" });
+  const txs = useLiveTransactions();
 
-  const filtered = MOCK_TXS.filter(
+  const filtered = txs.filter(
     (t) =>
       t.id.includes(filter) ||
       t.status.includes(filter.toUpperCase()) ||
@@ -39,7 +40,7 @@ export function TransactionsTab() {
               background: BG3,
               border: `1px solid ${BORDER}`,
               color: "#eee",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 12,
               padding: "9px 12px",
               outline: "none",
@@ -54,7 +55,7 @@ export function TransactionsTab() {
               background: "transparent",
               border: `1px solid ${AMBER}55`,
               color: AMBER,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               cursor: "pointer",
               letterSpacing: "0.06em",
