@@ -5,13 +5,14 @@ import { Pipeline } from "./Pipeline";
 import { ContractInfoPanel } from "./ContractInfoPanel";
 import { RecentTxTable } from "./RecentTxTable";
 import { TxDetailModal } from "@/components/transactions/TxDetailModal";
-import { MOCK_CONTRACT_INFO } from "@/lib/mock-data";
 import { useLiveTransactions } from "@/lib/soroban/useLiveTransactions";
+import { useLiveContractInfo } from "@/lib/soroban/useLiveContractInfo";
 import type { Transaction } from "@/lib/types";
 
 export function DashboardTab() {
   const [selected, setSelected] = useState<Transaction | null>(null);
   const txs = useLiveTransactions();
+  const contractInfo = useLiveContractInfo();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="animate-fade-in">
@@ -19,7 +20,7 @@ export function DashboardTab() {
       <StatCards txs={txs} />
       <Pipeline txs={txs} />
       <div className="dashboard-grid">
-        <ContractInfoPanel info={MOCK_CONTRACT_INFO} />
+        <ContractInfoPanel info={contractInfo} />
         <RecentTxTable txs={txs} onSelect={setSelected} />
       </div>
     </div>
