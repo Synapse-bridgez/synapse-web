@@ -14,8 +14,9 @@ export function TransactionsTab() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [cb, setCb] = useState({ tx_id: "", callback_url: "", secret: "" });
+  const txs = useLiveTransactions();
 
-  const filtered = MOCK_TXS.filter(
+  const filtered = txs.filter(
     (t) =>
       t.id.includes(filter) ||
       t.status.includes(filter.toUpperCase()) ||
