@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { AMBER, BG2, BORDER, DIM, MONO } from "@/lib/constants";
+import { AMBER, BG2, DIM, MONO } from "@/lib/constants";
 
 export interface Toast {
   id: string;

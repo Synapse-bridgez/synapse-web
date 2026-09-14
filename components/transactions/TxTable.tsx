@@ -112,47 +112,28 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
   const pageTxs = txs.slice(start, start + PAGE_SIZE);
 
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-        <thead>
-          <tr>
-            {HEADERS.map((header) => (
-              <th
-                key={header}
-                style={{
-                  padding: "4px 8px 10px",
-                  fontSize: 9,
-                  letterSpacing: "0.1em",
-                  color: DIM,
-                  fontFamily: MONO,
-                  textAlign: "left",
-                  borderBottom: `1px solid ${BORDER}`,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {txs.map((tx) => (
-            <TxRow key={tx.id} tx={tx} onSelect={onSelect} />
-          ))}
-          {txs.length === 0 && (
+    <div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+          <thead>
             <tr>
-              <td
-                colSpan={8}
-                style={{
-                  padding: 24,
-                  textAlign: "center",
-                  color: DIM,
-                  fontFamily: MONO,
-                  fontSize: 11,
-                }}
-              >
-                no transactions match filter
-              </td>
+              {HEADERS.map((header) => (
+                <th
+                  key={header}
+                  style={{
+                    padding: "4px 8px 10px",
+                    fontSize: 9,
+                    letterSpacing: "0.1em",
+                    color: DIM,
+                    fontFamily: MONO,
+                    textAlign: "left",
+                    borderBottom: `1px solid ${BORDER}`,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {header}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -167,7 +148,7 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
                     padding: 24,
                     textAlign: "center",
                     color: DIM,
-                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontFamily: MONO,
                     fontSize: 11,
                   }}
                 >
@@ -200,7 +181,7 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
               color: page === 1 ? DIM : "#ccc",
               cursor: page === 1 ? "not-allowed" : "pointer",
               opacity: page === 1 ? 0.5 : 1,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 10,
               letterSpacing: "0.06em",
             }}
@@ -209,7 +190,7 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
           </button>
           <span
             style={{
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 10,
               color: DIM,
               letterSpacing: "0.06em",
@@ -227,7 +208,7 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
               color: page === totalPages ? DIM : "#ccc",
               cursor: page === totalPages ? "not-allowed" : "pointer",
               opacity: page === totalPages ? 0.5 : 1,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 10,
               letterSpacing: "0.06em",
             }}

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { AMBER, BG2, BG3, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import { BG2, BG3, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { ActionButton } from "./ActionButton";
 
 interface ConfirmDialogProps {

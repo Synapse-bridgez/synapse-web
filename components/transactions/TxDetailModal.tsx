@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/Badge";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { CopyButton } from "@/components/ui/CopyButton";
-import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
-import { formatAmount } from "@/lib/utils";
-import { STATUS_META, AMBER, BG1, BG2, BORDER, DIM } from "@/lib/constants";
+import { useToast } from "@/components/ui/Toast";
+import { useWallet } from "@/lib/wallet/WalletProvider";
+import { invokeContract, simulateContractCall, stringArg } from "@/lib/soroban/contract";
+import { AMBER, BG1, BG2, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { formatAmount, shortId } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
