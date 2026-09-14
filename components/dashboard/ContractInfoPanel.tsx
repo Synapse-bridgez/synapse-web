@@ -1,7 +1,7 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
 import { SorobanTip } from "@/components/ui/SorobanTip";
-import { BORDER, DIM } from "@/lib/constants";
+import { BORDER, DIM, MONO } from "@/lib/constants";
 import type { ContractInfo } from "@/lib/types";
 
 export function ContractInfoPanel({ info }: { info: ContractInfo }) {
@@ -25,7 +25,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
                   padding: "6px 0",
                   fontSize: 11,
                   color: DIM,
-                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontFamily: MONO,
                   width: "38%",
                   verticalAlign: "top",
                 }}
@@ -37,7 +37,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
                   padding: "6px 0 6px 8px",
                   fontSize: 10,
                   color: "#ccc",
-                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontFamily: MONO,
                   textAlign: "right",
                   wordBreak: "break-all",
                   maxWidth: 180,

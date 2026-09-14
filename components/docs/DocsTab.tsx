@@ -1,5 +1,5 @@
 "use client";
-import { ABI_ENDPOINTS, BORDER, DIM, AMBER } from "@/lib/constants";
+import { ABI_ENDPOINTS, AMBER, BORDER, DIM, MONO } from "@/lib/constants";
 
 const ACCESS_COLORS: Record<string, string> = {
   "one-time": "#A78BFA",
@@ -25,7 +25,7 @@ export function DocsTab() {
             fontSize: 9,
             letterSpacing: "0.14em",
             color: DIM,
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: MONO,
             marginBottom: 10,
           }}
         >
@@ -35,7 +35,7 @@ export function DocsTab() {
           style={{
             fontSize: 11,
             color: "rgba(255,255,255,0.55)",
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: MONO,
             lineHeight: 1.75,
             margin: 0,
           }}
@@ -63,7 +63,7 @@ export function DocsTab() {
                 style={{
                   fontSize: 9,
                   color: c,
-                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontFamily: MONO,
                   letterSpacing: "0.08em",
                 }}
               >
@@ -94,7 +94,7 @@ export function DocsTab() {
           <div>
             <div
               style={{
-                fontFamily: "'IBM Plex Mono', monospace",
+                fontFamily: MONO,
                 fontSize: 12,
                 color: AMBER,
                 marginBottom: 4,
@@ -105,7 +105,7 @@ export function DocsTab() {
             </div>
             <div
               style={{
-                fontFamily: "'IBM Plex Mono', monospace",
+                fontFamily: MONO,
                 fontSize: 10,
                 color: "rgba(255,255,255,0.4)",
                 marginBottom: 8,
@@ -116,7 +116,7 @@ export function DocsTab() {
             </div>
             <div
               style={{
-                fontFamily: "'IBM Plex Mono', monospace",
+                fontFamily: MONO,
                 fontSize: 11,
                 color: "rgba(255,255,255,0.6)",
                 lineHeight: 1.6,
@@ -128,7 +128,7 @@ export function DocsTab() {
           <span
             style={{
               fontSize: 9,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               padding: "3px 10px",
               border: `1px solid ${ACCESS_COLORS[ep.access] ?? "#888"}44`,
               color: ACCESS_COLORS[ep.access] ?? "#888",

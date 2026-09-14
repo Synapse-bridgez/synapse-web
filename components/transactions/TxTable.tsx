@@ -2,7 +2,7 @@
 import { memo, type CSSProperties } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { CopyButton } from "@/components/ui/CopyButton";
-import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
+import { AMBER, BG3, BORDER, DIM, MONO } from "@/lib/constants";
 import { shortId, elapsed, formatAmount } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
@@ -22,14 +22,14 @@ const FLEX_CELL_STYLE: CSSProperties = { display: "flex", alignItems: "center" }
 const ID_STYLE: CSSProperties = {
   fontSize: 10,
   color: AMBER,
-  fontFamily: "'IBM Plex Mono', monospace",
+  fontFamily: MONO,
 };
 const COPY_BUTTON_STYLE: CSSProperties = { marginLeft: 4 };
 const ASSET_STYLE: CSSProperties = {
   ...CELL_STYLE,
   fontSize: 10,
   color: "#ccc",
-  fontFamily: "'IBM Plex Mono', monospace",
+  fontFamily: MONO,
 };
 const AMOUNT_STYLE: CSSProperties = { ...ASSET_STYLE, color: "#fff" };
 const ADDRESS_STYLE: CSSProperties = { ...ID_STYLE, color: DIM };
@@ -109,7 +109,7 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
                   fontSize: 9,
                   letterSpacing: "0.1em",
                   color: DIM,
-                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontFamily: MONO,
                   textAlign: "left",
                   borderBottom: `1px solid ${BORDER}`,
                   whiteSpace: "nowrap",
@@ -132,7 +132,7 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
                   padding: 24,
                   textAlign: "center",
                   color: DIM,
-                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontFamily: MONO,
                   fontSize: 11,
                 }}
               >

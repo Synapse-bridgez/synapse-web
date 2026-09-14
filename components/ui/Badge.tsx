@@ -1,5 +1,5 @@
 "use client";
-import { STATUS_META } from "@/lib/constants";
+import { MONO, STATUS_META } from "@/lib/constants";
 import type { TxStatus } from "@/lib/types";
 
 export function Badge({ status }: { status: TxStatus }) {
@@ -7,7 +7,7 @@ export function Badge({ status }: { status: TxStatus }) {
   return (
     <span
       style={{
-        fontFamily: "'IBM Plex Mono', monospace",
+        fontFamily: MONO,
         fontSize: 10,
         fontWeight: 600,
         letterSpacing: "0.08em",
