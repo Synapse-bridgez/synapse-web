@@ -1,10 +1,12 @@
 "use client";
-import { memo, type CSSProperties } from "react";
+import { memo, useState, type CSSProperties } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
 import { shortId, elapsed, formatAmount } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
+
+const PAGE_SIZE = 15;
 
 interface TxTableProps {
   txs: Transaction[];
@@ -96,52 +98,123 @@ const TxRow = memo(function TxRow({ tx, onSelect }: TxRowProps) {
 }, hasSameRenderedData);
 
 export function TxTable({ txs, onSelect }: TxTableProps) {
+  const [page, setPage] = useState(1);
+  const [knownLength, setKnownLength] = useState(txs.length);
+  if (txs.length !== knownLength) {
+    setKnownLength(txs.length);
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(txs.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const pageTxs = txs.slice(start, start + PAGE_SIZE);
+
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-        <thead>
-          <tr>
-            {HEADERS.map((header) => (
-              <th
-                key={header}
-                style={{
-                  padding: "4px 8px 10px",
-                  fontSize: 9,
-                  letterSpacing: "0.1em",
-                  color: DIM,
-                  fontFamily: "'IBM Plex Mono', monospace",
-                  textAlign: "left",
-                  borderBottom: `1px solid ${BORDER}`,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {txs.map((tx) => (
-            <TxRow key={tx.id} tx={tx} onSelect={onSelect} />
-          ))}
-          {txs.length === 0 && (
+    <div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+          <thead>
             <tr>
-              <td
-                colSpan={8}
-                style={{
-                  padding: 24,
-                  textAlign: "center",
-                  color: DIM,
-                  fontFamily: "'IBM Plex Mono', monospace",
-                  fontSize: 11,
-                }}
-              >
-                no transactions match filter
-              </td>
+              {HEADERS.map((header) => (
+                <th
+                  key={header}
+                  style={{
+                    padding: "4px 8px 10px",
+                    fontSize: 9,
+                    letterSpacing: "0.1em",
+                    color: DIM,
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    textAlign: "left",
+                    borderBottom: `1px solid ${BORDER}`,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {header}
+                </th>
+              ))}
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {pageTxs.map((tx) => (
+              <TxRow key={tx.id} tx={tx} onSelect={onSelect} />
+            ))}
+            {txs.length === 0 && (
+              <tr>
+                <td
+                  colSpan={8}
+                  style={{
+                    padding: 24,
+                    textAlign: "center",
+                    color: DIM,
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: 11,
+                  }}
+                >
+                  no transactions match filter
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {txs.length > PAGE_SIZE && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: 12,
+            paddingTop: 10,
+            borderTop: `1px solid ${BORDER}`,
+          }}
+        >
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{
+              padding: "6px 14px",
+              background: "transparent",
+              border: `1px solid ${BORDER}`,
+              color: page === 1 ? DIM : "#ccc",
+              cursor: page === 1 ? "not-allowed" : "pointer",
+              opacity: page === 1 ? 0.5 : 1,
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 10,
+              letterSpacing: "0.06em",
+            }}
+          >
+            ← PREV
+          </button>
+          <span
+            style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 10,
+              color: DIM,
+              letterSpacing: "0.06em",
+            }}
+          >
+            page {page} of {totalPages} · {txs.length} total
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            style={{
+              padding: "6px 14px",
+              background: "transparent",
+              border: `1px solid ${BORDER}`,
+              color: page === totalPages ? DIM : "#ccc",
+              cursor: page === totalPages ? "not-allowed" : "pointer",
+              opacity: page === totalPages ? 0.5 : 1,
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 10,
+              letterSpacing: "0.06em",
+            }}
+          >
+            NEXT →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
