@@ -46,7 +46,7 @@ export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contr
   const server = new rpc.Server(rpcUrl);
   let cursor: string | null = getStoredCursor();
   let pollTimer: ReturnType<typeof setInterval> | null = null;
-  let health: RpcHealth = {
+  const health: RpcHealth = {
     connected: false,
     lastCheck: 0,
     lastEventTimestamp: null,
