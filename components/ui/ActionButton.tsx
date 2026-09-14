@@ -7,12 +7,14 @@ interface ActionButtonProps {
   color: string;
   onClick: () => void;
   fullWidth?: boolean;
+  disabled?: boolean;
 }
 
-export function ActionButton({ label, color, onClick, fullWidth }: ActionButtonProps) {
+export function ActionButton({ label, color, onClick, fullWidth, disabled }: ActionButtonProps) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       style={{
         flex: fullWidth ? undefined : 1,
         width: fullWidth ? "100%" : undefined,
@@ -28,10 +30,12 @@ export function ActionButton({ label, color, onClick, fullWidth }: ActionButtonP
         transition: "all 0.15s",
       }}
       onMouseEnter={(e) => {
+        if (disabled) return;
         (e.currentTarget as HTMLButtonElement).style.background = color + "22";
         (e.currentTarget as HTMLButtonElement).style.borderColor = color + "99";
       }}
       onMouseLeave={(e) => {
+        if (disabled) return;
         (e.currentTarget as HTMLButtonElement).style.background = "transparent";
         (e.currentTarget as HTMLButtonElement).style.borderColor = color + "55";
       }}
