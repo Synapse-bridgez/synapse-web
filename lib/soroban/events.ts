@@ -3,7 +3,6 @@ import { rpc } from "@stellar/stellar-sdk";
 const DEFAULT_RPC_URL = "https://soroban-testnet.stellar.org";
 const POLL_INTERVAL_MS = 5000;
 const CURSOR_STORAGE_KEY = "soroban-event-cursor";
-const MAX_RECOVERY_GAP = 50;
 
 export type SorobanEventType = "TransactionRegistered" | "StatusChanged";
 
