@@ -1,13 +1,5 @@
 "use client";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
   createSorobanEventPoller,
   type NormalizedSorobanEvent,
@@ -37,11 +29,7 @@ interface SorobanProviderProps {
   contractId?: string;
 }
 
-export function SorobanProvider({
-  children,
-  rpcUrl,
-  contractId,
-}: SorobanProviderProps) {
+export function SorobanProvider({ children, rpcUrl, contractId }: SorobanProviderProps) {
   const [events, setEvents] = useState<NormalizedSorobanEvent[]>([]);
   const [health, setHealth] = useState<RpcHealth>({
     connected: false,
@@ -49,12 +37,9 @@ export function SorobanProvider({
     lastEventTimestamp: null,
     error: null,
   });
-  const pollerRef = useRef<SorobanEventPoller | null>(null);
+  const [poller] = useState<SorobanEventPoller>(() => createSorobanEventPoller(rpcUrl, contractId));
 
   useEffect(() => {
-    const poller = createSorobanEventPoller(rpcUrl, contractId);
-    pollerRef.current = poller;
-
     const unsubHealth = poller.onHealth(setHealth);
     const unsubEvents = poller.onEvents((newEvents) => {
       setEvents((prev) => {
@@ -69,14 +54,11 @@ export function SorobanProvider({
       poller.stop();
       unsubHealth();
       unsubEvents();
-      pollerRef.current = null;
     };
-  }, [rpcUrl, contractId]);
+  }, [poller]);
 
   return (
-    <SorobanContext.Provider value={{ events, health, poller: pollerRef.current }}>
-      {children}
-    </SorobanContext.Provider>
+    <SorobanContext.Provider value={{ events, health, poller }}>{children}</SorobanContext.Provider>
   );
 }
 
