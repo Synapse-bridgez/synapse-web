@@ -1,5 +1,5 @@
 "use client";
-import { BG3, BORDER, DIM } from "@/lib/constants";
+import { BG3, BORDER, DIM, MONO } from "@/lib/constants";
 
 interface FieldProps {
   label: string;
@@ -16,7 +16,7 @@ export function Field({ label, value, onChange, placeholder, type = "text" }: Fi
         style={{
           fontSize: 9,
           color: DIM,
-          fontFamily: "'IBM Plex Mono', monospace",
+          fontFamily: MONO,
           marginBottom: 4,
         }}
       >
@@ -32,7 +32,7 @@ export function Field({ label, value, onChange, placeholder, type = "text" }: Fi
           background: BG3,
           border: `1px solid ${BORDER}`,
           color: "#eee",
-          fontFamily: "'IBM Plex Mono', monospace",
+          fontFamily: MONO,
           fontSize: 11,
           padding: "7px 10px",
           outline: "none",

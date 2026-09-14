@@ -1,8 +1,24 @@
 import type { Metadata, Viewport } from "next";
+import { IBM_Plex_Mono } from "next/font/google";
 import { AMBER, BG0 } from "@/lib/constants";
 import { ToastProvider } from "@/components/ui/Toast";
 import { SorobanProvider } from "@/lib/soroban/SorobanProvider";
 import "./globals.css";
+
+/**
+ * Self-hosted at build time by next/font, which also emits a preload link and
+ * a size-adjusted fallback. Replaces the render-blocking Google Fonts
+ * `@import` that used to sit at the top of globals.css.
+ *
+ * The weights are the ones the old stylesheet requested; adding more would
+ * ship bytes nothing uses.
+ */
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-ibm-plex-mono",
+});
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -53,7 +69,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={ibmPlexMono.variable}>
       <body className="scanline-overlay">
         <ToastProvider>
           <SorobanProvider rpcUrl={process.env.NEXT_PUBLIC_SOROBAN_RPC_URL} contractId={process.env.NEXT_PUBLIC_CONTRACT_ID}>
