@@ -194,29 +194,3 @@ export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contr
 }
 
 export type SorobanEventPoller = ReturnType<typeof createSorobanEventPoller>;
-
-const CURSOR_RECOVERY_KEY = "soroban-cursor-backup";
-
-export function persistCursor(cursor: string): void {
-  try {
-    localStorage.setItem(CURSOR_STORAGE_KEY, cursor);
-    localStorage.setItem(CURSOR_RECOVERY_KEY, cursor);
-  } catch {}
-}
-
-export function recoverCursor(): string | null {
-  try {
-    return (
-      localStorage.getItem(CURSOR_STORAGE_KEY) ?? localStorage.getItem(CURSOR_RECOVERY_KEY) ?? null
-    );
-  } catch {
-    return null;
-  }
-}
-
-export function clearCursor(): void {
-  try {
-    localStorage.removeItem(CURSOR_STORAGE_KEY);
-    localStorage.removeItem(CURSOR_RECOVERY_KEY);
-  } catch {}
-}

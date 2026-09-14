@@ -10,5 +10,6 @@ Link to issue or reason for the change.
 
 - [ ] `npm run lint` passes
 - [ ] `npx tsc --noEmit` passes
+- [ ] `npm run test` passes
 - [ ] `npm run build` passes
 - [ ] Screenshots attached (if UI changes)
