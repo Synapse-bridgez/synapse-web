@@ -1,5 +1,7 @@
 "use client";
 
+import { MONO } from "@/lib/constants";
+
 interface ActionButtonProps {
   label: string;
   color: string;
@@ -19,7 +21,7 @@ export function ActionButton({ label, color, onClick, fullWidth }: ActionButtonP
         border: `1px solid ${color}55`,
         color,
         cursor: "pointer",
-        fontFamily: "'IBM Plex Mono', monospace",
+        fontFamily: MONO,
         fontSize: 10,
         fontWeight: 600,
         letterSpacing: "0.06em",

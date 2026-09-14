@@ -1,5 +1,5 @@
 "use client";
-import { AMBER } from "@/lib/constants";
+import { AMBER, MONO } from "@/lib/constants";
 
 export function SorobanTip({ children }: { children: React.ReactNode }) {
   return (
@@ -19,7 +19,7 @@ export function SorobanTip({ children }: { children: React.ReactNode }) {
           color: AMBER,
           fontWeight: 700,
           fontSize: 10,
-          fontFamily: "'IBM Plex Mono', monospace",
+          fontFamily: MONO,
           whiteSpace: "nowrap",
           paddingTop: 1,
         }}
@@ -30,7 +30,7 @@ export function SorobanTip({ children }: { children: React.ReactNode }) {
         style={{
           color: "rgba(255,255,255,0.45)",
           fontSize: 11,
-          fontFamily: "'IBM Plex Mono', monospace",
+          fontFamily: MONO,
           lineHeight: 1.6,
         }}
       >

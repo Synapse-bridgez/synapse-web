@@ -5,7 +5,7 @@ import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { AMBER, BORDER, DIM, STATUS_META } from "@/lib/constants";
+import { AMBER, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -121,7 +121,7 @@ export function AdminTab() {
           style={{
             fontSize: 10,
             color: "#EF5350",
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: MONO,
             letterSpacing: "0.06em",
           }}
         >
@@ -196,7 +196,7 @@ export function AdminTab() {
               border: `1px solid ${BORDER}`,
               color: DIM,
               cursor: "pointer",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               transition: "all 0.15s",
             }}
@@ -222,7 +222,7 @@ export function AdminTab() {
               border: `1px solid ${BORDER}`,
               color: DIM,
               cursor: "pointer",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               transition: "all 0.15s",
             }}

@@ -5,7 +5,7 @@ import { TransactionsTab } from "./transactions/TransactionsTab";
 import { AdminTab } from "./admin/AdminTab";
 import { DocsTab } from "./docs/DocsTab";
 import { TabErrorBoundary } from "@/components/ui/TabErrorBoundary";
-import { AMBER, BG1, BORDER, DIM, STATUS_META } from "@/lib/constants";
+import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 
 type Tab = "dashboard" | "transactions" | "admin" | "docs";
@@ -69,7 +69,7 @@ export function Shell() {
               background: connected ? "transparent" : "rgba(245,166,35,0.08)",
               border: `1px solid ${connected ? BORDER : AMBER}`,
               color: connected ? "#aaa" : AMBER,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               fontWeight: 600,
               cursor: "pointer",
@@ -99,7 +99,7 @@ export function Shell() {
               background: "none",
               border: "none",
               cursor: "pointer",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               letterSpacing: "0.1em",
               color: tab === t ? "#fff" : DIM,

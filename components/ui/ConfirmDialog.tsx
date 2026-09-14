@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { AMBER, BG2, BG3, BORDER, DIM, STATUS_META } from "@/lib/constants";
+import { AMBER, BG2, BG3, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { ActionButton } from "./ActionButton";
 
 interface ConfirmDialogProps {
@@ -50,7 +50,7 @@ export function ConfirmDialog({
   }, [onCancel]);
 
   const mono: CSSProperties = {
-    fontFamily: "'IBM Plex Mono', monospace",
+    fontFamily: MONO,
   };
 
   return createPortal(

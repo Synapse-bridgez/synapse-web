@@ -1,7 +1,7 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
 import { SorobanTip } from "@/components/ui/SorobanTip";
-import { STATUS_META, BORDER, DIM } from "@/lib/constants";
+import { BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import type { Transaction, TxStatus } from "@/lib/types";
 
 interface PipelineProps {
@@ -123,7 +123,7 @@ export function Pipeline({ txs }: PipelineProps) {
                       fontSize: 9,
                       letterSpacing: "0.1em",
                       color: active ? m.color : DIM,
-                      fontFamily: "'IBM Plex Mono', monospace",
+                      fontFamily: MONO,
                     }}
                   >
                     {s.label}
@@ -133,7 +133,7 @@ export function Pipeline({ txs }: PipelineProps) {
                       style={{
                         fontSize: 9,
                         color: m.color,
-                        fontFamily: "'IBM Plex Mono', monospace",
+                        fontFamily: MONO,
                         marginTop: 2,
                       }}
                     >
