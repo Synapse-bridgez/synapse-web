@@ -4,28 +4,26 @@ import { useSorobanHealth } from "./SorobanProvider";
 
 export type ConnectionStatus = "connected" | "disconnected" | "error";
 
+function formatAge(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+  return `${Math.floor(seconds / 60)}m ago`;
+}
+
 export function useSorobanStatus() {
   const health = useSorobanHealth();
-  const [lastEventAge, setLastEventAge] = useState<string | null>(null);
+  const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!health.lastEventTimestamp) {
-      setLastEventAge(null);
-      return;
-    }
-    function update() {
-      const seconds = Math.floor((Date.now() - health.lastEventTimestamp) / 1000);
-      if (seconds < 60) {
-        setLastEventAge(`${seconds}s ago`);
-      } else {
-        const minutes = Math.floor(seconds / 60);
-        setLastEventAge(`${minutes}m ago`);
-      }
-    }
-    update();
-    const timer = setInterval(update, 5000);
+    if (!health.lastEventTimestamp) return;
+    const tick = () => setNow(Date.now());
+    tick();
+    const timer = setInterval(tick, 5000);
     return () => clearInterval(timer);
   }, [health.lastEventTimestamp]);
+
+  const lastEventAge =
+    health.lastEventTimestamp && now ? formatAge(now - health.lastEventTimestamp) : null;
 
   const status: ConnectionStatus = health.error
     ? "error"
