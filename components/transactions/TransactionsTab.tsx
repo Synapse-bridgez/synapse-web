@@ -7,15 +7,16 @@ import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
-import { MOCK_TXS } from "@/lib/mock-data";
+import { useLiveTransactions } from "@/lib/soroban/useLiveTransactions";
 import type { Transaction } from "@/lib/types";
 
 export function TransactionsTab() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [cb, setCb] = useState({ tx_id: "", callback_url: "", secret: "" });
+  const txs = useLiveTransactions();
 
-  const filtered = MOCK_TXS.filter(
+  const filtered = txs.filter(
     (t) =>
       t.id.includes(filter) ||
       t.status.includes(filter.toUpperCase()) ||
