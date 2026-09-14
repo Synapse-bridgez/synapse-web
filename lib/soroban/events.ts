@@ -1,7 +1,4 @@
-import {
-  Server,
-  SorobanRpc,
-} from "@stellar/stellar-sdk";
+import { rpc } from "@stellar/stellar-sdk";
 
 const DEFAULT_RPC_URL = "https://soroban-testnet.stellar.org";
 const POLL_INTERVAL_MS = 5000;
@@ -19,7 +16,7 @@ export interface NormalizedSorobanEvent {
   toStatus?: string;
   timestamp: number;
   ledger: number;
-  raw: SorobanRpc.Api.EventResponse;
+  raw: rpc.Api.EventResponse;
 }
 
 export interface RpcHealth {
@@ -45,11 +42,8 @@ function storeCursor(cursor: string): void {
   } catch {}
 }
 
-export function createSorobanEventPoller(
-  rpcUrl: string = DEFAULT_RPC_URL,
-  contractId?: string,
-) {
-  const server = new Server(rpcUrl);
+export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contractId?: string) {
+  const server = new rpc.Server(rpcUrl);
   let cursor: string | null = getStoredCursor();
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let health: RpcHealth = {
@@ -72,17 +66,15 @@ export function createSorobanEventPoller(
     eventListeners.forEach((fn) => fn(events));
   }
 
-  function normalizeEvent(raw: SorobanRpc.Api.EventResponse): NormalizedSorobanEvent | null {
+  function normalizeEvent(raw: rpc.Api.EventResponse): NormalizedSorobanEvent | null {
     try {
       const topics = raw.topic ?? [];
       const typeStr = topics[0]?.toString() ?? "";
-      const timestamp = raw.ledgerClosedAt
-        ? new Date(raw.ledgerClosedAt).getTime()
-        : Date.now();
+      const timestamp = raw.ledgerClosedAt ? new Date(raw.ledgerClosedAt).getTime() : Date.now();
 
       if (typeStr.includes("TransactionRegistered")) {
         return {
-          id: raw.id ?? `${raw.ledger}-${raw.eventIndex}`,
+          id: raw.id,
           type: "TransactionRegistered",
           txId: topics[1]?.toString(),
           timestamp,
@@ -93,7 +85,7 @@ export function createSorobanEventPoller(
 
       if (typeStr.includes("StatusChanged")) {
         return {
-          id: raw.id ?? `${raw.ledger}-${raw.eventIndex}`,
+          id: raw.id,
           type: "StatusChanged",
           txId: topics[1]?.toString(),
           fromStatus: topics[2]?.toString(),
@@ -116,14 +108,13 @@ export function createSorobanEventPoller(
       health.connected = true;
       health.error = null;
 
-      const request: SorobanRpc.GetEventsRequest = {
-        startLedger: 0,
-        filters: contractId
-          ? [{ contractId, type: "contract" }]
-          : undefined,
-        cursor: cursor ?? undefined,
-        limit: 100,
-      };
+      const filters: rpc.Api.EventFilter[] = contractId
+        ? [{ contractIds: [contractId], type: "contract" }]
+        : [];
+
+      const request: rpc.Api.GetEventsRequest = cursor
+        ? { filters, cursor, limit: 100 }
+        : { filters, startLedger: (await server.getLatestLedger()).sequence, limit: 100 };
 
       const response = await server.getEvents(request);
 
@@ -134,12 +125,10 @@ export function createSorobanEventPoller(
           if (n) normalized.push(n);
         }
 
-        if (normalized.length > 0) {
-          const lastEvent = response.events[response.events.length - 1];
-          if (lastEvent.id) {
-            cursor = lastEvent.id;
-            storeCursor(cursor);
-          }
+        const lastEvent = response.events[response.events.length - 1];
+        if (lastEvent) {
+          cursor = lastEvent.id;
+          storeCursor(cursor);
         }
 
         notifyEvents(normalized);
@@ -219,9 +208,7 @@ export function persistCursor(cursor: string): void {
 export function recoverCursor(): string | null {
   try {
     return (
-      localStorage.getItem(CURSOR_STORAGE_KEY) ??
-      localStorage.getItem(CURSOR_RECOVERY_KEY) ??
-      null
+      localStorage.getItem(CURSOR_STORAGE_KEY) ?? localStorage.getItem(CURSOR_RECOVERY_KEY) ?? null
     );
   } catch {
     return null;
