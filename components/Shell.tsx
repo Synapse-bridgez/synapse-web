@@ -5,7 +5,7 @@ import { TransactionsTab } from "./transactions/TransactionsTab";
 import { AdminTab } from "./admin/AdminTab";
 import { DocsTab } from "./docs/DocsTab";
 import { TabErrorBoundary } from "@/components/ui/TabErrorBoundary";
-import { AMBER, BG1, BORDER, DIM, STATUS_META } from "@/lib/constants";
+import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useToast } from "@/components/ui/Toast";
@@ -42,6 +42,7 @@ export function Shell() {
             SYNAPSE
           </span>
           <span
+            aria-hidden="true"
             style={{
               width: 9,
               height: 9,
@@ -69,6 +70,7 @@ export function Shell() {
             TESTNET
           </span>
           <span
+            aria-hidden="true"
             style={{
               width: 8,
               height: 8,
@@ -87,7 +89,7 @@ export function Shell() {
               background: connected ? "transparent" : "rgba(245,166,35,0.08)",
               border: `1px solid ${connected ? BORDER : AMBER}`,
               color: connected ? "#aaa" : AMBER,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               fontWeight: 600,
               cursor: connecting ? "wait" : "pointer",
@@ -108,17 +110,19 @@ export function Shell() {
       </header>
 
       {/* ── Tab Bar ── */}
-      <nav className="shell-nav">
+      <nav className="shell-nav" role="tablist" aria-label="Sections">
         {TABS.map((t) => (
           <button
             key={t}
+            role="tab"
+            aria-selected={tab === t}
             onClick={() => setTab(t)}
             style={{
               padding: "12px 22px",
               background: "none",
               border: "none",
               cursor: "pointer",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               letterSpacing: "0.1em",
               color: tab === t ? "#fff" : DIM,

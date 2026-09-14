@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { AMBER, BG2, BORDER, DIM } from "@/lib/constants";
+import { AMBER, BG2, BORDER, DIM, MONO } from "@/lib/constants";
 
 export interface Toast {
   id: string;
@@ -83,7 +83,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 alignItems: "center",
                 gap: 10,
                 color: "#fff",
-                fontFamily: "'IBM Plex Mono', monospace",
+                fontFamily: MONO,
                 fontSize: 11,
                 minWidth: 260,
                 pointerEvents: "auto",
@@ -97,6 +97,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={() => removeToast(t.id)}
+                aria-label="Dismiss notification"
                 style={{
                   background: "none",
                   border: "none",

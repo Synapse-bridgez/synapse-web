@@ -1,6 +1,6 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
-import { STATUS_META, DIM, NEUTRAL } from "@/lib/constants";
+import { DIM, MONO, NEUTRAL, STATUS_META } from "@/lib/constants";
 import type { Transaction } from "@/lib/types";
 
 interface StatCardsProps {
@@ -44,7 +44,7 @@ export function StatCards({ txs }: StatCardsProps) {
               fontSize: 9,
               letterSpacing: "0.14em",
               color: DIM,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               marginBottom: 8,
             }}
           >
@@ -54,7 +54,7 @@ export function StatCards({ txs }: StatCardsProps) {
             style={{
               fontSize: 28,
               fontWeight: 700,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               color: c.color,
               lineHeight: 1,
               marginBottom: 4,
@@ -62,7 +62,7 @@ export function StatCards({ txs }: StatCardsProps) {
           >
             {c.value}
           </div>
-          <div style={{ fontSize: 10, color: DIM, fontFamily: "'IBM Plex Mono', monospace" }}>
+          <div style={{ fontSize: 10, color: DIM, fontFamily: MONO }}>
             {c.sub}
           </div>
         </Panel>

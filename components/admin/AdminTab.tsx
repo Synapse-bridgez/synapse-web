@@ -6,11 +6,7 @@ import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { useToast } from "@/components/ui/Toast";
-import { useWallet } from "@/lib/wallet/WalletProvider";
-import { addressArg, invokeContract, simulateContractCall } from "@/lib/soroban/contract";
-import { shortId } from "@/lib/utils";
-import { AMBER, BORDER, DIM, STATUS_META } from "@/lib/constants";
+import { AMBER, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
@@ -192,7 +188,7 @@ export function AdminTab() {
           style={{
             fontSize: 10,
             color: "#EF5350",
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: MONO,
             letterSpacing: "0.06em",
           }}
         >
@@ -263,7 +259,7 @@ export function AdminTab() {
               border: `1px solid ${BORDER}`,
               color: DIM,
               cursor: "pointer",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               transition: "all 0.15s",
             }}
@@ -287,7 +283,7 @@ export function AdminTab() {
               border: `1px solid ${BORDER}`,
               color: DIM,
               cursor: "pointer",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               transition: "all 0.15s",
             }}

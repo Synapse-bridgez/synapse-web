@@ -7,12 +7,8 @@ import { Panel } from "@/components/ui/Panel";
 import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
-import { useToast } from "@/components/ui/Toast";
-import { useWallet } from "@/lib/wallet/WalletProvider";
-import { invokeContract, simulateContractCall, stringArg, structArg } from "@/lib/soroban/contract";
-import { AMBER, BG3, BORDER, DIM } from "@/lib/constants";
-import { useLiveTransactions } from "@/lib/soroban/useLiveTransactions";
-import { shortId } from "@/lib/utils";
+import { AMBER, BG3, BORDER, DIM, MONO } from "@/lib/constants";
+import { MOCK_TXS } from "@/lib/mock-data";
 import type { Transaction } from "@/lib/types";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
@@ -122,7 +118,7 @@ export function TransactionsTab() {
               background: BG3,
               border: `1px solid ${BORDER}`,
               color: "#eee",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 12,
               padding: "9px 12px",
               outline: "none",
@@ -138,7 +134,7 @@ export function TransactionsTab() {
               background: "transparent",
               border: `1px solid ${AMBER}55`,
               color: AMBER,
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: MONO,
               fontSize: 11,
               cursor: lookingUp ? "wait" : "pointer",
               opacity: lookingUp ? 0.6 : 1,
