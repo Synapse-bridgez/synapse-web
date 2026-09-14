@@ -3,7 +3,9 @@ import {
   BASE_FEE,
   Contract,
   TransactionBuilder,
+  nativeToScVal,
   rpc,
+  xdr,
   type Transaction,
 } from "@stellar/stellar-sdk";
 import { StellarWalletsKit } from "@/lib/wallet/kit";
@@ -19,6 +21,10 @@ export function addressArg(value: string) {
   return new Address(value).toScVal();
 }
 
+export function stringArg(value: string) {
+  return nativeToScVal(value, { type: "string" });
+}
+
 /**
  * Builds, simulates, signs (via the connected wallet), submits, and polls a
  * Soroban contract invocation to completion.
@@ -28,7 +34,7 @@ export async function invokeContract(
   contractId: string,
   sourceAddress: string,
   method: string,
-  args: ReturnType<typeof addressArg>[] = []
+  args: xdr.ScVal[] = []
 ): Promise<ContractCallResult> {
   const server = new rpc.Server(rpcUrl);
   const account = await server.getAccount(sourceAddress);
@@ -73,7 +79,7 @@ export async function simulateContractCall(
   contractId: string,
   sourceAddress: string,
   method: string,
-  args: ReturnType<typeof addressArg>[] = []
+  args: xdr.ScVal[] = []
 ) {
   const server = new rpc.Server(rpcUrl);
   const account = await server.getAccount(sourceAddress);
