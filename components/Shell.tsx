@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DashboardTab } from "./dashboard/DashboardTab";
 import { TransactionsTab } from "./transactions/TransactionsTab";
 import { AdminTab } from "./admin/AdminTab";
@@ -24,6 +24,14 @@ export function Shell() {
   useEffect(() => {
     if (error) toast(error, "error");
   }, [error, toast]);
+
+  const prevAddress = useRef<string | null>(null);
+  useEffect(() => {
+    if (address && !prevAddress.current) {
+      toast(`Wallet connected: ${shortId(address)}`, "success");
+    }
+    prevAddress.current = address;
+  }, [address, toast]);
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
