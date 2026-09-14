@@ -80,6 +80,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
             <Badge status={tx.status} />
             <button
               onClick={onClose}
+              aria-label="Close"
               style={{
                 background: "none",
                 border: "none",
