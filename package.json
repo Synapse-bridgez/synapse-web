@@ -15,6 +15,7 @@
     "*.{js,jsx,ts,tsx,mjs,json,css,md}": "prettier --write"
   },
   "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "^2.6.0",
     "@stellar/stellar-sdk": "^16.1.0",
     "next": "16.2.6",
     "react": "19.2.4",
