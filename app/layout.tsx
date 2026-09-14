@@ -3,6 +3,7 @@ import { IBM_Plex_Mono } from "next/font/google";
 import { AMBER, BG0 } from "@/lib/constants";
 import { ToastProvider } from "@/components/ui/Toast";
 import { SorobanProvider } from "@/lib/soroban/SorobanProvider";
+import { WalletProvider } from "@/lib/wallet/WalletProvider";
 import "./globals.css";
 
 /**
@@ -72,8 +73,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={ibmPlexMono.variable}>
       <body className="scanline-overlay">
         <ToastProvider>
-          <SorobanProvider rpcUrl={process.env.NEXT_PUBLIC_SOROBAN_RPC_URL} contractId={process.env.NEXT_PUBLIC_CONTRACT_ID}>
-            {children}
+          <SorobanProvider
+            rpcUrl={process.env.NEXT_PUBLIC_SOROBAN_RPC_URL}
+            contractId={process.env.NEXT_PUBLIC_CONTRACT_ID}
+          >
+            <WalletProvider>{children}</WalletProvider>
           </SorobanProvider>
         </ToastProvider>
       </body>
