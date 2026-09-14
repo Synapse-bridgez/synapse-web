@@ -4,9 +4,8 @@ import { Badge } from "@/components/ui/Badge";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { CopyButton } from "@/components/ui/CopyButton";
-import { STATUS_META, AMBER, BG1, BORDER, DIM } from "@/lib/constants";
-import { formatAmount } from "@/lib/utils";
 import { STATUS_META, AMBER, BG1, BG2, BORDER, DIM } from "@/lib/constants";
+import { formatAmount } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
 interface TxDetailModalProps {
@@ -181,7 +180,9 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
               <button
                 disabled={!failReason.trim()}
                 onClick={() => {
-                  alert(`⬡ SOROBAN: fail_transaction(tx_id: "${tx.id}", reason: "${failReason.trim()}")`);
+                  alert(
+                    `⬡ SOROBAN: fail_transaction(tx_id: "${tx.id}", reason: "${failReason.trim()}")`
+                  );
                   setShowFailPrompt(false);
                   setFailReason("");
                 }}
