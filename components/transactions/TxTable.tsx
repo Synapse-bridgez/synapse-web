@@ -92,7 +92,9 @@ const TxRow = memo(function TxRow({ tx, onSelect }: TxRowProps) {
         <Badge status={tx.status} />
       </td>
       <td style={RETRIES_STYLE}>{tx.retries}</td>
-      <td style={AGE_STYLE}>{elapsed(tx.timestamp)}</td>
+      <td style={AGE_STYLE} suppressHydrationWarning>
+        {elapsed(tx.timestamp)}
+      </td>
     </tr>
   );
 }, hasSameRenderedData);
