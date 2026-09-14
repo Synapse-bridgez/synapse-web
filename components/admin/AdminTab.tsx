@@ -41,7 +41,7 @@ function AdminCard({
   title: string;
   tip: string;
   fields: FieldDef[];
-  onSubmit: (vals: Record<string, string>) => void;
+  onSubmit: (vals: Record<string, string>) => void | Promise<void>;
   btnLabel: string;
   btnColor?: string;
   confirm?: ConfirmConfig;
@@ -50,17 +50,27 @@ function AdminCard({
     Object.fromEntries(fields.map((f) => [f.key, ""]))
   );
   const [pendingVals, setPendingVals] = useState<Record<string, string> | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(v: Record<string, string>) {
+    setSubmitting(true);
+    try {
+      await onSubmit(v);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   function handleClick() {
     if (confirm) {
       setPendingVals({ ...vals });
     } else {
-      onSubmit(vals);
+      submit(vals);
     }
   }
 
   function handleConfirm() {
-    if (pendingVals) onSubmit(pendingVals);
+    if (pendingVals) submit(pendingVals);
     setPendingVals(null);
   }
 
@@ -82,7 +92,12 @@ function AdminCard({
           ))}
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <ActionButton label={btnLabel} color={btnColor} onClick={handleClick} />
+          <ActionButton
+            label={submitting ? "SUBMITTING…" : btnLabel}
+            color={btnColor}
+            onClick={handleClick}
+            disabled={submitting}
+          />
         </div>
         <SorobanTip>{tip}</SorobanTip>
       </Panel>
