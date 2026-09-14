@@ -6,7 +6,7 @@ const SELECTED_WALLET_KEY = "synapse-selected-wallet-id";
 
 let initialized = false;
 
-function getStoredWalletId(): string | undefined {
+export function getStoredWalletId(): string | undefined {
   if (typeof window === "undefined") return undefined;
   try {
     return localStorage.getItem(SELECTED_WALLET_KEY) ?? undefined;

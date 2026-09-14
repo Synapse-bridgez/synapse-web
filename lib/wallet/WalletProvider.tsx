@@ -5,6 +5,7 @@ import {
   StellarWalletsKit,
   storeSelectedWalletId,
   clearSelectedWalletId,
+  getStoredWalletId,
 } from "./kit";
 
 interface WalletContextValue {
@@ -34,6 +35,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     ensureWalletKitInitialized();
+    if (!getStoredWalletId()) return;
+
+    let cancelled = false;
+    StellarWalletsKit.getAddress()
+      .then(({ address: restoredAddress }) => {
+        if (!cancelled) setAddress(restoredAddress);
+      })
+      .catch(() => {
+        clearSelectedWalletId();
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const connect = useCallback(async () => {
