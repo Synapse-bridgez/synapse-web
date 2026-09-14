@@ -5,9 +5,11 @@ import { MOCK_TXS } from "@/lib/mock-data";
 import type { Transaction } from "@/lib/types";
 
 /**
- * Merges the mock baseline with live StatusChanged events from the RPC
- * event poller, so status transitions on known transactions animate in
- * real time even before a real contract backs the demo data.
+ * Merges the mock baseline with live events from the RPC event poller:
+ * StatusChanged updates known transactions in place, and
+ * TransactionRegistered inserts a minimal placeholder row for
+ * transactions the mock data doesn't know about (full details are
+ * fetched separately via get_transaction when a wallet is connected).
  */
 export function useLiveTransactions(): Transaction[] {
   const events = useSorobanEvents();
@@ -27,6 +29,22 @@ export function useLiveTransactions(): Transaction[] {
             timestamp: event.timestamp,
           });
         }
+      }
+
+      if (event.type === "TransactionRegistered" && event.txId && !txMap.has(event.txId)) {
+        txMap.set(event.txId, {
+          id: event.txId,
+          asset: "—",
+          amount: 0,
+          status: "PENDING",
+          timestamp: event.timestamp,
+          from: "—",
+          to: "—",
+          memo: "",
+          callback_url: "",
+          retries: 0,
+          created_at: event.timestamp,
+        });
       }
     }
     return Array.from(txMap.values());
