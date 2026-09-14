@@ -133,7 +133,7 @@ export function AdminTab() {
   const { address, connect } = useWallet();
   const { toast } = useToast();
 
-  async function runAdminCall(method: string, args: ReturnType<typeof addressArg>[]) {
+  async function runAdminCall(method: string, addresses: string[]) {
     if (!CONTRACT_ID) {
       toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
       return;
@@ -143,7 +143,12 @@ export function AdminTab() {
       await connect();
       return;
     }
+    if (addresses.some((a) => !a.trim())) {
+      toast("All address fields are required", "error");
+      return;
+    }
     try {
+      const args = addresses.map(addressArg);
       const result = await invokeContract(RPC_URL, CONTRACT_ID, address, method, args);
       toast(
         `${method}() ${result.status === "SUCCESS" ? "succeeded" : "failed"} · tx ${shortId(result.hash)}`,
@@ -204,9 +209,7 @@ export function AdminTab() {
           { label: "relay_signer", key: "relay_signer", placeholder: "G… relay signer address" },
         ]}
         btnLabel="INITIALIZE →"
-        onSubmit={(v) =>
-          runAdminCall("initialize", [addressArg(v.admin ?? ""), addressArg(v.relay_signer ?? "")])
-        }
+        onSubmit={(v) => runAdminCall("initialize", [v.admin ?? "", v.relay_signer ?? ""])}
       />
 
       {/* Transfer admin — requires retype confirmation */}
@@ -225,7 +228,7 @@ export function AdminTab() {
           retypeKey: "new_admin",
           accentColor: STATUS_META.FAILED.color,
         }}
-        onSubmit={(v) => runAdminCall("transfer_admin", [addressArg(v.new_admin ?? "")])}
+        onSubmit={(v) => runAdminCall("transfer_admin", [v.new_admin ?? ""])}
       />
 
       {/* Set relay signer — gated confirm (no retype required) */}
@@ -245,7 +248,7 @@ export function AdminTab() {
             "Confirm only if you have the new signer ready.",
           accentColor: STATUS_META.PROCESSING.color,
         }}
-        onSubmit={(v) => runAdminCall("set_relay_signer", [addressArg(v.new_signer ?? "")])}
+        onSubmit={(v) => runAdminCall("set_relay_signer", [v.new_signer ?? ""])}
       />
 
       {/* Diagnostics */}
