@@ -25,6 +25,11 @@ export function stringArg(value: string) {
   return nativeToScVal(value, { type: "string" });
 }
 
+/** Encodes a plain object as an ScVal map — used for #[contracttype] struct arguments. */
+export function structArg(value: Record<string, unknown>) {
+  return nativeToScVal(value);
+}
+
 /**
  * Builds, simulates, signs (via the connected wallet), submits, and polls a
  * Soroban contract invocation to completion.

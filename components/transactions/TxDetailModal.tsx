@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { scValToNative } from "@stellar/stellar-sdk";
 import { Badge } from "@/components/ui/Badge";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SorobanTip } from "@/components/ui/SorobanTip";
@@ -7,8 +8,11 @@ import { CopyButton } from "@/components/ui/CopyButton";
 import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { formatAmount } from "@/lib/utils";
 import { STATUS_META, AMBER, BG1, BG2, BORDER, DIM } from "@/lib/constants";
-import { formatAmount } from "@/lib/utils";
+import { formatAmount, shortId } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
+
+const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
+const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
 
 interface TxDetailModalProps {
   tx: Transaction;
@@ -18,7 +22,59 @@ interface TxDetailModalProps {
 export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
   const [showFailPrompt, setShowFailPrompt] = useState(false);
   const [failReason, setFailReason] = useState("");
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const { address, connect } = useWallet();
+  const { toast } = useToast();
   const m = STATUS_META[tx.status];
+
+  async function runTxCall(method: string, extraArgs: string[] = []) {
+    if (!CONTRACT_ID) {
+      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+      return;
+    }
+    if (!address) {
+      toast("Connect a wallet before submitting transactions", "error");
+      await connect();
+      return;
+    }
+    setPendingAction(method);
+    try {
+      const args = [stringArg(tx.id), ...extraArgs.map(stringArg)];
+      const result = await invokeContract(RPC_URL, CONTRACT_ID, address, method, args);
+      toast(
+        `${method}() ${result.status === "SUCCESS" ? "succeeded" : "failed"} · tx ${shortId(result.hash)}`,
+        result.status === "SUCCESS" ? "success" : "error"
+      );
+    } catch (err) {
+      toast(err instanceof Error ? err.message : `${method}() failed`, "error");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function runIsDuplicate() {
+    if (!CONTRACT_ID) {
+      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+      return;
+    }
+    if (!address) {
+      toast("Connect a wallet to run this read-only check", "error");
+      await connect();
+      return;
+    }
+    setPendingAction("is_duplicate");
+    try {
+      const simulated = await simulateContractCall(RPC_URL, CONTRACT_ID, address, "is_duplicate", [
+        stringArg(tx.id),
+      ]);
+      const isDuplicate = simulated.result ? scValToNative(simulated.result.retval) : undefined;
+      toast(`is_duplicate(${shortId(tx.id)}) → ${JSON.stringify(isDuplicate)}`, "info");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "is_duplicate() failed", "error");
+    } finally {
+      setPendingAction(null);
+    }
+  }
 
   const fields: [string, string][] = [
     ["id", tx.id],
@@ -181,13 +237,12 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
             />
             <div style={{ display: "flex", gap: 8 }}>
               <button
-                disabled={!failReason.trim()}
-                onClick={() => {
-                  alert(
-                    `⬡ SOROBAN: fail_transaction(tx_id: "${tx.id}", reason: "${failReason.trim()}")`
-                  );
+                disabled={!failReason.trim() || pendingAction === "fail_transaction"}
+                onClick={async () => {
+                  const reason = failReason.trim();
                   setShowFailPrompt(false);
                   setFailReason("");
+                  await runTxCall("fail_transaction", [reason]);
                 }}
                 style={{
                   flex: 1,
@@ -232,24 +287,28 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
         ) : (
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             <ActionButton
-              label="START PROCESSING"
+              label={pendingAction === "start_processing" ? "SUBMITTING…" : "START PROCESSING"}
               color={STATUS_META.PROCESSING.color}
-              onClick={() => alert(`⬡ SOROBAN: start_processing(tx_id: "${tx.id}")`)}
+              disabled={pendingAction !== null}
+              onClick={() => runTxCall("start_processing")}
             />
             <ActionButton
-              label="COMPLETE"
+              label={pendingAction === "complete_transaction" ? "SUBMITTING…" : "COMPLETE"}
               color={STATUS_META.COMPLETED.color}
-              onClick={() => alert(`⬡ SOROBAN: complete_transaction(tx_id: "${tx.id}")`)}
+              disabled={pendingAction !== null}
+              onClick={() => runTxCall("complete_transaction")}
             />
             <ActionButton
               label="FAIL"
               color={STATUS_META.FAILED.color}
+              disabled={pendingAction !== null}
               onClick={() => setShowFailPrompt(true)}
             />
             <ActionButton
-              label="DUPLICATE?"
+              label={pendingAction === "is_duplicate" ? "CHECKING…" : "DUPLICATE?"}
               color={AMBER}
-              onClick={() => alert(`⬡ SOROBAN: is_duplicate(tx_id: "${tx.id}")`)}
+              disabled={pendingAction !== null}
+              onClick={runIsDuplicate}
             />
           </div>
         )}
