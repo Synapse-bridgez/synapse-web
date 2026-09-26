@@ -11,6 +11,7 @@ import { invokeContract, simulateContractCall, stringArg } from "@/lib/soroban/c
 import { AMBER, BG1, BG2, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { formatAmount, shortId } from "@/lib/utils";
 import type { Transaction, TxStatus } from "@/lib/types";
+import { TxReceiptPrintView } from "./TxReceiptPrintView";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
@@ -36,6 +37,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
   // reconciled with the poller-observed tx.status once it catches up.
   const [optimisticStatus, setOptimisticStatus] = useState<TxStatus | null>(null);
   const [optimisticError, setOptimisticError] = useState<string | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
   const { address, connect } = useWallet();
   const { toast } = useToast();
 
@@ -177,6 +179,23 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
               </span>
             )}
             <button
+              onClick={() => setShowReceipt(true)}
+              aria-label="Print receipt"
+              title="Print receipt"
+              style={{
+                background: "none",
+                border: `1px solid ${BORDER}`,
+                color: DIM,
+                cursor: "pointer",
+                fontFamily: MONO,
+                fontSize: 9,
+                letterSpacing: "0.08em",
+                padding: "3px 8px",
+              }}
+            >
+              RECEIPT
+            </button>
+            <button
               onClick={onClose}
               aria-label="Close"
               style={{
@@ -233,137 +252,24 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
                     fontSize: 10,
                     color: "#ddd",
                     fontFamily: MONO,
-                    wordBreak: "break-all",
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
                   }}
                 >
-                  <span style={{ verticalAlign: "middle" }}>{v}</span>
-                  {(k === "id" || k === "from" || k === "to") && (
-                    <CopyButton
-                      value={v}
-                      label={k === "id" ? "Tx ID" : k === "from" ? "From address" : "To address"}
-                      style={{ marginLeft: 6, verticalAlign: "middle" }}
-                    />
-                  )}
+                  {v}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {/* Action buttons */}
-        {showFailPrompt ? (
-          <div
-            style={{
-              marginBottom: 12,
-              padding: 16,
-              background: BG2,
-              border: `1px solid ${STATUS_META.FAILED.color}33`,
-              borderRadius: 4,
-            }}
-          >
-            <div
-              style={{
-                fontFamily: MONO,
-                fontSize: 10,
-                color: STATUS_META.FAILED.color,
-                fontWeight: 600,
-                letterSpacing: "0.06em",
-                marginBottom: 8,
-              }}
-            >
-              FAIL TRANSACTION REASON
-            </div>
-            <textarea
-              value={failReason}
-              onChange={(e) => setFailReason(e.target.value)}
-              placeholder="Enter failure reason..."
-              style={{
-                width: "100%",
-                height: 72,
-                background: BG1,
-                border: `1px solid ${BORDER}`,
-                color: "#fff",
-                fontFamily: MONO,
-                fontSize: 11,
-                padding: "8px 10px",
-                resize: "none",
-                outline: "none",
-                marginBottom: 12,
-                boxSizing: "border-box",
-              }}
-            />
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                disabled={!failReason.trim() || pendingAction === "fail_transaction"}
-                onClick={async () => {
-                  const reason = failReason.trim();
-                  setShowFailPrompt(false);
-                  setFailReason("");
-                  await runTxCall("fail_transaction", [reason]);
-                }}
-                style={{
-                  background: STATUS_META.FAILED.color,
-                  border: "none",
-                  color: "#000",
-                  fontFamily: MONO,
-                  fontSize: 10,
-                  fontWeight: 600,
-                  padding: "6px 12px",
-                  cursor: "pointer",
-                  opacity: !failReason.trim() || pendingAction === "fail_transaction" ? 0.5 : 1,
-                }}
-              >
-                CONFIRM FAIL
-              </button>
-              <button
-                onClick={() => {
-                  setShowFailPrompt(false);
-                  setFailReason("");
-                }}
-                style={{
-                  background: "none",
-                  border: `1px solid ${BORDER}`,
-                  color: DIM,
-                  fontFamily: MONO,
-                  fontSize: 10,
-                  padding: "6px 12px",
-                  cursor: "pointer",
-                }}
-              >
-                CANCEL
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            <ActionButton
-              label="start_processing"
-              pending={pendingAction === "start_processing"}
-              disabled={pendingAction !== null}
-              onClick={() => runTxCall("start_processing")}
-            />
-            <ActionButton
-              label="complete_transaction"
-              pending={pendingAction === "complete_transaction"}
-              disabled={pendingAction !== null}
-              onClick={() => runTxCall("complete_transaction")}
-            />
-            <ActionButton
-              label="fail_transaction"
-              pending={pendingAction === "fail_transaction"}
-              disabled={pendingAction !== null}
-              onClick={() => setShowFailPrompt(true)}
-            />
-            <ActionButton
-              label="is_duplicate"
-              pending={pendingAction === "is_duplicate"}
-              disabled={pendingAction !== null}
-              onClick={runIsDuplicate}
-            />
-          </div>
+        {showReceipt && (
+          <TxReceiptPrintView
+            tx={tx}
+            displayStatus={displayStatus}
+            onClose={() => setShowReceipt(false)}
+          />
         )}
-
-        <SorobanTip />
       </div>
     </div>
   );
