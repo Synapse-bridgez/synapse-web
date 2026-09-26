@@ -1,11 +1,12 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DashboardTab } from "./dashboard/DashboardTab";
 import { TransactionsTab } from "./transactions/TransactionsTab";
 import { AdminTab } from "./admin/AdminTab";
 import { DocsTab } from "./docs/DocsTab";
 import { TabErrorBoundary } from "@/components/ui/TabErrorBoundary";
+import { CommandPalette, type Command } from "./command-palette/CommandPalette";
 import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 import { useWallet } from "@/lib/wallet/WalletProvider";
@@ -55,6 +56,71 @@ export function Shell() {
     }
     prevAddress.current = address;
   }, [address, toast]);
+
+  // ── Command palette ──
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const commands = useMemo<Command[]>(() => {
+    const navCommands: Command[] = TABS.map((t) => ({
+      id: `nav-${t}`,
+      label: `Go to ${t}`,
+      keywords: ["navigate", "tab", t],
+      action: () => setTab(t),
+    }));
+
+    const actionCommands: Command[] = [
+      {
+        id: "wallet-toggle",
+        label: connected ? "Disconnect wallet" : "Connect wallet",
+        keywords: ["wallet", "connect", "disconnect", "account"],
+        action: () => (connected ? disconnect() : connect()),
+      },
+      {
+        id: "open-transactions",
+        label: "Open transactions",
+        keywords: ["transactions", "tx", "history", "activity"],
+        action: () => setTab("transactions"),
+      },
+    ];
+
+    const settingsCommands: Command[] = [
+      {
+        id: "toggle-theme",
+        label: "Toggle theme",
+        keywords: ["theme", "dark", "light", "appearance", "settings"],
+        action: () => {
+          const root = document.documentElement;
+          const next = root.dataset.theme === "light" ? "dark" : "light";
+          root.dataset.theme = next;
+          toast(`Theme: ${next}`, "success");
+        },
+      },
+      {
+        id: "toggle-locale",
+        label: "Toggle locale",
+        keywords: ["locale", "language", "i18n", "settings"],
+        action: () => {
+          const root = document.documentElement;
+          const next = root.lang === "en" ? "es" : "en";
+          root.lang = next;
+          toast(`Locale: ${next}`, "success");
+        },
+      },
+    ];
+
+    return [...navCommands, ...actionCommands, ...settingsCommands];
+  }, [connected, connect, disconnect, setTab, toast]);
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
@@ -222,6 +288,12 @@ export function Shell() {
               : "connecting"}
         </span>
       </footer>
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={commands}
+      />
     </div>
   );
 }
