@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { AMBER, BG2, DIM, MONO } from "@/lib/constants";
+import { announce } from "@/lib/a11y/announce";
 
 export interface Toast {
   id: string;
@@ -29,6 +30,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
 
+    // Announce to ARIA live region for screen readers
+    announce(message, type === "error" ? "assertive" : "polite");
+
     // Auto dismiss after 3 seconds
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -42,9 +46,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      {/* Toast container */}
+      {/* Toast visual container */}
       <div
-        aria-live="assertive"
         style={{
           position: "fixed",
           bottom: 24,
