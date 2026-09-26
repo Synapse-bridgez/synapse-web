@@ -1,9 +1,6 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { DashboardTab } from "./dashboard/DashboardTab";
-import { TransactionsTab } from "./transactions/TransactionsTab";
-import { AdminTab } from "./admin/AdminTab";
-import { DocsTab } from "./docs/DocsTab";
+import React, { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { TabErrorBoundary } from "@/components/ui/TabErrorBoundary";
 import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
@@ -13,11 +10,47 @@ import { shortId } from "@/lib/utils";
 import { useWalletExtensionDetection } from "@/lib/wallet/detection";
 import { NoWalletGuidance } from "@/components/wallet/NoWalletGuidance";
 
-type Tab = "dashboard" | "transactions" | "admin" | "docs";
-const TABS: Tab[] = ["dashboard", "transactions", "admin", "docs"];
+const TabLoadingFallback = () => (
+  <div
+    role="status"
+    aria-live="polite"
+    style={{
+      padding: "40px 20px",
+      textAlign: "center",
+      fontFamily: MONO,
+      fontSize: 11,
+      color: DIM,
+      letterSpacing: "0.1em",
+    }}
+  >
+    LOADING TAB MODULE…
+  </div>
+);
 
-export function Shell() {
-  const [tab, setTab] = useState<Tab>("dashboard");
+// Code-split each tab into lazy-loaded chunks via next/dynamic
+const DashboardTab = dynamic(
+  () => import("./dashboard/DashboardTab").then((mod) => mod.DashboardTab),
+  { loading: () => <TabLoadingFallback /> }
+);
+
+const TransactionsTab = dynamic(
+  () => import("./transactions/TransactionsTab").then((mod) => mod.TransactionsTab),
+  { loading: () => <TabLoadingFallback /> }
+);
+
+const AdminTab = dynamic(() => import("./admin/AdminTab").then((mod) => mod.AdminTab), {
+  loading: () => <TabLoadingFallback />,
+});
+
+const DocsTab = dynamic(() => import("./docs/DocsTab").then((mod) => mod.DocsTab), {
+  loading: () => <TabLoadingFallback />,
+});
+
+export type Tab = "dashboard" | "transactions" | "admin" | "docs";
+export const TABS: Tab[] = ["dashboard", "transactions", "admin", "docs"];
+
+export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [showGuidance, setShowGuidance] = useState(false);
   const { status: rpcStatus, lastEventAge, health: rpcHealth } = useSorobanStatus();
   const { address, connecting, error, connect, disconnect } = useWallet();
@@ -25,6 +58,23 @@ export function Shell() {
   const connected = address !== null;
   const { toast } = useToast();
   const navRef = useRef<HTMLElement>(null);
+
+  // Sync tab from URL hash if present
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "").toLowerCase() as Tab;
+      if (TABS.includes(hash)) {
+        setTab(hash);
+      }
+    }
+  }, []);
+
+  const handleTabSelect = (selectedTab: Tab) => {
+    setTab(selectedTab);
+    if (typeof window !== "undefined") {
+      window.location.hash = selectedTab;
+    }
+  };
 
   useEffect(() => {
     if (error) toast(error, "error");
@@ -53,7 +103,7 @@ export function Shell() {
       return;
     }
     e.preventDefault();
-    setTab(TABS[nextIndex]);
+    handleTabSelect(TABS[nextIndex]);
     const buttons = navRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
     buttons?.[nextIndex]?.focus();
   };
@@ -119,7 +169,9 @@ export function Shell() {
           <button
             onClick={handleConnectClick}
             disabled={connecting}
-            aria-label={connected ? `Connected account ${address}. Click to disconnect` : "Connect wallet"}
+            aria-label={
+              connected ? `Connected account ${address}. Click to disconnect` : "Connect wallet"
+            }
             style={{
               padding: "7px 18px",
               background: connected ? "transparent" : "rgba(245,166,35,0.08)",
@@ -183,7 +235,7 @@ export function Shell() {
             aria-selected={tab === t}
             aria-controls={`tabpanel-${t}`}
             tabIndex={tab === t ? 0 : -1}
-            onClick={() => setTab(t)}
+            onClick={() => handleTabSelect(t)}
             onKeyDown={(e) => handleTabKeyDown(e, idx)}
             style={{
               padding: "12px 22px",
@@ -212,7 +264,12 @@ export function Shell() {
       </nav>
 
       {/* ── Body ── */}
-      <main className="shell-main" id={`tabpanel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`}>
+      <main
+        className="shell-main"
+        id={`tabpanel-${tab}`}
+        role="tabpanel"
+        aria-labelledby={`tab-${tab}`}
+      >
         {tab === "dashboard" && (
           <TabErrorBoundary title="Dashboard tab error">
             <DashboardTab />
