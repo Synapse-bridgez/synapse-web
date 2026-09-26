@@ -3,6 +3,7 @@ import { useState } from "react";
 import { scValToNative } from "@stellar/stellar-sdk";
 import { Panel } from "@/components/ui/Panel";
 import { Field } from "@/components/ui/Field";
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -90,13 +91,25 @@ function AdminCard({
       <Panel title={title}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
           {fields.map((f) => (
-            <Field
-              key={f.key}
-              label={f.label}
-              value={vals[f.key] ?? ""}
-              onChange={(v) => setVals((p) => ({ ...p, [f.key]: v }))}
-              placeholder={f.placeholder}
-            />
+            <div key={f.key}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 10,
+                  color: DIM,
+                  fontFamily: MONO,
+                  letterSpacing: "0.06em",
+                  marginBottom: 4,
+                }}
+              >
+                {f.label}
+              </label>
+              <AddressAutocomplete
+                value={vals[f.key] ?? ""}
+                onChange={(v) => setVals((p) => ({ ...p, [f.key]: v }))}
+                placeholder={f.placeholder}
+              />
+            </div>
           ))}
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -241,11 +254,10 @@ export function AdminTab() {
         btnLabel="SET SIGNER →"
         btnColor={STATUS_META.PROCESSING.color}
         confirm={{
-          title: "REPLACE RELAY SIGNER",
+          title: "SET RELAY SIGNER",
           message:
-            "You are replacing the relay signer address. " +
-            "The current relay signer will immediately lose the ability to submit transactions. " +
-            "Confirm only if you have the new signer ready.",
+            "This changes the relay signer authorized to submit relayed transactions. " +
+            "Confirm the new signer address is correct.",
           accentColor: STATUS_META.PROCESSING.color,
         }}
         onSubmit={(v) => runAdminCall("set_relay_signer", [v.new_signer ?? ""])}
@@ -253,58 +265,20 @@ export function AdminTab() {
 
       {/* Diagnostics */}
       <Panel title="DIAGNOSTICS">
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={() => runDiagnostic("health")}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              background: "transparent",
-              border: `1px solid ${BORDER}`,
-              color: DIM,
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#fff";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = DIM;
-              e.currentTarget.style.borderColor = BORDER;
-            }}
-          >
-            health()
-          </button>
-          <button
-            onClick={() => runDiagnostic("version")}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              background: "transparent",
-              border: `1px solid ${BORDER}`,
-              color: DIM,
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#fff";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = DIM;
-              e.currentTarget.style.borderColor = BORDER;
-            }}
-          >
-            version()
-          </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <ActionButton
+            label="GET ADMIN"
+            color={BORDER}
+            onClick={() => runDiagnostic("get_admin")}
+          />
+          <ActionButton
+            label="GET RELAY SIGNER"
+            color={BORDER}
+            onClick={() => runDiagnostic("get_relay_signer")}
+          />
         </div>
         <SorobanTip>
-          health() + version() → read-only simulations via rpc.Server; no signing required
+          Read-only simulations — no transaction is submitted and no fees are spent.
         </SorobanTip>
       </Panel>
     </div>
