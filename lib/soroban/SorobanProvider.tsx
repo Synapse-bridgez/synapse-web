@@ -29,22 +29,48 @@ interface SorobanProviderProps {
   contractId?: string;
 }
 
+/**
+ * Soroban/contract state is held in a single store object so that the
+ * cross-cutting state layer can be migrated incrementally behind the
+ * existing hook APIs (`useSoroban`, `useSorobanEvents`, `useSorobanHealth`)
+ * without changing any consuming component.
+ */
+interface SorobanStore {
+  events: NormalizedSorobanEvent[];
+  health: RpcHealth;
+  poller: SorobanEventPoller | null;
+}
+
+const initialHealth: RpcHealth = {
+  connected: false,
+  lastCheck: 0,
+  lastEventTimestamp: null,
+  error: null,
+};
+
+const initialStore: SorobanStore = {
+  events: [],
+  health: initialHealth,
+  poller: null,
+};
+
 export function SorobanProvider({ children, rpcUrl, contractId }: SorobanProviderProps) {
-  const [events, setEvents] = useState<NormalizedSorobanEvent[]>([]);
-  const [health, setHealth] = useState<RpcHealth>({
-    connected: false,
-    lastCheck: 0,
-    lastEventTimestamp: null,
-    error: null,
-  });
-  const [poller] = useState<SorobanEventPoller>(() => createSorobanEventPoller(rpcUrl, contractId));
+  const [store, setStore] = useState<SorobanStore>(() => ({
+    ...initialStore,
+    poller: createSorobanEventPoller(rpcUrl, contractId),
+  }));
 
   useEffect(() => {
-    const unsubHealth = poller.onHealth(setHealth);
+    const poller = store.poller;
+    if (!poller) return;
+
+    const unsubHealth = poller.onHealth((health) => {
+      setStore((prev) => ({ ...prev, health }));
+    });
     const unsubEvents = poller.onEvents((newEvents) => {
-      setEvents((prev) => {
-        const combined = [...newEvents, ...prev];
-        return combined.slice(0, 200);
+      setStore((prev) => {
+        const combined = [...newEvents, ...prev.events];
+        return { ...prev, events: combined.slice(0, 200) };
       });
     });
 
@@ -55,10 +81,10 @@ export function SorobanProvider({ children, rpcUrl, contractId }: SorobanProvide
       unsubHealth();
       unsubEvents();
     };
-  }, [poller]);
+  }, [store.poller]);
 
   return (
-    <SorobanContext.Provider value={{ events, health, poller }}>{children}</SorobanContext.Provider>
+    <SorobanContext.Provider value={store}>{children}</SorobanContext.Provider>
   );
 }
 
