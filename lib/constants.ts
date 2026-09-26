@@ -68,6 +68,24 @@ export const NETWORK_LABEL = NETWORK_PASSPHRASE.includes("Test")
     ? "Mainnet"
     : "Custom Network";
 
+/**
+ * Idle-session timeout configuration for connected wallet sessions.
+ *
+ * A wallet left connected on a shared or unattended machine is a security
+ * exposure, so the wallet layer auto-disconnects after a period of user
+ * inactivity. `IDLE_TIMEOUT_MS` is the total inactivity window before the
+ * session is reset; `IDLE_WARNING_MS` is how long before expiry the warning
+ * prompt (with a "stay connected" option) is shown. Both are overridable via
+ * environment variables for deployments that need a different policy.
+ */
+export const IDLE_TIMEOUT_MS = Number(
+  process.env.NEXT_PUBLIC_IDLE_TIMEOUT_MS ?? 15 * 60 * 1000,
+);
+
+export const IDLE_WARNING_MS = Number(
+  process.env.NEXT_PUBLIC_IDLE_WARNING_MS ?? 60 * 1000,
+);
+
 export const ABI_ENDPOINTS = [
   {
     name: "initialize",

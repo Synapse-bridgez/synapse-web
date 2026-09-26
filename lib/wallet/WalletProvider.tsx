@@ -1,5 +1,13 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ensureWalletKitInitialized,
   StellarWalletsKit,
@@ -16,6 +24,19 @@ export const DASHBOARD_NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ??
   "Test SDF Network ; September 2015";
 
+/**
+ * Idle-session timeout configuration. After this much user inactivity the
+ * wallet session is auto-disconnected (client-side context reset only).
+ */
+export const IDLE_TIMEOUT_MS = Number(
+  process.env.NEXT_PUBLIC_WALLET_IDLE_TIMEOUT_MS ?? 15 * 60 * 1000,
+);
+
+/** How long before expiry the "stay connected" warning is shown. */
+export const IDLE_WARNING_MS = Number(
+  process.env.NEXT_PUBLIC_WALLET_IDLE_WARNING_MS ?? 60 * 1000,
+);
+
 export type NetworkStatus = "match" | "mismatch" | "unknown";
 
 interface WalletContextValue {
@@ -28,6 +49,14 @@ interface WalletContextValue {
   networkStatus: NetworkStatus;
   /** Human-readable warning for mismatch/unknown states, or null when matched. */
   networkWarning: string | null;
+  /** True while the idle warning is shown and the session is about to expire. */
+  idleWarning: boolean;
+  /** Milliseconds remaining before auto-disconnect while the warning is shown. */
+  idleRemainingMs: number;
+  /** Resets the idle timer, keeping the session connected. */
+  stayConnected: () => void;
+  /** Pauses the idle timer while a transaction is being signed/confirmed. */
+  setSigningInFlight: (inFlight: boolean) => void;
   /** Re-checks the wallet network; returns the resulting status. */
   checkNetwork: () => Promise<NetworkStatus>;
   connect: () => Promise<void>;
@@ -41,6 +70,10 @@ const WalletContext = createContext<WalletContextValue>({
   networkPassphrase: null,
   networkStatus: "unknown",
   networkWarning: null,
+  idleWarning: false,
+  idleRemainingMs: 0,
+  stayConnected: () => {},
+  setSigningInFlight: () => {},
   checkNetwork: async () => "unknown",
   connect: async () => {},
   disconnect: async () => {},
@@ -80,12 +113,20 @@ async function readWalletNetworkPassphrase(): Promise<string | null> {
   }
 }
 
+const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"] as const;
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [networkPassphrase, setNetworkPassphrase] = useState<string | null>(null);
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>("unknown");
+  const [idleWarning, setIdleWarning] = useState(false);
+  const [idleRemainingMs, setIdleRemainingMs] = useState(0);
+
+  const lastActivityRef = useRef<number>(Date.now());
+  const signingInFlightRef = useRef(false);
+  const disconnectRef = useRef<() => Promise<void>>(async () => {});
 
   const applyNetwork = useCallback((passphrase: string | null) => {
     const status = compareNetwork(passphrase);
@@ -131,6 +172,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Compare the wallet-reported network against the dashboard config on connect.
       const passphrase = await readWalletNetworkPassphrase();
       applyNetwork(passphrase);
+      lastActivityRef.current = Date.now();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect wallet");
     } finally {
@@ -148,7 +190,71 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setAddress(null);
     setNetworkPassphrase(null);
     setNetworkStatus("unknown");
+    setIdleWarning(false);
+    setIdleRemainingMs(0);
   }, []);
+
+  disconnectRef.current = disconnect;
+
+  const stayConnected = useCallback(() => {
+    lastActivityRef.current = Date.now();
+    setIdleWarning(false);
+    setIdleRemainingMs(0);
+  }, []);
+
+  const setSigningInFlight = useCallback((inFlight: boolean) => {
+    signingInFlightRef.current = inFlight;
+    // Treat the start of signing as activity so the timer restarts cleanly.
+    if (inFlight) lastActivityRef.current = Date.now();
+  }, []);
+
+  // Idle-session tracking: reset on user interaction, warn before expiry, and
+  // auto-disconnect on timeout. Paused while a signature is in flight.
+  useEffect(() => {
+    if (!address) return;
+
+    lastActivityRef.current = Date.now();
+    setIdleWarning(false);
+    setIdleRemainingMs(0);
+
+    const onActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    ACTIVITY_EVENTS.forEach((event) =>
+      window.addEventListener(event, onActivity, { passive: true }),
+    );
+
+    const interval = window.setInterval(() => {
+      if (signingInFlightRef.current) {
+        // Don't expire while the user is confirming a transaction.
+        lastActivityRef.current = Date.now();
+        return;
+      }
+      const elapsed = Date.now() - lastActivityRef.current;
+      const remaining = IDLE_TIMEOUT_MS - elapsed;
+      if (remaining <= 0) {
+        setIdleWarning(false);
+        setIdleRemainingMs(0);
+        void disconnectRef.current();
+        return;
+      }
+      if (remaining <= IDLE_WARNING_MS) {
+        setIdleWarning(true);
+        setIdleRemainingMs(remaining);
+      } else if (idleWarning) {
+        setIdleWarning(false);
+        setIdleRemainingMs(0);
+      }
+    }, 1000);
+
+    return () => {
+      ACTIVITY_EVENTS.forEach((event) =>
+        window.removeEventListener(event, onActivity),
+      );
+      window.clearInterval(interval);
+    };
+  }, [address, idleWarning]);
 
   const networkWarning = warningFor(networkStatus, networkPassphrase);
 
@@ -161,6 +267,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         networkPassphrase,
         networkStatus,
         networkWarning,
+        idleWarning,
+        idleRemainingMs,
+        stayConnected,
+        setSigningInFlight,
         checkNetwork,
         connect,
         disconnect,
