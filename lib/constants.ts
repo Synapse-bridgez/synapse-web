@@ -49,77 +49,142 @@ export const DIM = "rgba(255,255,255,0.35)";
  */
 export const MONO = "var(--font-ibm-plex-mono), monospace";
 
-export const ABI_ENDPOINTS = [
+/**
+ * Parameter type descriptors used to drive the DocsTab ABI playground.
+ *
+ * The playground derives its generated form directly from these descriptors,
+ * so adding a new entrypoint (or a new parameter) here automatically produces
+ * a working form field without touching the UI. `kind` maps onto the argument
+ * encoders in `lib/soroban/args.ts`.
+ */
+export type AbiParamKind =
+  | "address"
+  | "string"
+  | "u32"
+  | "i128"
+  | "bool"
+  | "tx_payload"
+  | "callback_payload";
+
+export interface AbiParam {
+  name: string;
+  kind: AbiParamKind;
+  /** Optional human hint shown as the field placeholder. */
+  hint?: string;
+}
+
+export interface AbiEndpoint {
+  name: string;
+  sig: string;
+  access: "one-time" | "relay_signer" | "admin" | "public";
+  desc: string;
+  /** Ordered parameters; empty for zero-arg entrypoints. */
+  params: AbiParam[];
+  /** True when the call mutates ledger state and therefore needs a signature. */
+  stateChanging: boolean;
+}
+
+export const ABI_ENDPOINTS: AbiEndpoint[] = [
   {
     name: "initialize",
     sig: "initialize(admin: Address, relay_signer: Address)",
     access: "one-time",
     desc: "Bootstrap the contract. Fails if already initialized. One-time call only.",
+    params: [
+      { name: "admin", kind: "address", hint: "G..." },
+      { name: "relay_signer", kind: "address", hint: "G..." },
+    ],
+    stateChanging: true,
   },
   {
     name: "register_transaction",
     sig: "register_transaction(payload: TxPayload) → tx_id: String",
     access: "relay_signer",
     desc: "Register a new transaction. Returns a UUID. Emits TransactionRegistered event.",
+    params: [{ name: "payload", kind: "tx_payload" }],
+    stateChanging: true,
   },
   {
     name: "start_processing",
     sig: "start_processing(tx_id: String)",
     access: "relay_signer",
     desc: "Advance transaction PENDING → PROCESSING. Emits StatusChanged.",
+    params: [{ name: "tx_id", kind: "string", hint: "uuid" }],
+    stateChanging: true,
   },
   {
     name: "complete_transaction",
     sig: "complete_transaction(tx_id: String)",
     access: "relay_signer",
     desc: "Advance PROCESSING → COMPLETED. Emits StatusChanged + triggers callback.",
+    params: [{ name: "tx_id", kind: "string", hint: "uuid" }],
+    stateChanging: true,
   },
   {
     name: "fail_transaction",
     sig: "fail_transaction(tx_id: String, reason: String)",
     access: "relay_signer",
     desc: "Mark transaction as FAILED with a reason string. Emits StatusChanged.",
+    params: [
+      { name: "tx_id", kind: "string", hint: "uuid" },
+      { name: "reason", kind: "string", hint: "failure reason" },
+    ],
+    stateChanging: true,
   },
   {
     name: "get_transaction",
     sig: "get_transaction(tx_id: String) → Transaction",
     access: "public",
     desc: "Read-only simulation. Returns full Transaction struct from ledger storage.",
+    params: [{ name: "tx_id", kind: "string", hint: "uuid" }],
+    stateChanging: false,
   },
   {
     name: "is_duplicate",
     sig: "is_duplicate(tx_id: String) → bool",
     access: "public",
     desc: "Check whether a tx_id has already been registered. Safe read-only call.",
+    params: [{ name: "tx_id", kind: "string", hint: "uuid" }],
+    stateChanging: false,
   },
   {
     name: "register_callback",
     sig: "register_callback(payload: CallbackPayload)",
     access: "relay_signer",
     desc: "Register a webhook URL for a transaction lifecycle event notification.",
+    params: [{ name: "payload", kind: "callback_payload" }],
+    stateChanging: true,
   },
   {
     name: "transfer_admin",
     sig: "transfer_admin(new_admin: Address)",
     access: "admin",
     desc: "Transfer admin rights. Caller must be the current admin address.",
+    params: [{ name: "new_admin", kind: "address", hint: "G..." }],
+    stateChanging: true,
   },
   {
     name: "set_relay_signer",
     sig: "set_relay_signer(new_signer: Address)",
     access: "admin",
     desc: "Replace the relay signer address. Caller must be the current admin.",
+    params: [{ name: "new_signer", kind: "address", hint: "G..." }],
+    stateChanging: true,
   },
   {
     name: "health",
     sig: "health() → String",
     access: "public",
     desc: "Returns contract health string. No signing required.",
+    params: [],
+    stateChanging: false,
   },
   {
     name: "version",
     sig: "version() → String",
     access: "public",
     desc: "Returns contract semver string e.g. '0.1.0'.",
+    params: [],
+    stateChanging: false,
   },
 ];
