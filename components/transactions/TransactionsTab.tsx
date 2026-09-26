@@ -117,6 +117,7 @@ export function TransactionsTab() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="filter by tx_id · status · asset · memo…"
+            aria-label="Filter transactions by ID, status, asset, or memo"
             style={{
               flex: 1,
               background: BG3,
