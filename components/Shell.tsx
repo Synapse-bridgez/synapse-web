@@ -14,8 +14,15 @@ import { shortId } from "@/lib/utils";
 type Tab = "dashboard" | "transactions" | "admin" | "docs";
 const TABS: Tab[] = ["dashboard", "transactions", "admin", "docs"];
 
+// Responsive breakpoints (mobile-first, Tailwind v4 defaults):
+//   < 640px  (base)  → mobile: stacked header, scrollable tab bar, compact footer
+//   >= 640px (sm)    → tablet: inline header, full tab bar
+//   >= 1024px (lg)   → desktop: original spacing
+const MOBILE_MAX = 640;
+
 export function Shell() {
   const [tab, setTab] = useState<Tab>("dashboard");
+  const [isMobile, setIsMobile] = useState(false);
   const { status: rpcStatus, lastEventAge, health: rpcHealth } = useSorobanStatus();
   const { address, connecting, error, connect, disconnect } = useWallet();
   const connected = address !== null;
@@ -24,6 +31,14 @@ export function Shell() {
   useEffect(() => {
     if (error) toast(error, "error");
   }, [error, toast]);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_MAX - 1}px)`);
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   const prevAddress = useRef<string | null>(null);
   useEffect(() => {
@@ -34,9 +49,16 @@ export function Shell() {
   }, [address, toast]);
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       {/* ── Header ── */}
-      <header className="shell-header">
+      <header
+        className="shell-header"
+        style={{
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: isMobile ? "stretch" : "center",
+          gap: isMobile ? 10 : 0,
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.14em", color: "#fff" }}>
             SYNAPSE
@@ -57,7 +79,14 @@ export function Shell() {
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            justifyContent: isMobile ? "space-between" : "flex-end",
+          }}
+        >
           <span
             style={{
               fontSize: 9,
@@ -96,6 +125,7 @@ export function Shell() {
               letterSpacing: "0.06em",
               transition: "all 0.2s",
               opacity: connecting ? 0.6 : 1,
+              flex: isMobile ? 1 : undefined,
             }}
             onMouseEnter={(e) => {
               if (!connected) e.currentTarget.style.background = "rgba(245,166,35,0.16)";
@@ -110,7 +140,15 @@ export function Shell() {
       </header>
 
       {/* ── Tab Bar ── */}
-      <nav className="shell-nav" role="tablist" aria-label="Sections">
+      <nav
+        className="shell-nav"
+        role="tablist"
+        aria-label="Sections"
+        style={{
+          overflowX: isMobile ? "auto" : undefined,
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
         {TABS.map((t) => (
           <button
             key={t}
@@ -118,7 +156,7 @@ export function Shell() {
             aria-selected={tab === t}
             onClick={() => setTab(t)}
             style={{
-              padding: "12px 22px",
+              padding: isMobile ? "12px 16px" : "12px 22px",
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -129,6 +167,8 @@ export function Shell() {
               borderBottom: tab === t ? `2px solid ${AMBER}` : "2px solid transparent",
               marginBottom: -1,
               transition: "color 0.15s",
+              flex: isMobile ? "1 0 auto" : undefined,
+              whiteSpace: "nowrap",
             }}
             onMouseEnter={(e) => {
               if (tab !== t) e.currentTarget.style.color = "rgba(255,255,255,0.65)";
@@ -143,7 +183,7 @@ export function Shell() {
       </nav>
 
       {/* ── Body ── */}
-      <main className="shell-main">
+      <main className="shell-main" style={{ overflowX: "hidden" }}>
         {tab === "dashboard" && (
           <TabErrorBoundary title="Dashboard tab error">
             <DashboardTab />
@@ -170,8 +210,10 @@ export function Shell() {
       <footer
         style={{
           borderTop: `1px solid ${BORDER}`,
-          padding: "10px 28px",
+          padding: isMobile ? "10px 16px" : "10px 28px",
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          gap: isMobile ? 6 : 0,
           justifyContent: "space-between",
           background: BG1,
         }}
