@@ -8,10 +8,18 @@ import { WebVitalsReporter } from "@/components/telemetry/WebVitalsReporter";
 import { LiveRegion } from "@/components/ui/LiveRegion";
 import "./globals.css";
 
+/**
+ * Self-hosted at build time by next/font/google with latin subsetting,
+ * preloading, display: "swap", and automated fallback metric adjustments
+ * to eliminate cumulative layout shift (CLS).
+ */
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
+  preload: true,
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
+  adjustFontFallback: true,
   variable: "--font-ibm-plex-mono",
 });
 
