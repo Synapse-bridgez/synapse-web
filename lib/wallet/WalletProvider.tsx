@@ -8,12 +8,28 @@ import {
   getStoredWalletId,
 } from "./kit";
 
+const HORIZON_URL =
+  process.env.NEXT_PUBLIC_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
+const BALANCE_CACHE_MS = 15_000;
+const LOW_BALANCE_THRESHOLD_XLM = 1;
+
+export interface WalletBalance {
+  asset: string;
+  balance: string;
+}
+
 interface WalletContextValue {
   address: string | null;
   connecting: boolean;
   error: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
+  balances: WalletBalance[];
+  balanceLoading: boolean;
+  balanceError: string | null;
+  accountFunded: boolean;
+  lowBalance: boolean;
+  refreshBalance: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextValue>({
@@ -22,6 +38,12 @@ const WalletContext = createContext<WalletContextValue>({
   error: null,
   connect: async () => {},
   disconnect: async () => {},
+  balances: [],
+  balanceLoading: false,
+  balanceError: null,
+  accountFunded: true,
+  lowBalance: false,
+  refreshBalance: async () => {},
 });
 
 export function useWallet() {
@@ -32,6 +54,45 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [balances, setBalances] = useState<WalletBalance[]>([]);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+  const [accountFunded, setAccountFunded] = useState(true);
+  const [lastFetchedAt, setLastFetchedAt] = useState(0);
+
+  const fetchBalance = useCallback(async (account: string, force = false) => {
+    if (!force && Date.now() - lastFetchedAt < BALANCE_CACHE_MS) return;
+    setBalanceLoading(true);
+    setBalanceError(null);
+    try {
+      const res = await fetch(`${HORIZON_URL}/accounts/${account}`);
+      if (res.status === 404) {
+        setBalances([]);
+        setAccountFunded(false);
+        setLastFetchedAt(Date.now());
+        return;
+      }
+      if (!res.ok) throw new Error(`Horizon responded with ${res.status}`);
+      const data = (await res.json()) as {
+        balances?: Array<{ asset_type: string; asset_code?: string; balance: string }>;
+      };
+      const parsed: WalletBalance[] = (data.balances ?? []).map((b) => ({
+        asset: b.asset_type === "native" ? "XLM" : b.asset_code ?? b.asset_type,
+        balance: b.balance,
+      }));
+      setBalances(parsed);
+      setAccountFunded(true);
+      setLastFetchedAt(Date.now());
+    } catch (err) {
+      setBalanceError(err instanceof Error ? err.message : "Failed to load balance");
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, [lastFetchedAt]);
+
+  const refreshBalance = useCallback(async () => {
+    if (address) await fetchBalance(address, true);
+  }, [address, fetchBalance]);
 
   useEffect(() => {
     ensureWalletKitInitialized();
@@ -49,6 +110,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!address) {
+      setBalances([]);
+      setAccountFunded(true);
+      setBalanceError(null);
+      return;
+    }
+    void fetchBalance(address, true);
+  }, [address, fetchBalance]);
 
   const connect = useCallback(async () => {
     ensureWalletKitInitialized();
@@ -76,8 +147,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setAddress(null);
   }, []);
 
+  const nativeBalance = balances.find((b) => b.asset === "XLM");
+  const lowBalance =
+    accountFunded &&
+    nativeBalance !== undefined &&
+    Number(nativeBalance.balance) < LOW_BALANCE_THRESHOLD_XLM;
+
   return (
-    <WalletContext.Provider value={{ address, connecting, error, connect, disconnect }}>
+    <WalletContext.Provider
+      value={{
+        address,
+        connecting,
+        error,
+        connect,
+        disconnect,
+        balances,
+        balanceLoading,
+        balanceError,
+        accountFunded,
+        lowBalance,
+        refreshBalance,
+      }}
+    >
       {children}
     </WalletContext.Provider>
   );
