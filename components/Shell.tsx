@@ -10,6 +10,7 @@ import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useToast } from "@/components/ui/Toast";
 import { shortId } from "@/lib/utils";
+import { Profiled, ProfilerOverlay } from "@/lib/dev-tools/ProfilerOverlay";
 
 type Tab = "dashboard" | "transactions" | "admin" | "docs";
 const TABS: Tab[] = ["dashboard", "transactions", "admin", "docs"];
@@ -146,22 +147,30 @@ export function Shell() {
       <main className="shell-main">
         {tab === "dashboard" && (
           <TabErrorBoundary title="Dashboard tab error">
-            <DashboardTab />
+            <Profiled id="DashboardTab">
+              <DashboardTab />
+            </Profiled>
           </TabErrorBoundary>
         )}
         {tab === "transactions" && (
           <TabErrorBoundary title="Transactions tab error">
-            <TransactionsTab />
+            <Profiled id="TransactionsTab">
+              <TransactionsTab />
+            </Profiled>
           </TabErrorBoundary>
         )}
         {tab === "admin" && (
           <TabErrorBoundary title="Admin tab error">
-            <AdminTab />
+            <Profiled id="AdminTab">
+              <AdminTab />
+            </Profiled>
           </TabErrorBoundary>
         )}
         {tab === "docs" && (
           <TabErrorBoundary title="Docs tab error">
-            <DocsTab />
+            <Profiled id="DocsTab">
+              <DocsTab />
+            </Profiled>
           </TabErrorBoundary>
         )}
       </main>
@@ -199,6 +208,8 @@ export function Shell() {
               : "connecting"}
         </span>
       </footer>
+
+      <ProfilerOverlay />
     </div>
   );
 }
