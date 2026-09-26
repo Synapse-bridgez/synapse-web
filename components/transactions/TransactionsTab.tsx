@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { scValToNative } from "@stellar/stellar-sdk";
 import { TxTable } from "./TxTable";
 import { TxDetailModal } from "./TxDetailModal";
+import { BulkActionBar, type BulkItemState } from "./BulkActionBar";
 import { Panel } from "@/components/ui/Panel";
 import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
@@ -18,12 +19,20 @@ import type { Transaction } from "@/lib/types";
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
 
+const BULK_ACTIONS = ["fail_transaction", "complete_transaction", "cancel_transaction"] as const;
+const TERMINAL_STATUSES = ["COMPLETED", "FAILED", "CANCELLED"];
+
 export function TransactionsTab() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [cb, setCb] = useState({ tx_id: "", callback_url: "", secret: "" });
   const [lookingUp, setLookingUp] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [bulkAction, setBulkAction] = useState<string>(BULK_ACTIONS[0]);
+  const [bulkIds, setBulkIds] = useState<string[]>([]);
+  const [bulkItems, setBulkItems] = useState<BulkItemState[]>([]);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const cancelRef = useRef(false);
   const txs = useLiveTransactions();
   const { address, connect } = useWallet();
   const { toast } = useToast();
@@ -98,6 +107,74 @@ export function TransactionsTab() {
     }
   }
 
+  function toggleBulk(id: string) {
+    setBulkIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function updateBulkItem(id: string, patch: Partial<BulkItemState>) {
+    setBulkItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  }
+
+  async function runBulk() {
+    if (!CONTRACT_ID) {
+      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+      return;
+    }
+    if (!address) {
+      toast("Connect a wallet before running a bulk action", "error");
+      await connect();
+      return;
+    }
+    const targets = bulkItems.length
+      ? bulkItems.filter((i) => i.status === "pending").map((i) => i.id)
+      : bulkIds;
+    if (targets.length === 0) {
+      toast("Select at least one pending transaction", "error");
+      return;
+    }
+    cancelRef.current = false;
+    setBulkRunning(true);
+    setBulkItems((prev) => {
+      const existing = new Map(prev.map((i) => [i.id, i]));
+      return targets.map((id) => existing.get(id) ?? { id, status: "pending" as const });
+    });
+
+    for (const id of targets) {
+      if (cancelRef.current) {
+        updateBulkItem(id, { status: "skipped", message: "batch cancelled" });
+        continue;
+      }
+      const live = txs.find((t) => t.id === id);
+      if (live && TERMINAL_STATUSES.includes(live.status)) {
+        updateBulkItem(id, {
+          status: "skipped",
+          message: `already ${live.status.toLowerCase()} by another signer`,
+        });
+        continue;
+      }
+      updateBulkItem(id, { status: "signing", message: "awaiting wallet signature" });
+      try {
+        const result = await invokeContract(RPC_URL, CONTRACT_ID, address, bulkAction, [
+          stringArg(id),
+        ]);
+        if (result.status === "SUCCESS") {
+          updateBulkItem(id, { status: "success", message: shortId(result.hash) });
+        } else {
+          updateBulkItem(id, { status: "failed", message: "submission failed" });
+        }
+      } catch (err) {
+        updateBulkItem(id, {
+          status: "failed",
+          message: err instanceof Error ? err.message : "signing rejected",
+        });
+      }
+    }
+
+    setBulkRunning(false);
+    setBulkIds([]);
+    toast(`Bulk ${bulkAction} finished`, "info");
+  }
+
   const filtered = txs.filter(
     (t) =>
       t.id.includes(filter) ||
@@ -150,6 +227,69 @@ export function TransactionsTab() {
         </div>
         <SorobanTip>
           get_transaction(tx_id: string) → Transaction struct; read-only simulation, no signing
+        </SorobanTip>
+      </Panel>
+
+      {/* Bulk lifecycle actions */}
+      <Panel title="BULK LIFECYCLE ACTIONS">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <span style={{ fontFamily: MONO, fontSize: 11, color: "#888" }}>ACTION</span>
+          <select
+            value={bulkAction}
+            onChange={(e) => setBulkAction(e.target.value)}
+            disabled={bulkRunning}
+            style={{
+              background: BG3,
+              border: `1px solid ${BORDER}`,
+              color: AMBER,
+              fontFamily: MONO,
+              fontSize: 11,
+              padding: "7px 10px",
+              outline: "none",
+            }}
+          >
+            {BULK_ACTIONS.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+          <span style={{ fontFamily: MONO, fontSize: 11, color: "#888" }}>
+            {bulkIds.length} selected · each item requires its own signature
+          </span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+          {filtered.map((t) => (
+            <label
+              key={t.id}
+              style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: MONO, fontSize: 11 }}
+            >
+              <input
+                type="checkbox"
+                checked={bulkIds.includes(t.id)}
+                disabled={bulkRunning || TERMINAL_STATUSES.includes(t.status)}
+                onChange={() => toggleBulk(t.id)}
+              />
+              <span style={{ color: "#ccc" }}>{t.id}</span>
+              <span style={{ color: "#888" }}>· {t.status}</span>
+            </label>
+          ))}
+        </div>
+        <BulkActionBar
+          action={bulkAction}
+          items={bulkItems}
+          running={bulkRunning}
+          onRun={runBulk}
+          onCancel={() => {
+            cancelRef.current = true;
+          }}
+          onClear={() => {
+            setBulkItems([]);
+            setBulkIds([]);
+          }}
+        />
+        <SorobanTip>
+          Sequential signing loop — {bulkAction}(tx_id: string) invoked once per selected transaction
         </SorobanTip>
       </Panel>
 
