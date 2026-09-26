@@ -10,10 +10,18 @@ import { useWallet } from "@/lib/wallet/WalletProvider";
 import { invokeContract, simulateContractCall, stringArg } from "@/lib/soroban/contract";
 import { AMBER, BG1, BG2, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { formatAmount, shortId } from "@/lib/utils";
-import type { Transaction } from "@/lib/types";
+import type { Transaction, TxStatus } from "@/lib/types";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
+
+// Optimistic lifecycle transitions: the status we expect the poller to observe
+// once the submitted write action is confirmed on-chain.
+const OPTIMISTIC_STATUS: Record<string, TxStatus> = {
+  start_processing: "PROCESSING",
+  complete_transaction: "COMPLETED",
+  fail_transaction: "FAILED",
+};
 
 interface TxDetailModalProps {
   tx: Transaction;
@@ -24,9 +32,18 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
   const [showFailPrompt, setShowFailPrompt] = useState(false);
   const [failReason, setFailReason] = useState("");
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  // Optimistic overlay: locally-pending status shown immediately on submission,
+  // reconciled with the poller-observed tx.status once it catches up.
+  const [optimisticStatus, setOptimisticStatus] = useState<TxStatus | null>(null);
+  const [optimisticError, setOptimisticError] = useState<string | null>(null);
   const { address, connect } = useWallet();
   const { toast } = useToast();
-  const m = STATUS_META[tx.status];
+
+  // Reconcile: once the poller-observed status matches the optimistic target,
+  // drop the overlay so the confirmed state takes over.
+  const reconciled = optimisticStatus !== null && tx.status === optimisticStatus;
+  const displayStatus = reconciled ? tx.status : optimisticStatus ?? tx.status;
+  const m = STATUS_META[displayStatus];
 
   async function runTxCall(method: string, extraArgs: string[] = []) {
     if (!CONTRACT_ID) {
@@ -38,15 +55,25 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
       await connect();
       return;
     }
+    const optimistic = OPTIMISTIC_STATUS[method];
     setPendingAction(method);
+    setOptimisticError(null);
+    if (optimistic) setOptimisticStatus(optimistic);
     try {
       const args = [stringArg(tx.id), ...extraArgs.map(stringArg)];
       const result = await invokeContract(RPC_URL, CONTRACT_ID, address, method, args);
-      toast(
-        `${method}() ${result.status === "SUCCESS" ? "succeeded" : "failed"} · tx ${shortId(result.hash)}`,
-        result.status === "SUCCESS" ? "success" : "error"
-      );
+      if (result.status === "SUCCESS") {
+        toast(`${method}() succeeded · tx ${shortId(result.hash)}`, "success");
+      } else {
+        // Submission failed/reverted: roll back the optimistic overlay.
+        setOptimisticStatus(null);
+        setOptimisticError(`${method}() failed on-chain`);
+        toast(`${method}() failed · tx ${shortId(result.hash)}`, "error");
+      }
     } catch (err) {
+      // Submission threw: roll back the optimistic overlay with a clear error.
+      setOptimisticStatus(null);
+      setOptimisticError(err instanceof Error ? err.message : `${method}() failed`);
       toast(err instanceof Error ? err.message : `${method}() failed`, "error");
     } finally {
       setPendingAction(null);
@@ -87,7 +114,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
     ["callback_url", tx.callback_url],
     ["retries", String(tx.retries)],
     ["created_at", new Date(tx.created_at).toISOString()],
-    ["status", tx.status],
+    ["status", displayStatus],
   ];
 
   return (
@@ -136,7 +163,19 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
             TX DETAIL
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Badge status={tx.status} />
+            <Badge status={displayStatus} />
+            {optimisticStatus !== null && !reconciled && (
+              <span
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 9,
+                  color: AMBER,
+                  letterSpacing: "0.08em",
+                }}
+              >
+                PENDING CONFIRMATION
+              </span>
+            )}
             <button
               onClick={onClose}
               aria-label="Close"
@@ -153,6 +192,23 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
             </button>
           </div>
         </div>
+
+        {optimisticError && (
+          <div
+            role="alert"
+            style={{
+              marginBottom: 12,
+              padding: "8px 10px",
+              background: BG2,
+              border: `1px solid ${STATUS_META.FAILED.color}55`,
+              color: STATUS_META.FAILED.color,
+              fontFamily: MONO,
+              fontSize: 10,
+            }}
+          >
+            ⚠ {optimisticError} — reverted to confirmed state
+          </div>
+        )}
 
         {/* Fields */}
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
@@ -246,21 +302,18 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
                   await runTxCall("fail_transaction", [reason]);
                 }}
                 style={{
-                  flex: 1,
-                  padding: "9px 12px",
-                  background: failReason.trim() ? STATUS_META.FAILED.color : "transparent",
-                  border: `1px solid ${STATUS_META.FAILED.color}`,
-                  color: failReason.trim() ? "#000" : STATUS_META.FAILED.color,
-                  opacity: failReason.trim() ? 1 : 0.4,
-                  cursor: failReason.trim() ? "pointer" : "not-allowed",
+                  background: STATUS_META.FAILED.color,
+                  border: "none",
+                  color: "#000",
                   fontFamily: MONO,
                   fontSize: 10,
                   fontWeight: 600,
-                  letterSpacing: "0.06em",
-                  transition: "all 0.15s",
+                  padding: "6px 12px",
+                  cursor: "pointer",
+                  opacity: !failReason.trim() || pendingAction === "fail_transaction" ? 0.5 : 1,
                 }}
               >
-                SUBMIT FAILURE
+                CONFIRM FAIL
               </button>
               <button
                 onClick={() => {
@@ -268,17 +321,13 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
                   setFailReason("");
                 }}
                 style={{
-                  flex: 1,
-                  padding: "9px 12px",
-                  background: "transparent",
-                  border: `1px solid ${DIM}`,
+                  background: "none",
+                  border: `1px solid ${BORDER}`,
                   color: DIM,
-                  cursor: "pointer",
                   fontFamily: MONO,
                   fontSize: 10,
-                  fontWeight: 600,
-                  letterSpacing: "0.06em",
-                  transition: "all 0.15s",
+                  padding: "6px 12px",
+                  cursor: "pointer",
                 }}
               >
                 CANCEL
@@ -286,37 +335,35 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
             </div>
           </div>
         ) : (
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <ActionButton
-              label={pendingAction === "start_processing" ? "SUBMITTING…" : "START PROCESSING"}
-              color={STATUS_META.PROCESSING.color}
+              label="start_processing"
+              pending={pendingAction === "start_processing"}
               disabled={pendingAction !== null}
               onClick={() => runTxCall("start_processing")}
             />
             <ActionButton
-              label={pendingAction === "complete_transaction" ? "SUBMITTING…" : "COMPLETE"}
-              color={STATUS_META.COMPLETED.color}
+              label="complete_transaction"
+              pending={pendingAction === "complete_transaction"}
               disabled={pendingAction !== null}
               onClick={() => runTxCall("complete_transaction")}
             />
             <ActionButton
-              label="FAIL"
-              color={STATUS_META.FAILED.color}
+              label="fail_transaction"
+              pending={pendingAction === "fail_transaction"}
               disabled={pendingAction !== null}
               onClick={() => setShowFailPrompt(true)}
             />
             <ActionButton
-              label={pendingAction === "is_duplicate" ? "CHECKING…" : "DUPLICATE?"}
-              color={AMBER}
+              label="is_duplicate"
+              pending={pendingAction === "is_duplicate"}
               disabled={pendingAction !== null}
               onClick={runIsDuplicate}
             />
           </div>
         )}
 
-        <SorobanTip>
-          get_transaction(tx_id) → full Transaction struct; actions require relay_signer signing
-        </SorobanTip>
+        <SorobanTip />
       </div>
     </div>
   );
