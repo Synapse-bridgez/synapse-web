@@ -10,7 +10,7 @@
   --amber: #f5a623;
   --amber-dim: rgba(245, 166, 35, 0.12);
   --border: rgba(245, 166, 35, 0.15);
-  --dim: rgba(255, 255, 255, 0.35);
+  --dim: rgba(255, 255, 255, 0.45);
   --pending: #f5a623;
   --processing: #4fc3f7;
   --completed: #66bb6a;
@@ -84,6 +84,45 @@ body {
 
 .animate-fade-in {
   animation: fadeIn 0.35s ease both;
+}
+
+/* ── Reduced Motion Support (WCAG 2.1 AA / 2.3.3) ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-fade-in {
+    animation: none !important;
+  }
+}
+
+/* ── High Contrast Support (WCAG 2.1 AA / 1.4.3 & 1.4.6) ── */
+@media (prefers-contrast: more) {
+  :root {
+    --bg0: #000000;
+    --bg1: #080808;
+    --bg2: #101010;
+    --bg3: #181818;
+    --amber: #ffb74d;
+    --border: rgba(255, 183, 77, 0.45);
+    --dim: rgba(255, 255, 255, 0.85);
+  }
+
+  button,
+  input,
+  textarea {
+    border-width: 2px !important;
+  }
+
+  [role="tab"][aria-selected="true"] {
+    border-bottom-width: 3px !important;
+    color: #fff !important;
+  }
 }
 
 .scanline-overlay {
