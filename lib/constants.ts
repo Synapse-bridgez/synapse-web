@@ -49,6 +49,25 @@ export const DIM = "rgba(255,255,255,0.35)";
  */
 export const MONO = "var(--font-ibm-plex-mono), monospace";
 
+/**
+ * The network passphrase this dashboard is configured to target.
+ *
+ * Used by the wallet layer to detect a mismatch between the connected
+ * wallet's active network and the dashboard's configured network before
+ * allowing a submission. Defaults to Testnet; override via
+ * `NEXT_PUBLIC_NETWORK_PASSPHRASE` for other deployments.
+ */
+export const NETWORK_PASSPHRASE =
+  process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
+  "Test SDF Network ; September 2015";
+
+/** Human-readable label for the configured network, derived from the passphrase. */
+export const NETWORK_LABEL = NETWORK_PASSPHRASE.includes("Test")
+  ? "Testnet"
+  : NETWORK_PASSPHRASE.includes("Public")
+    ? "Mainnet"
+    : "Custom Network";
+
 export const ABI_ENDPOINTS = [
   {
     name: "initialize",
