@@ -49,6 +49,50 @@ export const DIM = "rgba(255,255,255,0.35)";
  */
 export const MONO = "var(--font-ibm-plex-mono), monospace";
 
+/**
+ * Predefined Soroban RPC environments offered by the network switcher.
+ *
+ * `passphrase` is the network passphrase the endpoint is expected to report
+ * via `getNetwork`. It is used to detect a passphrase mismatch when a user
+ * validates a custom endpoint, so the two must stay in sync with the
+ * predefined switcher options.
+ */
+export const SOROBAN_NETWORKS = [
+  {
+    id: "testnet",
+    label: "Testnet",
+    rpcUrl: "https://soroban-testnet.stellar.org",
+    passphrase: "Test SDF Network ; September 2015",
+  },
+  {
+    id: "futurenet",
+    label: "Futurenet",
+    rpcUrl: "https://rpc-futurenet.stellar.org",
+    passphrase: "Test SDF Future Network ; October 2022",
+  },
+] as const;
+
+export type SorobanNetworkId = (typeof SOROBAN_NETWORKS)[number]["id"];
+
+/**
+ * Storage key for a user-supplied custom Soroban RPC endpoint. The value is
+ * only written after a successful connectivity/compatibility validation.
+ */
+export const CUSTOM_RPC_STORAGE_KEY = "soroban.customRpcEndpoint";
+
+/**
+ * The RPC method used as a lightweight health-check before a custom endpoint
+ * is persisted or activated. `getHealth` is the Soroban RPC equivalent of a
+ * liveness probe and requires no signing.
+ */
+export const RPC_HEALTH_METHOD = "getHealth";
+
+/**
+ * The RPC method used to read the endpoint's network passphrase so a custom
+ * endpoint can be rejected when it does not match the expected network.
+ */
+export const RPC_NETWORK_METHOD = "getNetwork";
+
 export const ABI_ENDPOINTS = [
   {
     name: "initialize",
