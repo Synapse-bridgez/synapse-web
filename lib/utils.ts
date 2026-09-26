@@ -9,6 +9,7 @@ export function elapsed(ts: number): string {
   return `${Math.floor(s / 3600)}h ago`;
 }
 
-export function formatAmount(n: number): string {
-  return n.toFixed(2);
+export function formatAmount(n: number | string): string {
+  const num = typeof n === "number" ? n : parseFloat(n) || 0;
+  return num.toFixed(2);
 }
