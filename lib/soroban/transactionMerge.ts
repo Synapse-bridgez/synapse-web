@@ -1,6 +1,7 @@
 import { MOCK_TXS } from "@/lib/mock-data";
 import type { Transaction } from "@/lib/types";
 import type { NormalizedSorobanEvent } from "./events";
+import { txCache, type TxCache } from "@/lib/storage/txCache";
 
 export const PLACEHOLDER_MARKER = "—";
 
@@ -77,4 +78,43 @@ export function mergeTransactionEvents(events: NormalizedSorobanEvent[]): Transa
     }
   }
   return Array.from(txMap.values());
+}
+
+/**
+ * Merges cached (IndexedDB) history with fresh RPC/poller data. Fresh data is
+ * authoritative for any tx_id it contains; cached records fill in history that
+ * has aged out of the RPC event retention window. Result is newest-first.
+ */
+export function mergeCachedTransactions(
+  fresh: Transaction[],
+  cached: Transaction[]
+): Transaction[] {
+  const txMap = new Map<string, Transaction>();
+  for (const tx of cached) txMap.set(tx.id, tx);
+  for (const tx of fresh) txMap.set(tx.id, tx);
+  return Array.from(txMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+}
+
+/**
+ * Loads persisted history from the cache and merges it with fresh data,
+ * persisting the fresh records so future reloads retain them. Falls back to
+ * fresh-only data when IndexedDB is unavailable.
+ */
+export async function loadMergedTransactions(
+  fresh: Transaction[],
+  cache: TxCache = txCache
+): Promise<Transaction[]> {
+  let cached: Transaction[] = [];
+  try {
+    cached = await cache.getAll();
+  } catch {
+    cached = [];
+  }
+  const merged = mergeCachedTransactions(fresh, cached);
+  try {
+    await cache.putMany(fresh);
+  } catch {
+    // Persistence is best-effort; merged data is still returned.
+  }
+  return merged;
 }
