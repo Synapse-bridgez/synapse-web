@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { BG2, BG3, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { ActionButton } from "./ActionButton";
+import { useFocusTrap } from "./useFocusTrap";
 
 interface ConfirmDialogProps {
   /** Dialog heading */
@@ -32,67 +33,15 @@ export function ConfirmDialog({
   const [typed, setTyped] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   const needsRetype = Boolean(retypeValue);
   const canConfirm = needsRetype ? typed === retypeValue : true;
 
-  // Store previously focused element and focus dialog/input on open
-  useEffect(() => {
-    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-
-    if (inputRef.current) {
-      inputRef.current.focus();
-    } else if (dialogRef.current) {
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusable.length > 0) {
-        focusable[0].focus();
-      }
-    }
-
-    return () => {
-      // Restore focus on close
-      previouslyFocusedRef.current?.focus();
-    };
-  }, []);
-
-  // Close on Escape & Focus Trap
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-        return;
-      }
-
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+  // Utilize the shared useFocusTrap hook
+  useFocusTrap(dialogRef, {
+    onEscape: onCancel,
+    initialFocusRef: needsRetype ? inputRef : undefined,
+  });
 
   const mono: CSSProperties = {
     fontFamily: MONO,
@@ -191,7 +140,9 @@ export function ConfirmDialog({
                 spellCheck={false}
                 autoComplete="off"
                 aria-invalid={typed.length > 0 && typed !== retypeValue}
-                aria-describedby={typed.length > 0 && typed !== retypeValue ? "retype-error-msg" : undefined}
+                aria-describedby={
+                  typed.length > 0 && typed !== retypeValue ? "retype-error-msg" : undefined
+                }
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
