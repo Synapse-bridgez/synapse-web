@@ -11,6 +11,7 @@ import { useWallet } from "@/lib/wallet/WalletProvider";
 import { addressArg, invokeContract, simulateContractCall } from "@/lib/soroban/contract";
 import { shortId } from "@/lib/utils";
 import { AMBER, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import { validateValues, type ValidationSchema } from "@/lib/validation/schemas";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
@@ -41,6 +42,7 @@ function AdminCard({
   title,
   tip,
   fields,
+  schema,
   onSubmit,
   btnLabel,
   btnColor = AMBER,
@@ -49,6 +51,7 @@ function AdminCard({
   title: string;
   tip: string;
   fields: FieldDef[];
+  schema: ValidationSchema;
   onSubmit: (vals: Record<string, string>) => void | Promise<void>;
   btnLabel: string;
   btnColor?: string;
@@ -57,6 +60,7 @@ function AdminCard({
   const [vals, setVals] = useState<Record<string, string>>(
     Object.fromEntries(fields.map((f) => [f.key, ""]))
   );
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [pendingVals, setPendingVals] = useState<Record<string, string> | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -69,7 +73,21 @@ function AdminCard({
     }
   }
 
+  function handleChange(key: string, value: string) {
+    setVals((p) => ({ ...p, [key]: value }));
+    // Clear a field's error as soon as the user edits it.
+    setErrors((p) => {
+      if (!p[key]) return p;
+      const next = { ...p };
+      delete next[key];
+      return next;
+    });
+  }
+
   function handleClick() {
+    const nextErrors = validateValues(schema, vals);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     if (confirm) {
       setPendingVals({ ...vals });
     } else {
@@ -94,8 +112,9 @@ function AdminCard({
               key={f.key}
               label={f.label}
               value={vals[f.key] ?? ""}
-              onChange={(v) => setVals((p) => ({ ...p, [f.key]: v }))}
+              onChange={(v) => handleChange(f.key, v)}
               placeholder={f.placeholder}
+              error={errors[f.key]}
             />
           ))}
         </div>
@@ -208,6 +227,7 @@ export function AdminTab() {
           { label: "admin", key: "admin", placeholder: "G… admin address" },
           { label: "relay_signer", key: "relay_signer", placeholder: "G… relay signer address" },
         ]}
+        schema={ADMIN_SCHEMAS.initialize}
         btnLabel="INITIALIZE →"
         onSubmit={(v) => runAdminCall("initialize", [v.admin ?? "", v.relay_signer ?? ""])}
       />
@@ -217,6 +237,7 @@ export function AdminTab() {
         title="TRANSFER ADMIN"
         tip="transfer_admin(new_admin: Address) — caller must be current admin; irreversible if wrong address"
         fields={[{ label: "new_admin", key: "new_admin", placeholder: "G… new admin address" }]}
+        schema={ADMIN_SCHEMAS.transfer_admin}
         btnLabel="TRANSFER →"
         btnColor={STATUS_META.FAILED.color}
         confirm={{
@@ -238,14 +259,14 @@ export function AdminTab() {
         fields={[
           { label: "new_signer", key: "new_signer", placeholder: "G… new relay signer address" },
         ]}
+        schema={ADMIN_SCHEMAS.set_relay_signer}
         btnLabel="SET SIGNER →"
         btnColor={STATUS_META.PROCESSING.color}
         confirm={{
-          title: "REPLACE RELAY SIGNER",
+          title: "SET RELAY SIGNER",
           message:
-            "You are replacing the relay signer address. " +
-            "The current relay signer will immediately lose the ability to submit transactions. " +
-            "Confirm only if you have the new signer ready.",
+            "You are updating the relay signer address. " +
+            "Confirm the new signer address is correct before continuing.",
           accentColor: STATUS_META.PROCESSING.color,
         }}
         onSubmit={(v) => runAdminCall("set_relay_signer", [v.new_signer ?? ""])}
@@ -253,58 +274,20 @@ export function AdminTab() {
 
       {/* Diagnostics */}
       <Panel title="DIAGNOSTICS">
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={() => runDiagnostic("health")}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              background: "transparent",
-              border: `1px solid ${BORDER}`,
-              color: DIM,
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#fff";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = DIM;
-              e.currentTarget.style.borderColor = BORDER;
-            }}
-          >
-            health()
-          </button>
-          <button
-            onClick={() => runDiagnostic("version")}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              background: "transparent",
-              border: `1px solid ${BORDER}`,
-              color: DIM,
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#fff";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = DIM;
-              e.currentTarget.style.borderColor = BORDER;
-            }}
-          >
-            version()
-          </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <ActionButton
+            label="GET ADMIN →"
+            color={DIM}
+            onClick={() => runDiagnostic("get_admin")}
+          />
+          <ActionButton
+            label="GET RELAY SIGNER →"
+            color={DIM}
+            onClick={() => runDiagnostic("get_relay_signer")}
+          />
         </div>
         <SorobanTip>
-          health() + version() → read-only simulations via rpc.Server; no signing required
+          Read-only simulations — no wallet signature required beyond the connected account.
         </SorobanTip>
       </Panel>
     </div>
