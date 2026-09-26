@@ -1,19 +1,44 @@
 import { StellarWalletsKit, Networks } from "@creit.tech/stellar-wallets-kit";
 import { FreighterModule } from "@creit.tech/stellar-wallets-kit/modules/freighter";
 import { xBullModule } from "@creit.tech/stellar-wallets-kit/modules/xbull";
+import { WalletConnectModule } from "@creit.tech/stellar-wallets-kit/modules/wallet-connect";
 import { getStoredWalletId } from "./storage";
 
 export { getStoredWalletId, storeSelectedWalletId, clearSelectedWalletId } from "./storage";
 
 let initialized = false;
 
+/**
+ * WalletConnect requires a project id issued by the WalletConnect Cloud.
+ * It is read from the public env var so the same build can target different
+ * relay projects without code changes.
+ */
+const WALLETCONNECT_PROJECT_ID =
+  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID) || "";
+
 export function ensureWalletKitInitialized(): void {
   if (initialized || typeof window === "undefined") return;
+
+  const modules = [new FreighterModule(), new xBullModule()];
+
+  // Only register WalletConnect when a project id is configured; otherwise
+  // the module would fail to open a relay session and break the connect flow.
+  if (WALLETCONNECT_PROJECT_ID) {
+    modules.push(
+      new WalletConnectModule({
+        projectId: WALLETCONNECT_PROJECT_ID,
+        name: "Stellar Dashboard",
+        description: "Connect a mobile Stellar wallet via WalletConnect",
+        url: typeof window !== "undefined" ? window.location.origin : "",
+        icons: [],
+      }),
+    );
+  }
 
   StellarWalletsKit.init({
     network: Networks.TESTNET,
     selectedWalletId: getStoredWalletId(),
-    modules: [new FreighterModule(), new xBullModule()],
+    modules,
   });
 
   initialized = true;

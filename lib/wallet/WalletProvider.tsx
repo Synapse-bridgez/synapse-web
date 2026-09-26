@@ -6,6 +6,7 @@ import {
   storeSelectedWalletId,
   clearSelectedWalletId,
   getStoredWalletId,
+  isWalletConnectModule,
 } from "./kit";
 
 interface WalletContextValue {
@@ -13,6 +14,16 @@ interface WalletContextValue {
   accounts: string[];
   connecting: boolean;
   error: string | null;
+  /**
+   * True while a WalletConnect pairing is in progress (QR shown / deep link
+   * opened). Consumers can use this to render the pairing UI.
+   */
+  pairing: boolean;
+  /**
+   * URI to render as a QR code (desktop) or open as a deep link (mobile) while
+   * pairing via WalletConnect. Null when not pairing.
+   */
+  pairingUri: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   switchAccount: (account: string) => void;
@@ -23,6 +34,8 @@ const WalletContext = createContext<WalletContextValue>({
   accounts: [],
   connecting: false,
   error: null,
+  pairing: false,
+  pairingUri: null,
   connect: async () => {},
   disconnect: async () => {},
   switchAccount: () => {},
@@ -55,11 +68,40 @@ async function enumerateAccounts(activeAddress: string): Promise<string[]> {
   return [activeAddress];
 }
 
+/**
+ * WalletConnect exposes a pairing URI (wc:...) that must be rendered as a QR
+ * code on desktop or opened as a deep link on mobile. The kit surfaces it via
+ * the module's `getQrCode`/`getUri` helpers depending on version, so we probe
+ * both and fall back to null when neither is available.
+ */
+async function getPairingUri(): Promise<string | null> {
+  try {
+    const module = StellarWalletsKit.selectedModule as unknown as {
+      getQrCode?: () => Promise<{ uri?: string } | string>;
+      getUri?: () => Promise<string> | string;
+    };
+    if (typeof module.getUri === "function") {
+      const uri = await module.getUri();
+      if (typeof uri === "string" && uri.length > 0) return uri;
+    }
+    if (typeof module.getQrCode === "function") {
+      const qr = await module.getQrCode();
+      if (typeof qr === "string" && qr.length > 0) return qr;
+      if (qr && typeof qr === "object" && typeof qr.uri === "string") return qr.uri;
+    }
+  } catch {
+    // Module doesn't expose a pairing URI; nothing to render.
+  }
+  return null;
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<string[]>([]);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pairing, setPairing] = useState(false);
+  const [pairingUri, setPairingUri] = useState<string | null>(null);
 
   useEffect(() => {
     ensureWalletKitInitialized();
@@ -74,7 +116,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setAccounts(enumerated);
       })
       .catch(() => {
+        // Session expired or relay disconnected: clear the stale session and
+        // surface a reconnect prompt instead of silently failing.
         clearSelectedWalletId();
+        if (!cancelled) {
+          setError("Wallet session expired. Please reconnect.");
+        }
       });
     return () => {
       cancelled = true;
@@ -85,15 +132,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     ensureWalletKitInitialized();
     setConnecting(true);
     setError(null);
+    setPairingUri(null);
     try {
       await StellarWalletsKit.authModal({});
+      const selected = StellarWalletsKit.selectedModule;
+      const walletConnect = isWalletConnectModule(selected);
+      if (walletConnect) {
+        setPairing(true);
+        setPairingUri(await getPairingUri());
+      }
       const { address: connectedAddress } = await StellarWalletsKit.getAddress();
       setAddress(connectedAddress);
       setAccounts(await enumerateAccounts(connectedAddress));
-      storeSelectedWalletId(StellarWalletsKit.selectedModule.productId);
+      storeSelectedWalletId(selected.productId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect wallet");
     } finally {
+      setPairing(false);
+      setPairingUri(null);
       setConnecting(false);
     }
   }, []);
@@ -107,6 +163,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     clearSelectedWalletId();
     setAddress(null);
     setAccounts([]);
+    setPairing(false);
+    setPairingUri(null);
   }, []);
 
   const switchAccount = useCallback((account: string) => {
@@ -116,7 +174,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return (
     <WalletContext.Provider
-      value={{ address, accounts, connecting, error, connect, disconnect, switchAccount }}
+      value={{
+        address,
+        accounts,
+        connecting,
+        error,
+        pairing,
+        pairingUri,
+        connect,
+        disconnect,
+        switchAccount,
+      }}
     >
       {children}
     </WalletContext.Provider>
