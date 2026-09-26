@@ -18,6 +18,21 @@ export interface ContractCallResult {
 }
 
 /**
+ * Result of a pre-submit simulation preview for a state-changing call.
+ * `ok: false` means the call would revert and submission must be blocked.
+ */
+export interface ContractCallPreview {
+  ok: boolean;
+  method: string;
+  /** Estimated total fee in stroops, derived from the simulation. */
+  estimatedFee: string;
+  /** Human-readable revert reason when `ok` is false. */
+  revertReason?: string;
+  /** Raw simulation result for callers that need to inspect return values. */
+  simulation?: unknown;
+}
+
+/**
  * Builds, simulates, signs (via the connected wallet), submits, and polls a
  * Soroban contract invocation to completion.
  */
@@ -90,4 +105,47 @@ export async function simulateContractCall(
     throw new Error(simulated.error);
   }
   return simulated;
+}
+
+/**
+ * Simulates a state-changing contract call and returns a preview describing
+ * whether it would succeed, the estimated fee, and (on failure) the revert
+ * reason. Callers must surface this preview and require explicit confirmation
+ * before invoking `invokeContract`.
+ */
+export async function previewContractCall(
+  rpcUrl: string,
+  contractId: string,
+  sourceAddress: string,
+  method: string,
+  args: xdr.ScVal[] = []
+): Promise<ContractCallPreview> {
+  try {
+    const simulated = await simulateContractCall(
+      rpcUrl,
+      contractId,
+      sourceAddress,
+      method,
+      args
+    );
+
+    const minResourceFee = (simulated as { minResourceFee?: string }).minResourceFee;
+    const estimatedFee = minResourceFee
+      ? (BigInt(minResourceFee) + BigInt(BASE_FEE)).toString()
+      : BASE_FEE;
+
+    return {
+      ok: true,
+      method,
+      estimatedFee,
+      simulation: simulated,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      method,
+      estimatedFee: BASE_FEE,
+      revertReason: error instanceof Error ? error.message : String(error),
+    };
+  }
 }

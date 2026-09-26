@@ -33,6 +33,47 @@ interface ConfirmConfig {
   accentColor?: string;
 }
 
+/** Diff-style preview of the expected effect of a state-changing call. */
+interface PreviewState {
+  method: string;
+  /** Human-readable diff lines, e.g. "admin: GABC… → GXYZ…" */
+  diff: string[];
+  /** Estimated fee in stroops, when the simulation reports one. */
+  fee?: string;
+  /** Raw values captured for the eventual submission. */
+  values: Record<string, string>;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function shortAddr(a: string): string {
+  const t = a.trim();
+  if (t.length <= 12) return t;
+  return `${t.slice(0, 6)}…${t.slice(-4)}`;
+}
+
+/**
+ * Build a diff-style preview for a known admin method from the submitted
+ * field values. Unknown methods fall back to a generic argument listing.
+ */
+function buildDiff(method: string, values: Record<string, string>): string[] {
+  switch (method) {
+    case "initialize":
+      return [
+        `admin: (unset) → ${shortAddr(values.admin ?? "")}`,
+        `relay_signer: (unset) → ${shortAddr(values.relay_signer ?? "")}`,
+      ];
+    case "transfer_admin":
+      return [`admin: (current) → ${shortAddr(values.new_admin ?? "")}`];
+    case "set_relay_signer":
+      return [`relay_signer: (current) → ${shortAddr(values.new_signer ?? "")}`];
+    default:
+      return Object.entries(values).map(([k, v]) => `${k}: → ${shortAddr(v)}`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // AdminCard
 // ---------------------------------------------------------------------------
@@ -126,14 +167,115 @@ function AdminCard({
 }
 
 // ---------------------------------------------------------------------------
+// PreviewDialog
+// ---------------------------------------------------------------------------
+
+function PreviewDialog({
+  preview,
+  accentColor,
+  onConfirm,
+  onCancel,
+}: {
+  preview: PreviewState;
+  accentColor: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.72)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: "#0B0E14",
+          border: `1px solid ${accentColor}`,
+          maxWidth: 520,
+          width: "100%",
+          padding: 20,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            fontFamily: MONO,
+            letterSpacing: "0.08em",
+            color: accentColor,
+            marginBottom: 12,
+          }}
+        >
+          SIMULATION PREVIEW — {preview.method}()
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+          {preview.diff.map((line, i) => (
+            <div
+              key={i}
+              style={{
+                fontFamily: MONO,
+                fontSize: 12,
+                color: "#E6E6E6",
+                background: "rgba(255,255,255,0.03)",
+                border: `1px solid ${BORDER}`,
+                padding: "6px 10px",
+              }}
+            >
+              {line}
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 11,
+            color: DIM,
+            marginBottom: 18,
+          }}
+        >
+          estimated fee: {preview.fee ?? "unavailable"}
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <ActionButton label="CANCEL" color={DIM} onClick={onCancel} />
+          <ActionButton label="CONFIRM & SIGN →" color={accentColor} onClick={onConfirm} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // AdminTab
 // ---------------------------------------------------------------------------
 
 export function AdminTab() {
   const { address, connect } = useWallet();
   const { toast } = useToast();
+  const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [simulating, setSimulating] = useState(false);
 
-  async function runAdminCall(method: string, addresses: string[]) {
+  /**
+   * Simulate the state-changing call first. On success, surface a diff-style
+   * preview + estimated fee and require explicit confirmation before the real
+   * signed submission. On revert, block submission and show the reason.
+   */
+  async function runAdminCall(
+    method: string,
+    addresses: string[],
+    values: Record<string, string>,
+    accentColor: string = AMBER
+  ) {
     if (!CONTRACT_ID) {
       toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
       return;
@@ -147,15 +289,46 @@ export function AdminTab() {
       toast("All address fields are required", "error");
       return;
     }
+
+    const args = addresses.map(addressArg);
+
+    // 1. Simulate first — never sign without a successful simulation.
+    setSimulating(true);
     try {
-      const args = addresses.map(addressArg);
-      const result = await invokeContract(RPC_URL, CONTRACT_ID, address, method, args);
+      const simulated = await simulateContractCall(RPC_URL, CONTRACT_ID, address, method, args);
+      const fee =
+        simulated.fee !== undefined && simulated.fee !== null
+          ? `${simulated.fee} stroops`
+          : undefined;
+      setPreview({
+        method,
+        diff: buildDiff(method, values),
+        fee,
+        values,
+      });
+    } catch (err) {
+      // Would-revert: block submission and surface the revert reason.
       toast(
-        `${method}() ${result.status === "SUCCESS" ? "succeeded" : "failed"} · tx ${shortId(result.hash)}`,
+        `Simulation failed — submission blocked: ${err instanceof Error ? err.message : `${method}() would revert`}`,
+        "error"
+      );
+    } finally {
+      setSimulating(false);
+    }
+  }
+
+  /** Triggered only after the user explicitly confirms the preview. */
+  async function submitConfirmed(p: PreviewState) {
+    if (!CONTRACT_ID || !address) return;
+    const args = Object.values(p.values).map(addressArg);
+    try {
+      const result = await invokeContract(RPC_URL, CONTRACT_ID, address, p.method, args);
+      toast(
+        `${p.method}() ${result.status === "SUCCESS" ? "succeeded" : "failed"} · tx ${shortId(result.hash)}`,
         result.status === "SUCCESS" ? "success" : "error"
       );
     } catch (err) {
-      toast(err instanceof Error ? err.message : `${method}() failed`, "error");
+      toast(err instanceof Error ? err.message : `${p.method}() failed`, "error");
     }
   }
 
@@ -208,8 +381,8 @@ export function AdminTab() {
           { label: "admin", key: "admin", placeholder: "G… admin address" },
           { label: "relay_signer", key: "relay_signer", placeholder: "G… relay signer address" },
         ]}
-        btnLabel="INITIALIZE →"
-        onSubmit={(v) => runAdminCall("initialize", [v.admin ?? "", v.relay_signer ?? ""])}
+        btnLabel={simulating ? "SIMULATING…" : "INITIALIZE →"}
+        onSubmit={(v) => runAdminCall("initialize", [v.admin ?? "", v.relay_signer ?? ""], v)}
       />
 
       {/* Transfer admin — requires retype confirmation */}
@@ -217,7 +390,7 @@ export function AdminTab() {
         title="TRANSFER ADMIN"
         tip="transfer_admin(new_admin: Address) — caller must be current admin; irreversible if wrong address"
         fields={[{ label: "new_admin", key: "new_admin", placeholder: "G… new admin address" }]}
-        btnLabel="TRANSFER →"
+        btnLabel={simulating ? "SIMULATING…" : "TRANSFER →"}
         btnColor={STATUS_META.FAILED.color}
         confirm={{
           title: "TRANSFER ADMIN — IRREVERSIBLE",
@@ -228,7 +401,9 @@ export function AdminTab() {
           retypeKey: "new_admin",
           accentColor: STATUS_META.FAILED.color,
         }}
-        onSubmit={(v) => runAdminCall("transfer_admin", [v.new_admin ?? ""])}
+        onSubmit={(v) =>
+          runAdminCall("transfer_admin", [v.new_admin ?? ""], v, STATUS_META.FAILED.color)
+        }
       />
 
       {/* Set relay signer — gated confirm (no retype required) */}
@@ -238,75 +413,31 @@ export function AdminTab() {
         fields={[
           { label: "new_signer", key: "new_signer", placeholder: "G… new relay signer address" },
         ]}
-        btnLabel="SET SIGNER →"
+        btnLabel={simulating ? "SIMULATING…" : "SET SIGNER →"}
         btnColor={STATUS_META.PROCESSING.color}
         confirm={{
-          title: "REPLACE RELAY SIGNER",
+          title: "SET RELAY SIGNER",
           message:
-            "You are replacing the relay signer address. " +
-            "The current relay signer will immediately lose the ability to submit transactions. " +
-            "Confirm only if you have the new signer ready.",
+            "You are updating the relay signer. Confirm the new signer address before continuing.",
           accentColor: STATUS_META.PROCESSING.color,
         }}
-        onSubmit={(v) => runAdminCall("set_relay_signer", [v.new_signer ?? ""])}
+        onSubmit={(v) =>
+          runAdminCall("set_relay_signer", [v.new_signer ?? ""], v, STATUS_META.PROCESSING.color)
+        }
       />
 
-      {/* Diagnostics */}
-      <Panel title="DIAGNOSTICS">
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={() => runDiagnostic("health")}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              background: "transparent",
-              border: `1px solid ${BORDER}`,
-              color: DIM,
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#fff";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = DIM;
-              e.currentTarget.style.borderColor = BORDER;
-            }}
-          >
-            health()
-          </button>
-          <button
-            onClick={() => runDiagnostic("version")}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              background: "transparent",
-              border: `1px solid ${BORDER}`,
-              color: DIM,
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#fff";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = DIM;
-              e.currentTarget.style.borderColor = BORDER;
-            }}
-          >
-            version()
-          </button>
-        </div>
-        <SorobanTip>
-          health() + version() → read-only simulations via rpc.Server; no signing required
-        </SorobanTip>
-      </Panel>
+      {preview && (
+        <PreviewDialog
+          preview={preview}
+          accentColor={AMBER}
+          onConfirm={() => {
+            const p = preview;
+            setPreview(null);
+            void submitConfirmed(p);
+          }}
+          onCancel={() => setPreview(null)}
+        />
+      )}
     </div>
   );
 }
