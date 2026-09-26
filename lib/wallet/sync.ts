@@ -6,18 +6,15 @@ export type WalletSyncMessage =
 const CHANNEL_NAME = "synapse_wallet_sync";
 const STORAGE_SYNC_KEY = "synapse_wallet_sync_event";
 
-let activeChannel: BroadcastChannel | null = null;
-
 function getChannel(): BroadcastChannel | null {
-  if (typeof window === "undefined") return null;
-  if (!activeChannel && typeof BroadcastChannel !== "undefined") {
-    try {
-      activeChannel = new BroadcastChannel(CHANNEL_NAME);
-    } catch {
-      activeChannel = null;
-    }
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return null;
   }
-  return activeChannel;
+  try {
+    return new BroadcastChannel(CHANNEL_NAME);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -30,6 +27,7 @@ export function broadcastWalletEvent(message: WalletSyncMessage): void {
   if (channel) {
     try {
       channel.postMessage(message);
+      channel.close?.();
     } catch {
       // Channel post failed, fallback to storage event
     }
@@ -37,10 +35,7 @@ export function broadcastWalletEvent(message: WalletSyncMessage): void {
 
   // Fallback / accompaniment via localStorage to trigger storage events across windows/tabs
   try {
-    localStorage.setItem(
-      STORAGE_SYNC_KEY,
-      JSON.stringify({ ...message, _timestamp: Date.now() })
-    );
+    localStorage.setItem(STORAGE_SYNC_KEY, JSON.stringify({ ...message, _timestamp: Date.now() }));
   } catch {
     // Storage access unavailable
   }
@@ -48,11 +43,9 @@ export function broadcastWalletEvent(message: WalletSyncMessage): void {
 
 /**
  * Subscribes to cross-tab wallet sync messages.
- * Returns an cleanup unsubscribe function.
+ * Returns a cleanup unsubscribe function.
  */
-export function subscribeWalletSync(
-  onMessage: (message: WalletSyncMessage) => void
-): () => void {
+export function subscribeWalletSync(onMessage: (message: WalletSyncMessage) => void): () => void {
   if (typeof window === "undefined") {
     return () => {};
   }
@@ -86,6 +79,7 @@ export function subscribeWalletSync(
   return () => {
     if (channel) {
       channel.removeEventListener("message", handleBroadcastMessage);
+      channel.close?.();
     }
     window.removeEventListener("storage", handleStorageEvent);
   };

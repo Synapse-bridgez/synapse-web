@@ -36,11 +36,9 @@ describe("Wallet-Kit Compatibility Suite Across Supported Wallets", () => {
   wallets.forEach(({ id, name }) => {
     describe(`Wallet Flow: ${name} (${id})`, () => {
       it(`initializes and connects successfully via ${name}`, async () => {
-        const initSpy = vi.spyOn(StellarWalletsKit, "init").mockImplementation(() => {});
-        const authSpy = vi.spyOn(StellarWalletsKit, "authModal").mockResolvedValue(undefined as any);
-        const addressSpy = vi
-          .spyOn(StellarWalletsKit, "getAddress")
-          .mockResolvedValue({ address: mockAddress });
+        vi.spyOn(StellarWalletsKit, "init").mockImplementation(() => {});
+        vi.spyOn(StellarWalletsKit, "authModal").mockResolvedValue(undefined as any);
+        vi.spyOn(StellarWalletsKit, "getAddress").mockResolvedValue({ address: mockAddress });
 
         ensureWalletKitInitialized();
         await StellarWalletsKit.authModal({});
@@ -94,7 +92,7 @@ describe("Wallet-Kit Compatibility Suite Across Supported Wallets", () => {
         await StellarWalletsKit.disconnect();
         clearSelectedWalletId();
 
-        expect(getStoredWalletId()).toBeNull();
+        expect(getStoredWalletId()).toBeUndefined();
         expect(disconnectSpy).toHaveBeenCalled();
       });
 
