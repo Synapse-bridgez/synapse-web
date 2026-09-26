@@ -93,77 +93,131 @@ export const RPC_HEALTH_METHOD = "getHealth";
  */
 export const RPC_NETWORK_METHOD = "getNetwork";
 
+/**
+ * A single documented parameter of a contract entrypoint.
+ *
+ * `type` is the Soroban/ScVal type name used by the clear-signing decoder in
+ * `lib/soroban/args.ts` to pick the right human-readable formatter. `struct`
+ * names the struct shape for complex arguments so nested fields can be
+ * decoded field-by-field instead of shown as an opaque blob.
+ */
+export type AbiParam = {
+  name: string;
+  type: "Address" | "String" | "bool" | "u32" | "i128" | "struct";
+  struct?: string;
+};
+
+/**
+ * Documented struct shapes referenced by `ABI_ENDPOINTS` parameters. Each
+ * entry lists the fields (in order) of a Soroban struct argument so the
+ * clear-signing decoder can label nested values.
+ */
+export const ABI_STRUCTS: Record<string, AbiParam[]> = {
+  TxPayload: [
+    { name: "tx_id", type: "String" },
+    { name: "amount", type: "i128" },
+    { name: "destination", type: "Address" },
+  ],
+  CallbackPayload: [
+    { name: "tx_id", type: "String" },
+    { name: "url", type: "String" },
+    { name: "event", type: "String" },
+  ],
+};
+
 export const ABI_ENDPOINTS = [
   {
     name: "initialize",
     sig: "initialize(admin: Address, relay_signer: Address)",
     access: "one-time",
     desc: "Bootstrap the contract. Fails if already initialized. One-time call only.",
+    params: [
+      { name: "admin", type: "Address" },
+      { name: "relay_signer", type: "Address" },
+    ] as AbiParam[],
   },
   {
     name: "register_transaction",
     sig: "register_transaction(payload: TxPayload) → tx_id: String",
     access: "relay_signer",
     desc: "Register a new transaction. Returns a UUID. Emits TransactionRegistered event.",
+    params: [
+      { name: "payload", type: "struct", struct: "TxPayload" },
+    ] as AbiParam[],
   },
   {
     name: "start_processing",
     sig: "start_processing(tx_id: String)",
     access: "relay_signer",
     desc: "Advance transaction PENDING → PROCESSING. Emits StatusChanged.",
+    params: [{ name: "tx_id", type: "String" }] as AbiParam[],
   },
   {
     name: "complete_transaction",
     sig: "complete_transaction(tx_id: String)",
     access: "relay_signer",
     desc: "Advance PROCESSING → COMPLETED. Emits StatusChanged + triggers callback.",
+    params: [{ name: "tx_id", type: "String" }] as AbiParam[],
   },
   {
     name: "fail_transaction",
     sig: "fail_transaction(tx_id: String, reason: String)",
     access: "relay_signer",
     desc: "Mark transaction as FAILED with a reason string. Emits StatusChanged.",
+    params: [
+      { name: "tx_id", type: "String" },
+      { name: "reason", type: "String" },
+    ] as AbiParam[],
   },
   {
     name: "get_transaction",
     sig: "get_transaction(tx_id: String) → Transaction",
     access: "public",
     desc: "Read-only simulation. Returns full Transaction struct from ledger storage.",
+    params: [{ name: "tx_id", type: "String" }] as AbiParam[],
   },
   {
     name: "is_duplicate",
     sig: "is_duplicate(tx_id: String) → bool",
     access: "public",
     desc: "Check whether a tx_id has already been registered. Safe read-only call.",
+    params: [{ name: "tx_id", type: "String" }] as AbiParam[],
   },
   {
     name: "register_callback",
     sig: "register_callback(payload: CallbackPayload)",
     access: "relay_signer",
     desc: "Register a webhook URL for a transaction lifecycle event notification.",
+    params: [
+      { name: "payload", type: "struct", struct: "CallbackPayload" },
+    ] as AbiParam[],
   },
   {
     name: "transfer_admin",
     sig: "transfer_admin(new_admin: Address)",
     access: "admin",
     desc: "Transfer admin rights. Caller must be the current admin address.",
+    params: [{ name: "new_admin", type: "Address" }] as AbiParam[],
   },
   {
     name: "set_relay_signer",
     sig: "set_relay_signer(new_signer: Address)",
     access: "admin",
     desc: "Replace the relay signer address. Caller must be the current admin.",
+    params: [{ name: "new_signer", type: "Address" }] as AbiParam[],
   },
   {
     name: "health",
     sig: "health() → String",
     access: "public",
     desc: "Returns contract health string. No signing required.",
+    params: [] as AbiParam[],
   },
   {
     name: "version",
     sig: "version() → String",
     access: "public",
     desc: "Returns contract semver string e.g. '0.1.0'.",
+    params: [] as AbiParam[],
   },
 ];
