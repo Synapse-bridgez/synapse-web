@@ -96,7 +96,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     ensureWalletKitInitialized();
-    if (!getStoredWalletId()) return;
+    const storedWalletId = getStoredWalletId();
+    if (!storedWalletId) return;
+
+    // The persisted wallet may no longer be installed/available. If the kit
+    // can't resolve it, clear the stale selection instead of retrying forever.
+    const available = StellarWalletsKit.modules?.some(
+      (m) => m.productId === storedWalletId,
+    );
+    if (!available) {
+      clearSelectedWalletId();
+      return;
+    }
 
     let cancelled = false;
     StellarWalletsKit.getAddress()
@@ -104,7 +115,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setAddress(restoredAddress);
       })
       .catch(() => {
-        clearSelectedWalletId();
+        // Silent reconnection isn't supported (or was rejected) by this wallet;
+        // fall back to the disconnected state without prompting the user.
+        if (!cancelled) clearSelectedWalletId();
       });
     return () => {
       cancelled = true;

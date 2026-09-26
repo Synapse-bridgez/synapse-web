@@ -1,7 +1,7 @@
 import { StellarWalletsKit, Networks } from "@creit.tech/stellar-wallets-kit";
 import { FreighterModule } from "@creit.tech/stellar-wallets-kit/modules/freighter";
 import { xBullModule } from "@creit.tech/stellar-wallets-kit/modules/xbull";
-import { getStoredWalletId } from "./storage";
+import { getStoredWalletId, clearSelectedWalletId } from "./storage";
 
 export { getStoredWalletId, storeSelectedWalletId, clearSelectedWalletId } from "./storage";
 
@@ -17,6 +17,36 @@ export function ensureWalletKitInitialized(): void {
   });
 
   initialized = true;
+}
+
+/**
+ * Attempt a silent reconnection to a previously selected wallet.
+ *
+ * Returns the connected address when the wallet supports silent
+ * reconnection and the user has already authorized this origin, or `null`
+ * when no persisted selection exists, the wallet is no longer available, or
+ * the wallet does not support silent reconnection (in which case no popup is
+ * opened). A stale persisted selection is cleared so we don't keep retrying.
+ */
+export async function trySilentReconnect(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+
+  const storedId = getStoredWalletId();
+  if (!storedId) return null;
+
+  ensureWalletKitInitialized();
+
+  try {
+    const { address } = await StellarWalletsKit.getAddress();
+    if (address) return address;
+  } catch {
+    // Silent reconnection is unsupported or was rejected without a prompt.
+  }
+
+  // The persisted wallet is no longer installed/available or cannot reconnect
+  // silently; clear the stale selection instead of failing repeatedly.
+  clearSelectedWalletId();
+  return null;
 }
 
 export { StellarWalletsKit };
