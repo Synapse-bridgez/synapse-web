@@ -2,28 +2,32 @@ import type { StatusMeta, TxStatus } from "./types";
 
 export const STATUS_META: Record<TxStatus, StatusMeta> = {
   PENDING: {
-    color: "#F5A623",
-    bg: "rgba(245,166,35,0.12)",
-    glow: "rgba(245,166,35,0.4)",
+    color: "var(--status-pending)",
+    bg: "var(--status-pending-bg)",
+    glow: "var(--status-pending-glow)",
     label: "PENDING",
+    symbol: "!",
   },
   PROCESSING: {
-    color: "#4FC3F7",
-    bg: "rgba(79,195,247,0.12)",
-    glow: "rgba(79,195,247,0.4)",
+    color: "var(--status-processing)",
+    bg: "var(--status-processing-bg)",
+    glow: "var(--status-processing-glow)",
     label: "PROCESSING",
+    symbol: "~",
   },
   COMPLETED: {
-    color: "#66BB6A",
-    bg: "rgba(102,187,106,0.12)",
-    glow: "rgba(102,187,106,0.4)",
+    color: "var(--status-completed)",
+    bg: "var(--status-completed-bg)",
+    glow: "var(--status-completed-glow)",
     label: "COMPLETED",
+    symbol: "+",
   },
   FAILED: {
-    color: "#EF5350",
-    bg: "rgba(239,83,80,0.12)",
-    glow: "rgba(239,83,80,0.4)",
+    color: "var(--status-failed)",
+    bg: "var(--status-failed-bg)",
+    glow: "var(--status-failed-glow)",
     label: "FAILED",
+    symbol: "x",
   },
 };
 

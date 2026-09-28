@@ -11,6 +11,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "perf:budget": "node scripts/check-bundle-budget.mjs",
+    "perf:record": "node scripts/record-performance.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

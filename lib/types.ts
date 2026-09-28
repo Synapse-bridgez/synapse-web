@@ -28,6 +28,7 @@ export interface StatusMeta {
   bg: string;
   glow: string;
   label: string;
+  symbol: string;
 }
 
 export interface CallbackPayload {

@@ -11,10 +11,33 @@
   --amber-dim: rgba(245, 166, 35, 0.12);
   --border: rgba(245, 166, 35, 0.15);
   --dim: rgba(255, 255, 255, 0.35);
-  --pending: #f5a623;
-  --processing: #4fc3f7;
-  --completed: #66bb6a;
-  --failed: #ef5350;
+  --status-pending: #ffc857;
+  --status-processing: #56b4e9;
+  --status-completed: #f0e442;
+  --status-failed: #cc79a7;
+  --status-pending-bg: rgba(255, 200, 87, 0.12);
+  --status-processing-bg: rgba(86, 180, 233, 0.12);
+  --status-completed-bg: rgba(240, 228, 66, 0.12);
+  --status-failed-bg: rgba(204, 121, 167, 0.12);
+  --status-pending-glow: rgba(255, 200, 87, 0.4);
+  --status-processing-glow: rgba(86, 180, 233, 0.4);
+  --status-completed-glow: rgba(240, 228, 66, 0.4);
+  --status-failed-glow: rgba(204, 121, 167, 0.4);
+}
+
+:root[data-theme="light"] {
+  --status-pending: #8a5700;
+  --status-processing: #005a83;
+  --status-completed: #706600;
+  --status-failed: #8b315e;
+  --status-pending-bg: rgba(138, 87, 0, 0.1);
+  --status-processing-bg: rgba(0, 90, 131, 0.1);
+  --status-completed-bg: rgba(112, 102, 0, 0.1);
+  --status-failed-bg: rgba(139, 49, 94, 0.1);
+  --status-pending-glow: rgba(138, 87, 0, 0.25);
+  --status-processing-glow: rgba(0, 90, 131, 0.25);
+  --status-completed-glow: rgba(112, 102, 0, 0.25);
+  --status-failed-glow: rgba(139, 49, 94, 0.25);
 }
 
 * {

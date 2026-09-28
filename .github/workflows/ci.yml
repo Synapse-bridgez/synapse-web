@@ -2,35 +2,77 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, staging]
   push:
     branches: [main]
 
 jobs:
-  lint-typecheck-test-build:
-    name: Lint, typecheck, test, and build
+  quality:
+    name: Quality gates
+    uses: ./.github/workflows/quality.yml
+
+  preview-deploy:
+    name: Deploy PR preview
+    needs: quality
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    environment:
+      name: preview
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout pull request
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      - name: Deploy isolated Testnet preview
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          NEXT_PUBLIC_CONTRACT_ID: ""
+          NEXT_PUBLIC_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+        run: |
+          if [[ -z "$VERCEL_TOKEN" || -z "$VERCEL_ORG_ID" || -z "$VERCEL_PROJECT_ID" ]]; then
+            echo "Configure VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID in the preview environment."
+            exit 1
+          fi
+          npm exec --yes --package=vercel@latest -- vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+          npm exec --yes --package=vercel@latest -- vercel build --token="$VERCEL_TOKEN"
+          deployment_url=$(npm exec --yes --package=vercel@latest -- vercel deploy --prebuilt --yes --token="$VERCEL_TOKEN" 2>&1 | tee /dev/stderr | grep -Eo 'https://[^[:space:]]+\.vercel\.app' | tail -1)
+          if [[ -z "$deployment_url" ]]; then
+            echo "Vercel did not return a preview URL."
+            exit 1
+          fi
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
 
-      - name: Typecheck
-        run: npx tsc --noEmit
-
-      - name: Test
-        run: npm run test
-
-      - name: Build
-        run: npm run build
+      - name: Comment preview URL
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+        with:
+          script: |
+            const marker = '<!-- synapse-preview-deployment -->';
+            const body = `${marker}\nPreview deployment: ${process.env.PREVIEW_URL}`;
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((comment) => comment.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+            }

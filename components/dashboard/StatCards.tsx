@@ -16,19 +16,19 @@ export function StatCards({ txs }: StatCardsProps) {
   const cards = [
     { label: "TOTAL TXS", value: txs.length, sub: "mock data", color: NEUTRAL },
     {
-      label: "PENDING",
+      label: `${STATUS_META.PENDING.symbol} PENDING`,
       value: counts.PENDING,
       sub: "awaiting pickup",
       color: STATUS_META.PENDING.color,
     },
     {
-      label: "COMPLETED",
+      label: `${STATUS_META.COMPLETED.symbol} COMPLETED`,
       value: counts.COMPLETED,
       sub: "settled on-chain",
       color: STATUS_META.COMPLETED.color,
     },
     {
-      label: "FAILED",
+      label: `${STATUS_META.FAILED.symbol} FAILED`,
       value: counts.FAILED,
       sub: "terminal errors",
       color: STATUS_META.FAILED.color,
@@ -62,9 +62,7 @@ export function StatCards({ txs }: StatCardsProps) {
           >
             {c.value}
           </div>
-          <div style={{ fontSize: 10, color: DIM, fontFamily: MONO }}>
-            {c.sub}
-          </div>
+          <div style={{ fontSize: 10, color: DIM, fontFamily: MONO }}>{c.sub}</div>
         </Panel>
       ))}
     </div>
