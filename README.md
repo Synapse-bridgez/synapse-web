@@ -50,6 +50,7 @@ synapse-web/
 │       ├── SorobanTip.tsx
 │       ├── TabErrorBoundary.tsx
 │       └── Toast.tsx
+├── e2e/                  # Playwright specs (smoke + cross-engine runtime)
 ├── lib/
 │   ├── mock-data.ts        # Fallback data: MOCK_TXS + MOCK_CONTRACT_INFO
 │   ├── types.ts            # Transaction, ContractInfo, TxStatus, CallbackPayload
@@ -104,10 +105,39 @@ npm run build        # Production build
 npm run lint         # ESLint
 npm run test         # Run the test suite once
 npm run test:watch   # Run the test suite in watch mode
+npm run e2e:install  # One-time: download the Playwright browsers
+npm run e2e          # Playwright suite (all three engines)
 npm run format       # Prettier (writes)
 npm run format:check # Prettier (CI check)
 npx tsc --noEmit     # Type-check without emitting
 ```
+
+---
+
+## Testing
+
+Two suites, two runners, two jobs:
+
+| Suite          | Runner         | Where                                | Scope                                                                         |
+| -------------- | -------------- | ------------------------------------ | ----------------------------------------------------------------------------- |
+| `npm run test` | Vitest + jsdom | `*.test.ts(x)` next to their modules | Logic and component behaviour. Node 20 **and** 22 in CI.                      |
+| `npm run e2e`  | Playwright     | `e2e/*.spec.ts`                      | Does the built app boot and render in each engine? Chromium, Firefox, WebKit. |
+
+`e2e/` is excluded from Vitest's `include` globs (see `vitest.config.ts`) — both
+runners default to `*.spec.ts`, so without that exclusion the Playwright suite
+would be collected by `npm run test` and fail on a missing runner.
+
+`playwright.config.ts` defines the browser matrix as Playwright `projects`. A
+local `npm run e2e` runs all three; CI runs one project per matrix leg
+(`npx playwright test --project=<engine>`) so a failure is attributable to a
+specific engine.
+
+The e2e suite builds and starts the production app (`next build && next start`)
+rather than the dev server, so it exercises what actually ships. That build is
+the dominant cost of the suite — budget ~1 minute of setup per run.
+
+The pinned build/publish path stays on Node 20; only the _test_ job is matrixed
+across Node versions. See `.github/workflows/ci.yml` for the reasoning.
 
 ---
 
@@ -144,13 +174,13 @@ Notable milestones on the path to a working testnet client:
 
 ## Tech stack
 
-|                |                                                  |
-| -------------- | ------------------------------------------------ |
-| Framework      | Next.js 16 (App Router)                          |
-| UI             | React 19, inline styles + Tailwind CSS v4        |
-| Font           | IBM Plex Mono                                    |
-| Language       | TypeScript 5                                     |
-| Linting        | ESLint + Prettier + Husky pre-commit             |
-| Testing        | Vitest + Testing Library                         |
-| CI             | GitHub Actions (lint → typecheck → test → build) |
-| Target network | Stellar Testnet (Soroban)                        |
+|                |                                                                      |
+| -------------- | -------------------------------------------------------------------- |
+| Framework      | Next.js 16 (App Router)                                              |
+| UI             | React 19, inline styles + Tailwind CSS v4                            |
+| Font           | IBM Plex Mono                                                        |
+| Language       | TypeScript 5                                                         |
+| Linting        | ESLint + Prettier + Husky pre-commit                                 |
+| Testing        | Vitest + Testing Library (unit), Playwright (E2E)                    |
+| CI             | GitHub Actions — Node 20/22 test matrix, Chromium/Firefox/WebKit E2E |
+| Target network | Stellar Testnet (Soroban)                                            |

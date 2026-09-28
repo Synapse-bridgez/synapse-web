@@ -7,8 +7,60 @@ on:
     branches: [main]
 
 jobs:
-  lint-typecheck-test-build:
-    name: Lint, typecheck, test, and build
+  # ---------------------------------------------------------------------------
+  # Compatibility matrix (#174)
+  #
+  # Deliberate counterpoint to the single pinned Node version used by the
+  # build/publish job below. Pinning keeps the artifact reproducible; it also
+  # hides breakage on the versions contributors actually run locally. Both are
+  # wanted, so the *test* job is matrixed and the *build* job stays pinned.
+  #
+  # node-version: [20, 22] — 20 is the pinned build target, 22 is the current
+  # LTS. Node 24 is intentionally not in the matrix yet: jsdom 25 and the
+  # stellar-sdk dependency chain are not verified against it, and adding an
+  # unverified major would mean triaging failures nobody can act on. See the
+  # "Known limitations" section of the PR body.
+  #
+  # Cost control:
+  #   - fail-fast: false. With fail-fast: true a failure on Node 20 cancels the
+  #     Node 22 leg, which is precisely the information the matrix exists to
+  #     produce. The three legs are cheap and independent, so let them all run.
+  #   - Only `npm run test` is matrixed. Lint, typecheck and build are version
+  #     independent for this repo and stay in the single pinned job.
+  #   - setup-node's npm cache is keyed per Node version automatically.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test · Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm run test
+
+  # ---------------------------------------------------------------------------
+  # Lint / typecheck / production build.
+  #
+  # Stays on the single pinned Node version (see the version-pinning issue): the
+  # build output is what gets published, and a reproducible build is worth more
+  # here than a second opinion from another runtime.
+  # ---------------------------------------------------------------------------
+  lint-typecheck-build:
+    name: Lint, typecheck, and build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,8 +81,68 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
-      - name: Test
-        run: npm run test
-
       - name: Build
         run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # Cross-engine E2E (#174)
+  #
+  # One job per engine, each running a single Playwright project from
+  # playwright.config.ts. Splitting by job (rather than running all three
+  # projects in one job) means a WebKit-only failure shows up as a failed WebKit
+  # check instead of an unattributable red X, and each leg gets its own retry
+  # budget.
+  #
+  # Cost: three legs in parallel, so wall-clock impact on the PR is bounded by
+  # the slowest leg (~4 min: npm ci, browser install, production build, 6 specs),
+  # not their sum. This is the single largest addition to CI time in this PR and
+  # is the price of the required browser matrix. `retries: 1` in
+  # playwright.config.ts absorbs genuine flake without hiding a real regression.
+  #
+  # `npx playwright install --with-deps <browser>` installs one engine instead of
+  # all three; the system packages still cost ~30s per leg, which is why the
+  # npm cache and the browser download cache below matter.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: E2E · ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve Playwright version
+        id: playwright
+        run: echo "version=$(npx playwright --version)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache browser binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install ${{ matrix.project }}
+        run: npx playwright install --with-deps ${{ matrix.project }}
+
+      - name: Run ${{ matrix.project }} project
+        run: npx playwright test --project=${{ matrix.project }}
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: playwright-report/
+          retention-days: 7
