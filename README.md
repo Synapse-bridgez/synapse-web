@@ -102,12 +102,69 @@ Other scripts:
 ```bash
 npm run build        # Production build
 npm run lint         # ESLint
+npm run typecheck    # tsc --noEmit
 npm run test         # Run the test suite once
+npm run test:unit    # Unit tests only (what the pre-push hook runs)
 npm run test:watch   # Run the test suite in watch mode
 npm run format       # Prettier (writes)
 npm run format:check # Prettier (CI check)
-npx tsc --noEmit     # Type-check without emitting
 ```
+
+---
+
+## Git hooks
+
+`npm install` wires up [Husky](https://typicode.github.io/husky/), so the hooks
+are active on a fresh clone. Two hooks run:
+
+| Hook         | Runs                                                | Catches                                                                           |
+| ------------ | --------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `pre-commit` | Prettier + ESLint `--fix`, **on staged files only** | Bad formatting, unused vars, `let` vs `const`, bad React hooks, `any` sneaking in |
+| `pre-push`   | `tsc --noEmit`, then the unit test suite            | Type errors anywhere in the project, failing/regressed tests                      |
+
+`pre-commit` is scoped to staged files on purpose — a full-project lint is slow
+enough that people start reaching for `--no-verify`, which is the outcome this
+setup is trying to avoid. Anything that needs to see the whole project
+(typecheck, tests) lives in `pre-push`, where a few extra seconds is a fair
+price for not finding out in CI.
+
+`pre-push` runs **unit tests only**. The full browser E2E suite is deliberately
+out of scope for local hooks — it is far too slow, and it is CI-only. If a
+Playwright suite is added later, its specs belong in `e2e/` and `test:unit` must
+be kept from picking them up; today the whole suite is unit tests, so
+`test:unit` and `test` are the same command on purpose.
+
+### Emergency bypass
+
+Every so often the hooks are wrong — a hook bug, a broken toolchain, or a
+`main`-only type error you cannot fix from this branch. There is a sanctioned
+way out. It is not `--no-verify`:
+
+```bash
+SYNAPSE_HOOK_BYPASS="<why the hook cannot pass right now>" git commit -m "..."
+SYNAPSE_HOOK_BYPASS="<why the hook cannot pass right now>" git push
+```
+
+This is deliberate rather than a convenience:
+
+- **A reason is required.** `SYNAPSE_HOOK_BYPASS=""` is treated as a mistake
+  and the hook _fails_ with instructions. A bypass you cannot describe is a bug,
+  not an emergency.
+- **The reason gets printed.** The hook prints your reason back to you before
+  letting the commit through, so it is a deliberate act rather than a muscle
+  memory one.
+- **The reason has to follow you into the PR.** Copy it into a "Bypassed hooks"
+  section in the PR description. The bypass is only acceptable if the next
+  person can see why the checks were skipped.
+
+`--no-verify` (or `HUSKY=0`) still works, because it is Git and Husky, not us.
+It is not the sanctioned path: it skips the hook _and_ the reminder above, so it
+is silent. Reach for it only when the hook itself is wedged — and say so in the
+PR. Routine `--no-verify` erodes the hooks for everyone and is the one thing
+this setup is meant to prevent.
+
+If you push with a bypass, CI still runs every check, so you are buying delay,
+not immunity. Expect review to ask.
 
 ---
 
@@ -150,7 +207,7 @@ Notable milestones on the path to a working testnet client:
 | UI             | React 19, inline styles + Tailwind CSS v4        |
 | Font           | IBM Plex Mono                                    |
 | Language       | TypeScript 5                                     |
-| Linting        | ESLint + Prettier + Husky pre-commit             |
+| Linting        | ESLint + Prettier + Husky pre-commit / pre-push  |
 | Testing        | Vitest + Testing Library                         |
 | CI             | GitHub Actions (lint → typecheck → test → build) |
 | Target network | Stellar Testnet (Soroban)                        |
