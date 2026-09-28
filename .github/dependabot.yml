@@ -1,0 +1,63 @@
+# Dependabot configuration (#153).
+#
+# Version updates open PRs for direct dependencies on a weekly cadence.
+# Security updates (enabled in Settings → Code security → Dependabot security
+# updates) additionally open PRs for vulnerable *transitive* dependencies as
+# soon as an advisory is published — `allow: dependency-type: all` below makes
+# version updates cover transitive packages pinned in package-lock.json too.
+#
+# Auto-merging these PRs is intentionally out of scope here (see #167).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 10
+    allow:
+      - dependency-type: all
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: scope
+    groups:
+      # Framework packages must move together or the build breaks.
+      nextjs:
+        patterns:
+          - next
+          - eslint-config-next
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+      stellar:
+        patterns:
+          - "@stellar/*"
+          - "@creit.tech/*"
+      dev-tooling:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    # Security fixes are never grouped, so one vulnerable package cannot be held
+    # back by an unrelated failing bump in the same group.
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: "chore(ci)"
