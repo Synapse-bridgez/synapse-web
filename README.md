@@ -67,6 +67,10 @@ synapse-web/
 │       ├── transactionMerge.ts   # Merges mock baseline with live events
 │       ├── useLiveTransactions.ts
 │       └── useLiveContractInfo.ts
+├── e2e/
+│   └── smoke.spec.ts       # Staging smoke suite (Playwright) — see docs/
+├── docs/
+│   └── staging-smoke-tests.md
 └── public/                 # Static assets
 ```
 
@@ -104,10 +108,28 @@ npm run build        # Production build
 npm run lint         # ESLint
 npm run test         # Run the test suite once
 npm run test:watch   # Run the test suite in watch mode
+npm run test:e2e     # Playwright e2e suite (needs SMOKE_BASE_URL)
+npm run test:e2e:smoke  # Playwright staging smoke suite only
 npm run format       # Prettier (writes)
 npm run format:check # Prettier (CI check)
 npx tsc --noEmit     # Type-check without emitting
 ```
+
+Unit tests are Vitest; `e2e/` is Playwright. Vitest excludes `e2e/` so the two
+runners never collect each other's specs.
+
+---
+
+## Staging smoke tests
+
+`npm run test:e2e:smoke` runs a narrow Playwright suite against an
+**already-deployed** URL to confirm the running app is healthy — the check a
+build cannot make. `.github/workflows/smoke.yml` runs it after every staging
+deploy, and its `promote-gate` job is the required status check that blocks
+promotion to production when a smoke test fails.
+
+See [docs/staging-smoke-tests.md](docs/staging-smoke-tests.md) for what is
+covered, the retry strategy, and how to wire up the gate.
 
 ---
 
