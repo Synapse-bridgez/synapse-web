@@ -120,6 +120,25 @@ npx tsc --noEmit     # Type-check without emitting
 
 ---
 
+## Deploy rollback automation
+
+`.github/workflows/rollback.yml` rolls production back to the last known-good build
+when health signals (error rate, synthetic-monitoring failures) breach configured
+thresholds inside the observation window of a new deploy. Rolling back is "serve the
+previous build" — the app is stateless, so there is no data migration to unwind.
+
+Thresholds, hooks and the manual force/prevent overrides are all configuration, not
+code. See **[docs/rollback.md](docs/rollback.md)** for the full contract: which
+repository variables and secrets to set, the health-signal payload shape, how to wire
+the deploy pipeline's `deploy_completed` dispatch, and the anti-flap circuit breaker
+that stops rollback/re-promote loops.
+
+The decision logic itself lives in `scripts/deploy/rollback-policy.mjs` and is
+covered by `scripts/deploy/rollback-policy.test.ts`, so it is testable without a
+deploy platform.
+
+---
+
 ## Roadmap / open issues
 
 Remaining backend and contract-ABI work is tracked in the upstream repo's issue
