@@ -1,3 +1,52 @@
+# CI for the single `build` job below runs four gates -- lint, typecheck, unit
+# tests, and a production build -- as one job. The job `name:` is the required
+# status check for branch protection, so it must not change casually.
+#
+# ---------------------------------------------------------------------------
+# CACHING
+#
+# Three caches, restored immediately before the step that consumes them. Each is
+# `actions/cache/restore` + `actions/cache/save` rather than a single `actions/cache`
+# step, because a save is only worth its upload on a miss, and `restore-keys` need
+# to be explicit. `setup-node`'s built-in `cache: npm` is removed in favour of the
+# explicit npm step below, so all three caches have the same shape.
+#
+# Rules that shaped the keys:
+#
+#   * Content, not commit, is what invalidates. A cache built from a different
+#     package-lock.json is never reused for a build, so the lockfile is hashed
+#     into the `.next/cache` and Vitest keys.
+#   * A trailing `-${{ github.sha }}` is on the two *derived* caches. A build cache
+#     is only correct for the tree that produced it, so the exact key stays
+#     per-commit, and `restore-keys` supplies the nearest safe ancestor. That
+#     gives an exact hit on a re-run of the same commit and a prefix hit on the
+#     next commit, but a miss after any lockfile or `next.config.ts` change.
+#   * The npm *download* cache deliberately uses a coarse `Linux-npm-` fallback. npm
+#     verifies every tarball against the integrity hash in the lockfile, so a
+#     tarball downloaded under a previous lockfile is still correct, and that is
+#     the entire point of the npm cache.
+#
+# Two things this workflow deliberately does not do:
+#
+#   * It does not widen `GITHUB_TOKEN` permissions. `actions/cache/save` needs no
+#     extra scope, and a fork PR's cache is scoped to that PR's merge ref by
+#     GitHub, so an outside contributor cannot seed the base branch cache. The
+#     code being cached here is not the concern; poisoning is, and keeping the
+#     default token read-only is the mitigation.
+#   * It does not cache `.next` itself, only `.next/cache`. `.next` is the
+#     deployable output; `.next/cache` is the compiler's private memo of how it
+#     got there. The build always regenerates `.next` from the checked-out source
+#     on the runner, and this workflow has no upload-artifact step, so no cached
+#     bytes are ever published from a PR build.
+#
+# Next.js asks for exactly this. When `.next/cache` is absent, `next build` on CI
+# prints: "No build cache found. Please configure build caching for faster
+# rebuilds." (nextjs.org/docs/messages/no-cache)
+#
+# No attempt is made to quantify how much time any of this saves; run-to-run
+# variance on shared runners is larger than the effect being measured.
+# ---------------------------------------------------------------------------
+
 name: CI
 
 on:
@@ -18,10 +67,43 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+
+      # --- npm package cache ---------------------------------------------------
+      - name: Locate the npm cache directory
+        id: npm-cache-dir
+        run: echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the npm package cache
+        id: npm-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Save the npm package cache
+        if: steps.npm-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+
+      # --- Vitest / Vite cache -------------------------------------------------
+      # Restored AFTER `npm ci` on purpose: `npm ci` deletes node_modules wholesale
+      # before reinstalling, so a restore placed before it would be wiped a few
+      # seconds later while still reporting a cache hit in the logs.
+      - name: Restore the Vitest cache
+        id: vitest-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules/.vite
+          key: ${{ runner.os }}-vitest-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-vitest-${{ hashFiles('package-lock.json') }}-
 
       - name: Lint
         run: npm run lint
@@ -32,5 +114,29 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Save the Vitest cache
+        if: steps.vitest-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: node_modules/.vite
+          key: ${{ runner.os }}-vitest-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+
+      # --- Next.js build cache -------------------------------------------------
+      - name: Restore the Next.js build cache
+        id: next-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-next-${{ hashFiles('next.config.ts', 'package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-next-${{ hashFiles('next.config.ts', 'package-lock.json') }}-
+
       - name: Build
         run: npm run build
+
+      - name: Save the Next.js build cache
+        if: steps.next-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-next-${{ hashFiles('next.config.ts', 'package-lock.json') }}-${{ github.sha }}
