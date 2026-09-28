@@ -30,7 +30,24 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Test
+        # Retries are on (vitest.config.ts). A test that is still red after the
+        # last attempt fails here exactly as it always did; a test that only
+        # passes on a retry does not, and is reported in its own section and as
+        # a ::warning annotation on the PR. See docs/testing/QUARANTINE.md.
         run: npm run test
+
+      - name: Check the flake history
+        # A retry keeps a flaky test from breaking unrelated work; it does not
+        # fix anything. This step is where a test that keeps needing retries is
+        # held to an active quarantine with a named owner and an expiry, so it
+        # cannot be retried into a green build forever.
+        run: |
+          node scripts/test/flake-history.mjs \
+            --no-merge \
+            --commit="${GITHUB_SHA}" \
+            --summary-out=flake-summary.md \
+            --enforce
+          if [ -f flake-summary.md ]; then cat flake-summary.md >> "$GITHUB_STEP_SUMMARY"; fi
 
       - name: Build
         run: npm run build

@@ -109,6 +109,29 @@ npm run format:check # Prettier (CI check)
 npx tsc --noEmit     # Type-check without emitting
 ```
 
+### Flaky tests
+
+`npm test` retries a failing test up to twice before giving up, so one unlucky
+run does not block unrelated work. A test that is still red after the last
+attempt fails the build exactly as it always did. A test that only goes green on
+a retry does not — it is reported in its own section and annotated on the PR as
+a warning, because it is a real bug sitting behind a retry.
+
+Every retry is recorded. A nightly job folds them into a rolling per-test flake
+rate, and a test that keeps needing retries has to either be fixed or carry a
+quarantine entry with a named owner, a tracking issue and an expiry date. There
+is no way to make a quarantine permanent, so "we will fix it later" has to be
+re-argued on a schedule.
+
+```bash
+FLAKE_RETRY=0 npm test                 # No retries: the real first-attempt pass rate
+npm run test:flake-history             # Fold the last run in and report offenders
+npm run test:flake-history -- --enforce # Exit non-zero on an unquarantined offender
+```
+
+Full details, including when to quarantine rather than fix, are in
+[`docs/testing/QUARANTINE.md`](docs/testing/QUARANTINE.md).
+
 ---
 
 ## Adding a new tab
