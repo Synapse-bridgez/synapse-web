@@ -9,6 +9,8 @@ import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useToast } from "@/components/ui/Toast";
+import { OriginBadge } from "@/components/wallet/OriginBadge";
+import { GuidedTour } from "@/components/onboarding/GuidedTour";
 import { shortId } from "@/lib/utils";
 
 type Tab = "dashboard" | "transactions" | "admin" | "docs";
@@ -20,6 +22,7 @@ export function Shell() {
   const { address, connecting, error, connect, disconnect } = useWallet();
   const connected = address !== null;
   const { toast } = useToast();
+  const [tourSignal, setTourSignal] = useState(0);
 
   useEffect(() => {
     if (error) toast(error, "error");
@@ -58,6 +61,26 @@ export function Shell() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <OriginBadge />
+          <button
+            type="button"
+            onClick={() => setTourSignal((s) => s + 1)}
+            aria-label="Show wallet security briefing"
+            title="Wallet security briefing"
+            style={{
+              background: "none",
+              border: `1px solid ${BORDER}`,
+              color: DIM,
+              fontFamily: MONO,
+              fontSize: 11,
+              width: 26,
+              height: 26,
+              lineHeight: 1,
+              cursor: "pointer",
+            }}
+          >
+            ?
+          </button>
           <span
             style={{
               fontSize: 9,
@@ -165,6 +188,8 @@ export function Shell() {
           </TabErrorBoundary>
         )}
       </main>
+
+      <GuidedTour reopenSignal={tourSignal} />
 
       {/* ── Footer ── */}
       <footer

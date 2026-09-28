@@ -38,6 +38,10 @@ synapse-web/
 │   │   └── TxDetailModal.tsx       # Overlay with full tx fields
 │   ├── admin/
 │   │   └── AdminTab.tsx    # initialize / transfer_admin / set_relay_signer / diagnostics
+│   ├── wallet/
+│   │   └── OriginBadge.tsx # <OriginBadge /> in the header, <SigningOriginNote /> above every signing action
+│   ├── onboarding/
+│   │   └── GuidedTour.tsx  # First-visit anti-phishing briefing, reopenable from the header
 │   ├── docs/
 │   │   └── DocsTab.tsx     # ABI reference rendered from lib/constants.ABI_ENDPOINTS
 │   └── ui/
@@ -57,6 +61,8 @@ synapse-web/
 │   ├── utils.ts            # Shared helpers (shortId, elapsed, formatAmount)
 │   ├── wallet/
 │   │   ├── kit.ts              # StellarWalletsKit init (Freighter + xBull)
+│   │   ├── origin.ts           # Origin classification for the anti-phishing badge
+│   │   ├── origin.test.ts      # 17 tests over the classifier
 │   │   ├── storage.ts          # Selected-wallet-id localStorage helpers
 │   │   └── WalletProvider.tsx  # useWallet() context: address/connect/disconnect
 │   └── soroban/
@@ -108,6 +114,60 @@ npm run format       # Prettier (writes)
 npm run format:check # Prettier (CI check)
 npx tsc --noEmit     # Type-check without emitting
 ```
+
+---
+
+## Verifying you're on the real dashboard
+
+Wallet-connect phishing — a pixel-perfect clone of this dashboard on a different
+host, asking you to sign — is the most common Web3 attack there is. The defenses
+against it live mostly in the wallet extension, but this app shows its own origin
+so the comparison is possible before you approve anything.
+
+Every wallet connect / sign entry point renders the running origin:
+
+| State        | Meaning                                                                  |
+| ------------ | ------------------------------------------------------------------------ |
+| `GENUINE`    | The origin exactly matches a published origin, scheme and port included. |
+| `LOCAL DEV`  | `localhost` / `127.0.0.1` / `::1`. No signing here is real.              |
+| `UNVERIFIED` | Not a published origin — a clone, a fork, or an unknown preview host.    |
+| `EMBEDDED`   | Running inside someone else's frame. The address bar is not yours.       |
+
+The badge in the header is the always-visible one; `<SigningOriginNote />` also
+appears directly above every sign-triggering action, because that is the moment
+the decision is actually made. A first-visit briefing in `<GuidedTour />` (and
+the `?` button in the header) covers what to check and how clones get you.
+
+### Configuring the allowlist
+
+A published origin is anything in this list. **An origin that is not on it is
+`UNVERIFIED`, not "probably fine"** — the badge is deliberately unforgiving.
+
+| Variable                        | Purpose                                                                                                     |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`          | The operator's published address, e.g. `https://synapse.example.com`.                                       |
+| `NEXT_PUBLIC_CANONICAL_ORIGINS` | Extra origins, comma- or space-separated, for a custom domain or alias. Scheme-less hostnames are accepted. |
+| `VERCEL_URL`                    | Read automatically from Vercel at build time, so preview deployments are recognised.                        |
+
+Localhost origins classify as `LOCAL DEV` even if they appear in the allowlist:
+anything reachable locally is trivially impersonable, so the allowlist is not
+allowed to mint a trusted badge for it.
+
+### Iframes
+
+`EMBEDDED` overrides every other state, including a matching `GENUINE` origin,
+because a framed page's visible address bar belongs to the attacker. The real
+defence is CSP `frame-ancestors 'none'` plus `X-Frame-Options: DENY`; the badge
+is the loud fallback if those headers are ever missing. `window.opener` is
+deliberately ignored — setting `noopener`/`noreferrer` is the correct response,
+and a legitimate `window.open` flow should not be flagged for using it.
+
+### Out of scope
+
+The extensions' own domain binding, which is the check that actually binds a
+signature to a site, is not implementable from here. Freighter and xBull both
+perform it; the briefing links to their documentation rather than pretending to
+replace it.
 
 ---
 

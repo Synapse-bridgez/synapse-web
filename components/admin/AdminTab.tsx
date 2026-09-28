@@ -6,6 +6,7 @@ import { Field } from "@/components/ui/Field";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SigningOriginNote } from "@/components/wallet/OriginBadge";
 import { useToast } from "@/components/ui/Toast";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { addressArg, invokeContract, simulateContractCall } from "@/lib/soroban/contract";
@@ -107,6 +108,7 @@ function AdminCard({
             disabled={submitting}
           />
         </div>
+        <SigningOriginNote />
         <SorobanTip>{tip}</SorobanTip>
       </Panel>
 
@@ -121,6 +123,7 @@ function AdminCard({
           onCancel={() => setPendingVals(null)}
         />
       )}
+      {pendingVals && confirm && <SigningOriginNote />}
     </>
   );
 }

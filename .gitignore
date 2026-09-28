@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but the documented template is committed: it is the reference for the
+# origin allowlist variables and contains no secrets.
+!.env.example
 
 # vercel
 .vercel
