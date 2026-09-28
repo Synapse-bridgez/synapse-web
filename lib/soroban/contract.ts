@@ -7,6 +7,7 @@ import {
   type Transaction,
 } from "@stellar/stellar-sdk";
 import { StellarWalletsKit } from "@/lib/wallet/kit";
+import { getE2EMocks } from "@/lib/e2e";
 
 export { addressArg, stringArg, structArg } from "./args";
 
@@ -28,6 +29,9 @@ export async function invokeContract(
   method: string,
   args: xdr.ScVal[] = []
 ): Promise<ContractCallResult> {
+  const mockInvoke = getE2EMocks()?.invokeContract;
+  if (mockInvoke) return mockInvoke(method);
+
   const server = new rpc.Server(rpcUrl);
   const account = await server.getAccount(sourceAddress);
   const contract = new Contract(contractId);
@@ -73,6 +77,11 @@ export async function simulateContractCall(
   method: string,
   args: xdr.ScVal[] = []
 ) {
+  const mockSimulation = getE2EMocks()?.simulateContractCall;
+  if (mockSimulation) {
+    return { result: { retval: xdr.ScVal.scvString(await mockSimulation(method)) } };
+  }
+
   const server = new rpc.Server(rpcUrl);
   const account = await server.getAccount(sourceAddress);
   const contract = new Contract(contractId);

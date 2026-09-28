@@ -104,10 +104,15 @@ npm run build        # Production build
 npm run lint         # ESLint
 npm run test         # Run the test suite once
 npm run test:watch   # Run the test suite in watch mode
+npm run test:e2e     # Run browser E2E tests (Playwright Chromium required)
 npm run format       # Prettier (writes)
 npm run format:check # Prettier (CI check)
 npx tsc --noEmit     # Type-check without emitting
 ```
+
+The Playwright suite injects a mock wallet and contract responses, so it needs no
+browser extension or Testnet account. CI uses Chromium, Playwright's auto-waiting
+assertions, up to two retries, and failure traces to keep browser checks diagnosable.
 
 ---
 
@@ -144,13 +149,13 @@ Notable milestones on the path to a working testnet client:
 
 ## Tech stack
 
-|                |                                                  |
-| -------------- | ------------------------------------------------ |
-| Framework      | Next.js 16 (App Router)                          |
-| UI             | React 19, inline styles + Tailwind CSS v4        |
-| Font           | IBM Plex Mono                                    |
-| Language       | TypeScript 5                                     |
-| Linting        | ESLint + Prettier + Husky pre-commit             |
-| Testing        | Vitest + Testing Library                         |
-| CI             | GitHub Actions (lint → typecheck → test → build) |
-| Target network | Stellar Testnet (Soroban)                        |
+|                |                                                        |
+| -------------- | ------------------------------------------------------ |
+| Framework      | Next.js 16 (App Router)                                |
+| UI             | React 19, inline styles + Tailwind CSS v4              |
+| Font           | IBM Plex Mono                                          |
+| Language       | TypeScript 5                                           |
+| Linting        | ESLint + Prettier + Husky pre-commit                   |
+| Testing        | Vitest + Testing Library + Playwright                  |
+| CI             | GitHub Actions (lint → typecheck → test → build + E2E) |
+| Target network | Stellar Testnet (Soroban)                              |

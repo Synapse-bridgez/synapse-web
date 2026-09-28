@@ -40,6 +40,8 @@ export function SorobanProvider({ children, rpcUrl, contractId }: SorobanProvide
   const [poller] = useState<SorobanEventPoller>(() => createSorobanEventPoller(rpcUrl, contractId));
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1") return;
+
     const unsubHealth = poller.onHealth(setHealth);
     const unsubEvents = poller.onEvents((newEvents) => {
       setEvents((prev) => {

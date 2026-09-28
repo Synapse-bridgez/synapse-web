@@ -2,11 +2,15 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import {
   ensureWalletKitInitialized,
-  StellarWalletsKit,
+  walletAuthModal,
+  walletGetAddress,
+  walletDisconnect,
+  getSelectedWalletProductId,
   storeSelectedWalletId,
   clearSelectedWalletId,
   getStoredWalletId,
 } from "./kit";
+import { getE2EMocks } from "@/lib/e2e";
 
 interface WalletContextValue {
   address: string | null;
@@ -35,10 +39,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     ensureWalletKitInitialized();
-    if (!getStoredWalletId()) return;
+    if (getE2EMocks()?.wallet || !getStoredWalletId()) return;
 
     let cancelled = false;
-    StellarWalletsKit.getAddress()
+    walletGetAddress()
       .then(({ address: restoredAddress }) => {
         if (!cancelled) setAddress(restoredAddress);
       })
@@ -55,10 +59,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setConnecting(true);
     setError(null);
     try {
-      await StellarWalletsKit.authModal({});
-      const { address: connectedAddress } = await StellarWalletsKit.getAddress();
+      await walletAuthModal();
+      const { address: connectedAddress } = await walletGetAddress();
       setAddress(connectedAddress);
-      storeSelectedWalletId(StellarWalletsKit.selectedModule.productId);
+      storeSelectedWalletId(getSelectedWalletProductId());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect wallet");
     } finally {
@@ -68,7 +72,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(async () => {
     try {
-      await StellarWalletsKit.disconnect();
+      await walletDisconnect();
     } catch {
       // Some modules don't implement disconnect(); local state is cleared regardless.
     }
