@@ -24,9 +24,9 @@ else
 fi
 
 npm run --silent typecheck ||
-  synapse_die "pre-push" "'tsc --noEmit' reported type errors. Run 'npm run typecheck' to see them."
+  synapse_die "pre-push" push "'tsc --noEmit' reported type errors. Run 'npm run typecheck' to see them."
 
 npm run --silent test:unit ||
-  synapse_die "pre-push" "the unit test suite failed. Run 'npm run test:unit' to see the failures."
+  synapse_die "pre-push" push "the unit test suite failed. Run 'npm run test:unit' to see the failures."
 
 echo "pre-push: typecheck and unit tests passed."

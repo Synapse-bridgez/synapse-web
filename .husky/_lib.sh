@@ -62,13 +62,14 @@ synapse_bypass_guard() {
   fi
 }
 
-# synapse_die <hook-name> <message...>
+# synapse_die <hook-name> <commit|push> <message...>
 # Uniform failure epilogue so a blocked commit/push always says what to do.
 synapse_die() {
   _hook_name="$1"
-  shift
+  _verb="$2"
+  shift 2
   echo "" >&2
-  echo "  ${_hook_name} hook blocked this commit. -> $* " >&2
+  echo "  ${_hook_name} hook blocked this ${_verb}. -> $* " >&2
   echo "  (Or, for a genuine emergency: SYNAPSE_HOOK_BYPASS=\"<reason>\" ...)" >&2
   echo "" >&2
   exit 1
