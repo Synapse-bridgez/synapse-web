@@ -111,6 +111,43 @@ npx tsc --noEmit     # Type-check without emitting
 
 ---
 
+## Security headers & CSP
+
+Every route is served with a strict `Content-Security-Policy` plus
+`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
+`Permissions-Policy`, and `Strict-Transport-Security` (production only). The
+policy is owned and documented in `lib/security/csp.ts` and applied from
+`next.config.ts` — see `next.config.ts:13`.
+
+Two things matter for operators:
+
+**The RPC endpoint is build-time.** `connect-src` always allows the origin of
+`NEXT_PUBLIC_SOROBAN_RPC_URL` (or the testnet default) plus anything in
+`NEXT_PUBLIC_CSP_CONNECT_SRC` (comma-separated origins). Changing the RPC
+requires a redeploy, because the header is baked at build time. The policy
+_never_ falls back to `connect-src *`; a bad allowlist entry fails the build
+instead of producing a policy that silently blocks the app or opens it up.
+
+**Runtime user-supplied RPCs.** If a deployment lets users type an RPC endpoint
+at runtime, no static header can know it in advance. Set
+`NEXT_PUBLIC_CSP_ALLOW_ANY_HTTPS=1` to allow any `https:` origin in
+`connect-src` — still no plaintext HTTP, no `ws:`, and no `data:`. The
+long-term fix is a server-side RPC proxy so `connect-src` can stay `'self'`.
+
+Both exceptions the policy keeps — `script-src 'unsafe-inline'` (Next's static
+hydration needs it; doing better requires nonces, which force dynamic
+rendering) and `style-src 'unsafe-inline'` (React inline styles) — are
+documented in `lib/security/csp.ts` rather than left implicit. `script-src-attr
+'none'` blocks inline event handlers, and there is no `'unsafe-eval'` anywhere.
+
+Wallet extensions do not appear in `connect-src` by design: Freighter and xBull
+are reached via `window.postMessage` and extension-injected APIs, not `fetch`,
+so no extension origin is a connect target an injected script could exfiltrate
+to. If a future wallet module needs an iframe or a `fetch` call, that must be a
+reviewed, explicit policy change — see `lib/security/csp.ts`.
+
+---
+
 ## Adding a new tab
 
 1. Create `components/<name>/<Name>Tab.tsx` and export a `<NameTab />` component.
