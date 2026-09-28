@@ -67,6 +67,16 @@ synapse-web/
 │       ├── transactionMerge.ts   # Merges mock baseline with live events
 │       ├── useLiveTransactions.ts
 │       └── useLiveContractInfo.ts
+├── docs/                   # Source of the published documentation site
+│   ├── index.md
+│   ├── getting-started.md
+│   ├── architecture.md
+│   ├── contract-abi.md      # ABI table injected at build time (no hand copy)
+│   └── contributing.md
+├── scripts/
+│   └── docs/                # Markdown renderer, ABI generator, site builder
+├── e2e/                     # Playwright smoke + runtime tests (PR #174)
+├── playwright.config.ts
 └── public/                 # Static assets
 ```
 
@@ -108,6 +118,37 @@ npm run format       # Prettier (writes)
 npm run format:check # Prettier (CI check)
 npx tsc --noEmit     # Type-check without emitting
 ```
+
+---
+
+## Documentation
+
+The reference documentation lives in [`docs/`](./docs) and is published as a
+static site by `.github/workflows/docs.yml`:
+
+<https://synapse-bridgez.github.io/synapse-web>
+
+```bash
+npm run docs:build   # docs/*.md -> docs-dist/
+npm run docs:dev     # build, then serve on http://localhost:4173
+```
+
+To build for a different mount point, pass `--base` and `--site`:
+
+```bash
+npm run docs:build -- --base /synapse-web/ --site https://example.github.io
+```
+
+`docs/contract-abi.md` contains a `<!-- generated:abi-reference -->`
+anchor. The build replaces it with a table generated from `ABI_ENDPOINTS` in
+`lib/constants.ts`, so the published reference cannot drift from the endpoints
+the app actually calls. Adding an endpoint to `ABI_ENDPOINTS` and rebuilding is
+all that is required — do not paste a table into the Markdown by hand; the build
+fails if the anchor or its `generated: abi-reference` front matter is removed.
+
+There is no SSG or Markdown dependency here. `scripts/docs/` is a small
+renderer, generator, and static server built on Node's standard library, so the
+docs build cannot break the app's dependency tree or its CI runtime.
 
 ---
 

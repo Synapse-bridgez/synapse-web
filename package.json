@@ -11,6 +11,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "docs:build": "node scripts/docs/build.mjs",
+    "docs:dev": "node scripts/docs/build.mjs && node scripts/docs/serve.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

@@ -5,7 +5,7 @@ import { TransactionsTab } from "./transactions/TransactionsTab";
 import { AdminTab } from "./admin/AdminTab";
 import { DocsTab } from "./docs/DocsTab";
 import { TabErrorBoundary } from "@/components/ui/TabErrorBoundary";
-import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import { AMBER, BG1, BORDER, DIM, DOCS_SITE_URL, MONO, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useToast } from "@/components/ui/Toast";
@@ -179,24 +179,39 @@ export function Shell() {
         <span style={{ fontSize: 9, color: DIM, letterSpacing: "0.1em" }}>
           SYNAPSE CORE · v0.1.0 · TESTNET
         </span>
-        <span
-          style={{
-            fontSize: 9,
-            letterSpacing: "0.1em",
-            color:
-              rpcStatus === "connected"
-                ? STATUS_META.COMPLETED.color
-                : rpcStatus === "error"
-                  ? STATUS_META.FAILED.color
-                  : DIM,
-          }}
-        >
-          ⬡ SOROBAN RPC:{" "}
-          {rpcStatus === "connected"
-            ? `connected${lastEventAge ? ` · last event ${lastEventAge}` : ""}`
-            : rpcStatus === "error"
-              ? `error${rpcHealth.error ? `: ${rpcHealth.error}` : ""}`
-              : "connecting"}
+        <span style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          <a
+            href={DOCS_SITE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontSize: 9,
+              letterSpacing: "0.1em",
+              color: DIM,
+              textDecoration: "none",
+            }}
+          >
+            DOCS ↗
+          </a>
+          <span
+            style={{
+              fontSize: 9,
+              letterSpacing: "0.1em",
+              color:
+                rpcStatus === "connected"
+                  ? STATUS_META.COMPLETED.color
+                  : rpcStatus === "error"
+                    ? STATUS_META.FAILED.color
+                    : DIM,
+            }}
+          >
+            ⬡ SOROBAN RPC:{" "}
+            {rpcStatus === "connected"
+              ? `connected${lastEventAge ? ` · last event ${lastEventAge}` : ""}`
+              : rpcStatus === "error"
+                ? `error${rpcHealth.error ? `: ${rpcHealth.error}` : ""}`
+                : "connecting"}
+          </span>
         </span>
       </footer>
     </div>
