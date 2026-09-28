@@ -87,10 +87,47 @@ take over — see `lib/soroban/transactionMerge.ts` and `lib/soroban/useLiveCont
 
 ## Getting started
 
+**Requires Node `20.20.2` and npm `10.8.2` — exactly.** Those are the versions the
+build is pinned to; CI runs nothing else, and `npm ci` with a different npm produces
+a different tree.
+
+The pin lives in `package.json` → `engines` and is mirrored in `.nvmrc`. With
+[`nvm`](https://github.com/nvm-sh/nvm):
+
 ```bash
-npm install
+nvm install     # reads .nvmrc
+nvm use
+node --version  # v20.20.2
+npm --version   # 10.8.2
+```
+
+Then:
+
+```bash
+npm ci
 npm run dev
 ```
+
+`npm ci` rather than `npm install`: it installs exactly what `package-lock.json`
+pins and never rewrites the lockfile, which is what makes a local build match CI.
+
+If your version is wrong the toolchain check tells you so immediately, rather than
+letting it surface later as a confusing build error:
+
+```bash
+npm run check:toolchain
+```
+
+Upgrading the pinned version means changing `package.json` → `engines` and `.nvmrc`
+together (the check fails if they disagree), then running `npm install` with the new
+npm to regenerate `package-lock.json` and committing that too.
+
+### The Docker dev environment uses the same pin
+
+`npm run check:toolchain` also verifies any `Dockerfile` in the repository pins the
+same Node (`FROM node:20.20.2`), so the container dev environment cannot quietly run
+a different Node from CI. Until a Dockerfile exists the check reports a skip; when
+one is added, a mismatch fails immediately.
 
 Open [http://localhost:3000](http://localhost:3000). The app starts on the
 **dashboard** tab showing mock data. Connect a Freighter or xBull wallet and set
@@ -100,13 +137,14 @@ to live contract data instead.
 Other scripts:
 
 ```bash
-npm run build        # Production build
-npm run lint         # ESLint
-npm run test         # Run the test suite once
-npm run test:watch   # Run the test suite in watch mode
-npm run format       # Prettier (writes)
-npm run format:check # Prettier (CI check)
-npx tsc --noEmit     # Type-check without emitting
+npm run build            # Production build
+npm run lint             # ESLint
+npm run test             # Run the test suite once
+npm run test:watch       # Run the test suite in watch mode
+npm run check:toolchain  # Assert Node/npm match the pin in package.json
+npm run format           # Prettier (writes)
+npm run format:check     # Prettier (CI check)
+npx tsc --noEmit         # Type-check without emitting
 ```
 
 ---

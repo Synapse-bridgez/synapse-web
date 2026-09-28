@@ -2,6 +2,10 @@
   "name": "synapse-core",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.20.2",
+    "npm": "10.8.2"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,6 +15,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:toolchain": "node scripts/check-toolchain.mjs",
     "prepare": "husky"
   },
   "lint-staged": {
