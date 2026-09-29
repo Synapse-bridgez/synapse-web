@@ -3,17 +3,20 @@ import { useState } from "react";
 import { scValToNative } from "@stellar/stellar-sdk";
 import { Panel } from "@/components/ui/Panel";
 import { Field } from "@/components/ui/Field";
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useSoroban } from "@/lib/soroban/SorobanProvider";
 import { addressArg, invokeContract, simulateContractCall } from "@/lib/soroban/contract";
+import { useDraftPersistence } from "@/lib/forms/useDraftPersistence";
 import { shortId } from "@/lib/utils";
 import { AMBER, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import { validateValues, type ValidationSchema } from "@/lib/validation/schemas";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
-const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -109,22 +112,29 @@ function AdminCard({
   title,
   tip,
   fields,
+  schema,
   onSubmit,
   btnLabel,
   btnColor = AMBER,
   confirm,
+  draftKey: string;
+  disabled?: boolean;
 }: {
   title: string;
   tip: string;
   fields: FieldDef[];
+  schema: ValidationSchema;
   onSubmit: (vals: Record<string, string>) => void | Promise<void>;
   btnLabel: string;
   btnColor?: string;
   confirm?: ConfirmConfig;
+  draftKey,
+  disabled = false,
 }) {
-  const [vals, setVals] = useState<Record<string, string>>(
-    Object.fromEntries(fields.map((f) => [f.key, ""]))
-  );
+  const initialVals = Object.fromEntries(fields.map((f) => [f.key, ""]));
+  const { values: vals, setValues: setVals, restored, discard, clear } =
+    useDraftPersistence<Record<string, string>>(initialVals, { key: draftKey });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [pendingVals, setPendingVals] = useState<Record<string, string> | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -132,12 +142,29 @@ function AdminCard({
     setSubmitting(true);
     try {
       await onSubmit(v);
+      clear();
     } finally {
       setSubmitting(false);
     }
   }
 
+  function handleChange(key: string, value: string) {
+    setVals((p) => ({ ...p, [key]: value }));
+    // Clear a field's error as soon as the user edits it.
+    setErrors((p) => {
+      if (!p[key]) return p;
+      const next = { ...p };
+      delete next[key];
+      return next;
+    });
+  }
+
   function handleClick() {
+    if (disabled) return;
+
+    const nextErrors = validateValues(schema, vals);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     if (confirm) {
       setPendingVals({ ...vals });
     } else {
@@ -156,15 +183,68 @@ function AdminCard({
   return (
     <>
       <Panel title={title}>
+        {restored && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              marginBottom: 12,
+              padding: "8px 12px",
+              background: "rgba(255,193,7,0.08)",
+              border: `1px solid ${AMBER}`,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 10,
+                color: AMBER,
+                fontFamily: MONO,
+                letterSpacing: "0.06em",
+              }}
+            >
+              ⟲ RESTORED DRAFT — unsaved input was recovered
+            </span>
+            <button
+              type="button"
+              onClick={discard}
+              style={{
+                background: "transparent",
+                border: `1px solid ${BORDER}`,
+                color: DIM,
+                fontFamily: MONO,
+                fontSize: 10,
+                letterSpacing: "0.06em",
+                padding: "4px 10px",
+                cursor: "pointer",
+              }}
+            >
+              DISCARD
+            </button>
+          </div>
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
           {fields.map((f) => (
-            <Field
-              key={f.key}
-              label={f.label}
-              value={vals[f.key] ?? ""}
-              onChange={(v) => setVals((p) => ({ ...p, [f.key]: v }))}
-              placeholder={f.placeholder}
-            />
+            <div key={f.key}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 10,
+                  color: DIM,
+                  fontFamily: MONO,
+                  letterSpacing: "0.06em",
+                  marginBottom: 4,
+                }}
+              >
+                {f.label}
+              </label>
+              <AddressAutocomplete
+                value={vals[f.key] ?? ""}
+                onChange={(v) => setVals((p) => ({ ...p, [f.key]: v }))}
+                placeholder={f.placeholder}
+              />
+            </div>
           ))}
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -172,7 +252,7 @@ function AdminCard({
             label={submitting ? "SUBMITTING…" : btnLabel}
             color={btnColor}
             onClick={handleClick}
-            disabled={submitting}
+            disabled={submitting || disabled}
           />
         </div>
         <SorobanTip>{tip}</SorobanTip>
@@ -366,7 +446,8 @@ function BulkActionBar({
 // ---------------------------------------------------------------------------
 
 export function AdminTab() {
-  const { address, connect } = useWallet();
+  const { address, connect, mode } = useWallet();
+  const { contractId } = useSoroban();
   const { toast } = useToast();
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [simulating, setSimulating] = useState(false);
@@ -377,6 +458,8 @@ export function AdminTab() {
   const [bulkRunning, setBulkRunning] = useState(false);
   const cancelRef = useState<{ current: boolean }>(() => ({ current: false }))[0];
 
+  const isWatchOnly = mode === "watch";
+
   function toggleSelected(id: string) {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -386,6 +469,17 @@ export function AdminTab() {
   function resetBulk() {
     setSelected([]);
     setBulkItems([]);
+  }
+
+  async function runAdminCall(method: string, addresses: string[]) {
+    if (isWatchOnly) {
+      toast("Watch-only mode: connect a signing wallet to submit admin transactions", "error");
+      return;
+    }
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
+      return;
+    }
   }
 
   /**
@@ -524,8 +618,91 @@ export function AdminTab() {
     }
   }
 
+  async function runDiagnostic(method: string) {
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
+      return;
+    }
+    if (!address) {
+      toast("Connect a wallet to run read-only diagnostics", "error");
+      await connect();
+      return;
+    }
+    try {
+      const simulated = await simulateContractCall(RPC_URL, contractId, address, method);
+      const value = simulated.result ? scValToNative(simulated.result.retval) : undefined;
+      toast(`${method}() → ${JSON.stringify(value)}`, "info");
+    } catch (err) {
+      toast({
+        message: `Simulation reverted: ${err instanceof Error ? err.message : String(err)}`,
+        tone: "error",
+      });
+    } finally {
+      setSimulating(false);
+    }
+  }
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="animate-fade-in">
+      {/* Warning banner */}
+      <div
+        style={{
+          background: "rgba(239,83,80,0.06)",
+          border: "1px s
+    } catch (err) {
+      toast({
+        message: `${method} failed: ${err instanceof Error ? err.message : String(err)}`,
+        tone: "error",
+      });
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="animate-fade-in">
+      {/* Warning banner */}
+      <div
+        style={{
+          background: "rgba(239,83,80,0.06)",
+          border: "1px solid rgba(239,83,80,0.3)",
+          padding: "10px 16px",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            color: "#EF5350",
+            fontFamily: MONO,
+            letterSpacing: "0.06em",
+          }}
+        >
+          ⚠ PRIVILEGED ZONE — all operations here require admin keypair authorization
+        </span>
+      </div>
+
+      {/* Watch-only notice */}
+      {isWatchOnly && (
+        <div
+          style={{
+            background: "rgba(255,193,7,0.06)",
+            border: `1px solid ${AMBER}`,
+            padding: "10px 16px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              color: AMBER,
+              fontFamily: MONO,
+              letterSpacing: "0.06em",
+            }}
+          >
+            👁 WATCH-ONLY MODE — admin write actions are disabled. Connect a signing wallet to
+            perform privileged operations.
+          </span>
+        </div>
+      )}
+
+      {/* Initialize */}
       <AdminCard
         title="INITIALIZE"
         tip="Sets the initial admin and relay signer. Can only be called once."
@@ -538,19 +715,36 @@ export function AdminTab() {
           title: "Initialize contract",
           message: "This permanently sets the admin and relay signer.",
         }}
-        onSubmit={(vals) =>
-          simulateAndPreview("initialize", vals, [
-            addressArg(vals.admin),
-            addressArg(vals.relay_signer),
-          ])
+        onSub
+      <AdminCard
+        title="INITIALIZE"
+        tip="Sets the initial admin and relay signer. Can only be called once."
+        fields={[
+          { label: "Admin address", key: "admin", placeholder: "G…" },
+          { label: "Relay signer", key: "relay_signer", placeholder: "G…" },
+        ]}
+        schema={ADMIN_SCHEMAS.initialize}
+        btnLabel="INITIALIZE →"
+        draftKey="admin:initialize"
+        disabled={isWatchOnly}
+        confirm={{
+          title: "Initialize contract",
+          message: "This permanently sets the admin and relay signer.",
+        }}
+        onSubmit={(v) =>
+          simulateAndPreview("initialize", [v.admin ?? "", v.relay_signer ?? ""])
         }
       />
 
       <AdminCard
         title="TRANSFER ADMIN"
-        tip="Transfers admin authority to a new address."
-        fields={[{ label: "New admin", key: "new_admin", placeholder: "G…" }]}
-        btnLabel="TRANSFER"
+        tip="transfer_admin(new_admin: Address) — caller must be current admin; irreversible if wrong address"
+        fields={[{ label: "new_admin", key: "new_admin", placeholder: "G… new admin address" }]}
+        schema={ADMIN_SCHEMAS.transfer_admin}
+        btnLabel="TRANSFER →"
+        btnColor={STATUS_META.FAILED.color}
+        draftKey="admin:transfer_admin"
+        disabled={isWatchOnly}
         confirm={{
           title: "Transfer admin",
           message: "You will lose admin authority after this call.",
@@ -564,42 +758,83 @@ export function AdminTab() {
       <AdminCard
         title="SET RELAY SIGNER"
         tip="Updates the relay signer authorized to submit lifecycle actions."
-        fields={[{ label: "New signer", key: "new_signer", placeholder: "G…" }]}
-        btnLabel="UPDATE"
+        fields={[{ label: "New signer", key: "new_signer",
+        confirm={{
+          title: "Transfer admin",
+          message: "You will lose admin authority after this call.",
+          retypeKey: "new_admin",
+        }}
         onSubmit={(vals) =>
-          simulateAndPreview("set_relay_signer", vals, [addressArg(vals.new_signer)])
+          simulateAndPreview("transfer_admin", vals, [addressArg(vals.new_admin)])
         }
       />
 
-      <Panel title="PENDING TRANSACTIONS">
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {selected.length === 0 && (
-            <div style={{ fontFamily: MONO, fontSize: 12, color: DIM }}>
-              Select pending transactions below to run a bulk lifecycle action.
-            </div>
-          )}
-          {selected.map((id) => (
-            <label
-              key={id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                fontFamily: MONO,
-                fontSize: 12,
-                color: "#E6E6E6",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked
-                onChange={() => toggleSelected(id)}
-                disabled={bulkRunning}
-              />
-              {shortId(id)}
-            </label>
-          ))}
+      <AdminCard
+        title="SET RELAY SIGNER"
+        tip="set_relay_signer(new_signer: Address) — caller must be current admin"
+        fields={[
+          { label: "new_signer", key: "new_signer", placeholder: "G… new relay signer address" },
+        ]}
+        schema={ADMIN_SCHEMAS.set_relay_signer}
+        btnLabel="SET SIGNER →"
+        btnColor={STATUS_META.PROCESSING.color}
+        disabled={isWatchOnly}
+        confirm={{
+          title: "SET RELAY SIGNER",
+          message:
+            "This updates the relay signer authorized to submit relayed transactions. " +
+            "Confirm the new signer address is correct before continuing.",
+          accentColor: STATUS_META.PROCESSING.color,
+        }}
+        onSubmit={(v) => runAdminCall("set_relay_signer", [v.new_signer ?? ""])}
+      />
+
+      {/* Diagnostics — read-only, allowed in watch mode */}
+      <Panel title="DIAGNOSTICS">
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <ActionButton
+            label="PING →"
+            color={DIM}
+            onClick={() => runDiagnostic("ping")}
+          />
+          <ActionButton
+            label="GET ADMIN →"
+            color={DIM}
+            onClick={() => runDiagnostic("get_admin")}
+          />
+          <ActionButton
+            label="GET RELAY SIGNER →"
+            color={DIM}
+            onClick={() => runDiagnostic("get_relay_signer")}
+          />
         </div>
+        <SorobanTip>
+          Read-only simulations. These do not require signing and remain available in watch-only
+          mode. No transaction is submitted and no fees are spent.
+        </SorobanTip>
+      </Panel>
+
+      {bulkItems.length > 0 && (
+        <BulkActionBar
+          items={bulkItems}
+          running={bulkRunning}
+          onRun={runBulkAction}
+          onCancel={cancelBulk}
+          onReset={resetBulk}
+        />
+      )}
+
+      {preview && (
+        <PreviewDialog
+          preview={preview}
+          accentColor={AMBER}
+          onConfirm={submitPreviewed}
+          onCancel={() => setPreview(null)}
+        />
+      )}
+    </div>
+  );
+}
       </Panel>
 
       {bulkItems.length > 0 && (
