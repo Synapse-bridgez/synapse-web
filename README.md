@@ -104,10 +104,20 @@ npm run build        # Production build
 npm run lint         # ESLint
 npm run test         # Run the test suite once
 npm run test:watch   # Run the test suite in watch mode
+npm run perf:budget  # Enforce the initial JavaScript bundle budget after build
+npm run perf:record  # Append Lighthouse metrics to the committed history file
 npm run format       # Prettier (writes)
 npm run format:check # Prettier (CI check)
 npx tsc --noEmit     # Type-check without emitting
 ```
+
+## Deployments and performance
+
+GitHub Actions runs lint, typecheck, tests, build, and the initial-route JavaScript budget before deployment. PRs from branches in this repository receive an automatically updated Vercel preview comment; external-fork PRs run the quality gates but do not receive deployment credentials or an automated preview. Preview builds use Stellar Testnet and an empty contract ID, so they render mock data by default.
+
+Configure `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as GitHub environment secrets for `preview`, `staging`, and `production`. Pushes to a `staging` branch run the full quality gate and deploy using the `staging` environment's `NEXT_PUBLIC_CONTRACT_ID` and `NEXT_PUBLIC_SOROBAN_RPC_URL` variables. To promote a verified staging revision, manually dispatch the deployment workflow from `staging`; it reruns the quality gate and waits at the `production` environment. Add required reviewers to that GitHub environment to enforce approval; keep production contract and RPC values scoped to it. Set the staging contract to a Testnet deployment, never a production contract. Enable read/write workflow permissions for `GITHUB_TOKEN` so the performance workflow can update its history file.
+
+The [performance history](/performance) page charts Lighthouse score, LCP, and initial-route JavaScript size, and lists CLS and TBT for the latest 30 successful main-branch CI runs. `public/performance/history.json` is appended automatically after each successful run. TBT is a lab proxy, not field INP; field INP requires real-user monitoring. The chart remains empty until a successful main-branch run records the first sample.
 
 ---
 
@@ -155,15 +165,15 @@ Notable milestones on the path to a working testnet client:
 
 ## Tech stack
 
-|                |                                                   |
-| -------------- | ------------------------------------------------- |
-| Framework      | Next.js 16 (App Router)                           |
-| UI             | React 19, inline styles + Tailwind CSS v4         |
-| Font           | IBM Plex Mono                                     |
-| Language       | TypeScript 5                                      |
-| Linting        | ESLint + Prettier + Husky pre-commit              |
-| Testing        | Vitest + Testing Library                          |
-| CI             | GitHub Actions (lint → typecheck → test → build)  |
-| Quality gates  | Dependency audit, SBOM, bundle budget, Lighthouse |
-| Deploys        | Vercel Rolling Releases canary + auto-rollback    |
-| Target network | Stellar Testnet (Soroban)                         |
+|                |                                                                  |
+| -------------- | ---------------------------------------------------------------- |
+| Framework      | Next.js 16 (App Router)                                          |
+| UI             | React 19, inline styles + Tailwind CSS v4                        |
+| Font           | IBM Plex Mono                                                    |
+| Language       | TypeScript 5                                                     |
+| Linting        | ESLint + Prettier + Husky pre-commit                             |
+| Testing        | Vitest + Testing Library                                         |
+| CI             | GitHub Actions (lint → typecheck → test → build → bundle budget) |
+| Quality gates  | Dependency audit, SBOM, bundle budget, Lighthouse                |
+| Deploys        | Vercel Rolling Releases canary + auto-rollback                   |
+| Target network | Stellar Testnet (Soroban)                                        |
