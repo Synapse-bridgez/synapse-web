@@ -99,6 +99,95 @@ const TxRow = memo(function TxRow({ tx, onSelect }: TxRowProps) {
   );
 }, hasSameRenderedData);
 
+const CARD_STYLE: CSSProperties = {
+  border: `1px solid ${BORDER}`,
+  padding: "10px 12px",
+  marginBottom: 8,
+  cursor: "pointer",
+  transition: "background 0.15s",
+};
+const CARD_ROW_STYLE: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 6,
+};
+const CARD_LABEL_STYLE: CSSProperties = {
+  fontSize: 9,
+  letterSpacing: "0.1em",
+  color: DIM,
+  fontFamily: MONO,
+  flexShrink: 0,
+};
+const CARD_VALUE_STYLE: CSSProperties = {
+  fontSize: 10,
+  color: "#ccc",
+  fontFamily: MONO,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  textAlign: "right",
+  minWidth: 0,
+};
+
+const TxCard = memo(function TxCard({ tx, onSelect }: TxRowProps) {
+  return (
+    <div
+      onClick={() => onSelect(tx)}
+      style={CARD_STYLE}
+      onMouseEnter={(event) => (event.currentTarget.style.background = BG3)}
+      onMouseLeave={(event) => (event.currentTarget.style.background = "transparent")}
+    >
+      <div style={CARD_ROW_STYLE}>
+        <span style={CARD_LABEL_STYLE}>TX ID</span>
+        <span style={CARD_VALUE_STYLE}>
+          <span style={ID_STYLE}>{shortId(tx.id)}</span>
+          <CopyButton value={tx.id} label="Tx ID" style={COPY_BUTTON_STYLE} />
+        </span>
+      </div>
+      <div style={CARD_ROW_STYLE}>
+        <span style={CARD_LABEL_STYLE}>ASSET</span>
+        <span style={CARD_VALUE_STYLE}>{tx.asset}</span>
+      </div>
+      <div style={CARD_ROW_STYLE}>
+        <span style={CARD_LABEL_STYLE}>AMOUNT</span>
+        <span style={{ ...CARD_VALUE_STYLE, color: "#fff" }}>{formatAmount(tx.amount)}</span>
+      </div>
+      <div style={CARD_ROW_STYLE}>
+        <span style={CARD_LABEL_STYLE}>FROM</span>
+        <span style={CARD_VALUE_STYLE}>
+          <span style={ADDRESS_STYLE}>{tx.from.slice(0, 10)}…</span>
+          <CopyButton value={tx.from} label="From address" style={COPY_BUTTON_STYLE} />
+        </span>
+      </div>
+      <div style={CARD_ROW_STYLE}>
+        <span style={CARD_LABEL_STYLE}>TO</span>
+        <span style={CARD_VALUE_STYLE}>
+          <span style={ADDRESS_STYLE}>{tx.to.slice(0, 10)}…</span>
+          <CopyButton value={tx.to} label="To address" style={COPY_BUTTON_STYLE} />
+        </span>
+      </div>
+      <div style={CARD_ROW_STYLE}>
+        <span style={CARD_LABEL_STYLE}>STATUS</span>
+        <span style={CARD_VALUE_STYLE}>
+          <Badge status={tx.status} />
+        </span>
+      </div>
+      <div style={CARD_ROW_STYLE}>
+        <span style={CARD_LABEL_STYLE}>RETRIES</span>
+        <span style={CARD_VALUE_STYLE}>{tx.retries}</span>
+      </div>
+      <div style={{ ...CARD_ROW_STYLE, marginBottom: 0 }}>
+        <span style={CARD_LABEL_STYLE}>AGE</span>
+        <span style={CARD_VALUE_STYLE} suppressHydrationWarning>
+          {elapsed(tx.timestamp)}
+        </span>
+      </div>
+    </div>
+  );
+}, hasSameRenderedData);
+
 export function TxTable({ txs, onSelect }: TxTableProps) {
   const [page, setPage] = useState(1);
   const [knownLength, setKnownLength] = useState(txs.length);
@@ -113,7 +202,29 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
 
   return (
     <div>
-      <div style={{ overflowX: "auto" }}>
+      {/* Mobile-first: below the md breakpoint (768px) the dense grid degrades to
+          stacked cards so every column stays reachable without horizontal scroll. */}
+      <div className="md:hidden">
+        {pageTxs.map((tx) => (
+          <TxCard key={tx.id} tx={tx} onSelect={onSelect} />
+        ))}
+        {txs.length === 0 && (
+          <div
+            style={{
+              padding: 24,
+              textAlign: "center",
+              color: DIM,
+              fontFamily: MONO,
+              fontSize: 11,
+            }}
+          >
+            no transactions match filter
+          </div>
+        )}
+      </div>
+
+      {/* md and up: full tabular grid. */}
+      <div className="hidden md:block" style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
           <thead>
             <tr>
