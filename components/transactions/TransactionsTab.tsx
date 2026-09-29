@@ -9,10 +9,11 @@ import { SorobanTip } from "@/components/ui/SorobanTip";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { useToast } from "@/components/ui/Toast";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useSoroban } from "@/lib/soroban/SorobanProvider";
 import { invokeContract, simulateContractCall, stringArg, structArg } from "@/lib/soroban/contract";
 import { useLiveTransactions } from "@/lib/soroban/useLiveTransactions";
 import { shortId } from "@/lib/utils";
-import { AMBER, BG3, BORDER, MONO } from "@/lib/constants";
+import { AMBER, BG3, BORDER, DIM, MONO } from "@/lib/constants";
 import {
   createSavedView,
   loadSavedViews,
@@ -20,10 +21,10 @@ import {
   type SavedView,
   type SavedViewFilters,
 } from "@/lib/filters/savedViews";
+import { toCsv, toJson, downloadBlob } from "@/lib/export/formatters";
 import type { Transaction } from "@/lib/types";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
-const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
 
 export function TransactionsTab() {
   const [filter, setFilter] = useState("");
@@ -39,6 +40,7 @@ export function TransactionsTab() {
   const [viewName, setViewName] = useState("");
   const txs = useLiveTransactions();
   const { address, connect } = useWallet();
+  const { contractId } = useSoroban();
   const { toast } = useToast();
 
   // Load persisted views once on mount (per-browser persistence).
@@ -101,8 +103,8 @@ export function TransactionsTab() {
       toast("Enter a tx_id to look up", "error");
       return;
     }
-    if (!CONTRACT_ID) {
-      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
       return;
     }
     if (!address) {
@@ -114,7 +116,7 @@ export function TransactionsTab() {
     try {
       const simulated = await simulateContractCall(
         RPC_URL,
-        CONTRACT_ID,
+        contractId,
         address,
         "get_transaction",
         [stringArg(filter.trim())]
@@ -133,8 +135,8 @@ export function TransactionsTab() {
       toast("tx_id, callback_url, and secret are all required", "error");
       return;
     }
-    if (!CONTRACT_ID) {
-      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
       return;
     }
     if (!address) {
@@ -149,7 +151,7 @@ export function TransactionsTab() {
         callback_url: cb.callback_url.trim(),
         secret: cb.secret.trim(),
       });
-      const result = await invokeContract(RPC_URL, CONTRACT_ID, address, "register_callback", [
+      const result = await invokeContract(RPC_URL, contractId, address, "register_callback", [
         payload,
       ]);
       toast(
@@ -320,6 +322,50 @@ export function TransactionsTab() {
 
       {/* Full table */}
       <Panel title={`ALL TRANSACTIONS (${filtered.length})`}>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, marginBottom: 10 }}>
+          <button
+            onClick={() => downloadBlob(toCsv(filtered), `transactions-${Date.now()}.csv`, "text/csv;charset=utf-8;")}
+            disabled={filtered.length === 0}
+            aria-label="Export as CSV"
+            style={{
+              padding: "5px 12px",
+              background: "transparent",
+              border: `1px solid ${BORDER}`,
+              color: filtered.length === 0 ? DIM : "#ccc",
+              fontFamily: MONO,
+              fontSize: 9,
+              letterSpacing: "0.1em",
+              cursor: filtered.length === 0 ? "not-allowed" : "pointer",
+              opacity: filtered.length === 0 ? 0.4 : 1,
+              transition: "border-color 0.15s, color 0.15s",
+            }}
+            onMouseEnter={(e) => { if (filtered.length > 0) { e.currentTarget.style.borderColor = AMBER; e.currentTarget.style.color = AMBER; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#ccc"; }}
+          >
+            ↓ CSV
+          </button>
+          <button
+            onClick={() => downloadBlob(toJson(filtered), `transactions-${Date.now()}.json`, "application/json")}
+            disabled={filtered.length === 0}
+            aria-label="Export as JSON"
+            style={{
+              padding: "5px 12px",
+              background: "transparent",
+              border: `1px solid ${BORDER}`,
+              color: filtered.length === 0 ? DIM : "#ccc",
+              fontFamily: MONO,
+              fontSize: 9,
+              letterSpacing: "0.1em",
+              cursor: filtered.length === 0 ? "not-allowed" : "pointer",
+              opacity: filtered.length === 0 ? 0.4 : 1,
+              transition: "border-color 0.15s, color 0.15s",
+            }}
+            onMouseEnter={(e) => { if (filtered.length > 0) { e.currentTarget.style.borderColor = AMBER; e.currentTarget.style.color = AMBER; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "#ccc"; }}
+          >
+            ↓ JSON
+          </button>
+        </div>
         <TxTable txs={filtered} onSelect={setSelected} />
       </Panel>
 

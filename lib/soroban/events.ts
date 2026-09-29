@@ -72,26 +72,30 @@ export function createIntervalController(
 
 export type IntervalController = ReturnType<typeof createIntervalController>;
 
-function getStoredCursor(): string | null {
+function getCursorKey(contractId?: string): string {
+  return contractId ? `${CURSOR_STORAGE_KEY}:${contractId}` : CURSOR_STORAGE_KEY;
+}
+
+function getStoredCursor(contractId?: string): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return localStorage.getItem(CURSOR_STORAGE_KEY);
+    return localStorage.getItem(getCursorKey(contractId));
   } catch {
     return null;
   }
 }
 
-function storeCursor(cursor: string): void {
+function storeCursor(contractId: string | undefined, cursor: string): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(CURSOR_STORAGE_KEY, cursor);
+    localStorage.setItem(getCursorKey(contractId), cursor);
   } catch {}
 }
 
 export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contractId?: string) {
   const server = new rpc.Server(rpcUrl);
-  let cursor: string | null = getStoredCursor();
-  let pollTimer: ReturnType<typeof setTimeout> | null = null;
+  let cursor: string | null = getStoredCursor(contractId);
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
   let running = false;
   const controller = createIntervalController();
   const health: RpcHealth = {
@@ -177,7 +181,7 @@ export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contr
         const lastEvent = response.events[response.events.length - 1];
         if (lastEvent) {
           cursor = lastEvent.id;
-          storeCursor(cursor);
+          storeCursor(contractId, cursor);
         }
 
         eventCount = normalized.length;
@@ -265,7 +269,7 @@ export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contr
 
   function resetCursor(): void {
     cursor = null;
-    storeCursor("");
+    storeCursor(contractId, "");
   }
 
   return {

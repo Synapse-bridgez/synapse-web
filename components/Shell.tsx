@@ -4,15 +4,19 @@ import { DashboardTab } from "./dashboard/DashboardTab";
 import { TransactionsTab } from "./transactions/TransactionsTab";
 import { AdminTab } from "./admin/AdminTab";
 import { DocsTab } from "./docs/DocsTab";
+import { AnalyticsTab } from "./analytics/AnalyticsTab";
+import { NotificationCenter } from "./notifications/NotificationCenter";
+import { NotificationProvider } from "@/lib/notifications/NotificationStore";
 import { TabErrorBoundary } from "@/components/ui/TabErrorBoundary";
+import { ContractSwitcher } from "@/components/ui/ContractSwitcher";
 import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useToast } from "@/components/ui/Toast";
 import { shortId } from "@/lib/utils";
 
-type Tab = "dashboard" | "transactions" | "admin" | "docs";
-const TABS: Tab[] = ["dashboard", "transactions", "admin", "docs"];
+type Tab = "dashboard" | "transactions" | "analytics" | "admin" | "docs";
+const TABS: Tab[] = ["dashboard", "transactions", "analytics", "admin", "docs"];
 
 type Theme = "dark" | "light";
 const THEME_STORAGE_KEY = "synapse-theme";
@@ -54,6 +58,7 @@ export function Shell() {
   }, [address, toast]);
 
   return (
+    <NotificationProvider>
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {/* ── Header ── */}
       <header className="shell-header">
@@ -78,6 +83,7 @@ export function Shell() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <ContractSwitcher />
           <span
             style={{
               fontSize: 9,
@@ -101,6 +107,7 @@ export function Shell() {
               transition: "all 0.3s",
             }}
           />
+          <NotificationCenter />
           <button
             onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
             aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
@@ -201,6 +208,11 @@ export function Shell() {
             <TransactionsTab />
           </TabErrorBoundary>
         )}
+        {tab === "analytics" && (
+          <TabErrorBoundary title="Analytics tab error">
+            <AnalyticsTab />
+          </TabErrorBoundary>
+        )}
         {tab === "admin" && (
           <TabErrorBoundary title="Admin tab error">
             <AdminTab />
@@ -247,5 +259,6 @@ export function Shell() {
         </span>
       </footer>
     </div>
+    </NotificationProvider>
   );
 }
