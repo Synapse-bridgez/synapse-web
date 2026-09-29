@@ -34,6 +34,8 @@ export const STATIC_ASSET_SOURCE = "/_next/static/:path*";
 export const ALL_PATHS_SOURCE = "/:path*";
 
 const nextConfig: NextConfig = {
+  compress: true,
+  poweredByHeader: false,
   async headers() {
     return [
       // ORDER MATTERS — read before editing.
