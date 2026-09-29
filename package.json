@@ -13,13 +13,20 @@
     "lint": "eslint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.mts",
+    "test:unit": "vitest run --config vitest.config.mts",
+    "test:watch": "vitest --config vitest.config.mts",
     "check:toolchain": "node scripts/check-toolchain.mjs",
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,json,css,md}": "prettier --write"
+    "*.{js,jsx,ts,tsx,mjs}": [
+      "prettier --write",
+      "eslint --max-warnings=0 --no-warn-ignored --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": "prettier --write"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "^2.6.0",

@@ -26,6 +26,8 @@ synapse-web/
 │   └── error.tsx / not-found.tsx
 ├── components/
 │   ├── Shell.tsx           # Top-level shell: header, tab bar, footer
+│   ├── command-palette/
+│   │   └── CommandPalette.tsx      # Cmd/Ctrl+K fuzzy-searchable command list
 │   ├── dashboard/
 │   │   ├── DashboardTab.tsx        # Composes the dashboard view
 │   │   ├── StatCards.tsx           # PENDING / PROCESSING / COMPLETED / FAILED counts
@@ -85,6 +87,37 @@ take over — see `lib/soroban/transactionMerge.ts` and `lib/soroban/useLiveCont
 
 ---
 
+## Runtime Contract Switcher & Multi-Deployment Tracking
+
+The dashboard allows tracking and switching between multiple deployed Soroban contract IDs at runtime (for example, switching between a personal Testnet deployment and a shared staging deployment) without requiring environment changes or frontend rebuilds.
+
+### Features
+- **Contract-Switcher UI**: Integrated directly into the shell header with dropdown navigation, tracked deployments list, active badge indicators, and "+ ADD CONTRACT ID" form.
+- **LocalStorage Persistence**: Contract selections and custom added deployments are persisted across browser reloads via `localStorage` (matching the pattern in `lib/wallet/storage.ts`).
+- **Clean Re-scoping & Zero Stale-Data Leakage**:
+  - Switching contracts tears down the existing `lib/soroban/events.ts` poller and establishes a fresh one scoped to the new contract ID.
+  - Event poller cursors in `localStorage` are scoped per contract ID (`soroban-event-cursor:<contractId>`), ensuring event feeds never collide.
+  - `useLiveTransactions` immediately wipes cached enrichment state and resets fetch registries upon contract switch.
+  - `useLiveContractInfo` immediately wipes previous live health/version state and cancels any pending in-flight read requests.
+  - `AdminTab`, `TransactionsTab`, and `TxDetailModal` automatically route all simulations and contract invocations to the active contract ID.
+
+### Demonstration: Switching Live Between Two Testnet Instances
+1. **Initial Contract A (Shared Testnet)**:
+   - Select or configure Contract A: `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`.
+   - The contract info panel reflects Contract A's address and simulated `health()`/`version()`.
+   - Live events from Contract A are streamed into the pipeline and transaction tables.
+2. **Switching to Contract B (Personal Testnet)**:
+   - Click the **CONTRACT: ...** switcher in the header.
+   - Click **+ ADD CONTRACT ID** and enter Contract B: `CA3D5KRYMCMCZKPO722ECQQQ3QHOFGT2TJNITW5OECVOAQCEK7ALISVN` with label `Personal Testnet`.
+   - Click **Save & Switch**.
+   - Contract A's event poller is torn down and stopped immediately.
+   - All displayed events and enriched transaction state from Contract A are flushed to avoid stale leakage.
+   - Poller for Contract B connects with its own scoped cursor and starts polling Contract B.
+   - Contract info panel switches to Contract B, resetting old fields and re-fetching `health()` and `version()` for Contract B.
+   - Your selection is remembered in `localStorage` on page reload.
+
+---
+
 ## Getting started
 
 **Requires Node `20.20.2` and npm `10.8.2` — exactly.** Those are the versions the
@@ -130,22 +163,25 @@ a different Node from CI. Until a Dockerfile exists the check reports a skip; wh
 one is added, a mismatch fails immediately.
 
 Open [http://localhost:3000](http://localhost:3000). The app starts on the
-**dashboard** tab showing mock data. Connect a Freighter or xBull wallet and set
-`NEXT_PUBLIC_CONTRACT_ID` (plus optionally `NEXT_PUBLIC_SOROBAN_RPC_URL`) to switch
-to live contract data instead.
+**dashboard** tab. Connect a Freighter or xBull wallet and use the runtime **CONTRACT** switcher in the header (or configure `NEXT_PUBLIC_CONTRACT_ID` / `NEXT_PUBLIC_SOROBAN_RPC_URL` in `.env.local`) to interact with live Testnet contracts.
 
 Other scripts:
 
 ```bash
 npm run build            # Production build
 npm run lint             # ESLint
+npm run typecheck        # tsc --noEmit
 npm run test             # Run the test suite once
+npm run test:unit        # Unit tests only (what the pre-push hook runs)
 npm run test:watch       # Run the test suite in watch mode
 npm run check:toolchain  # Assert Node/npm match the pin in package.json
 npm run format           # Prettier (writes)
 npm run format:check     # Prettier (CI check)
-npx tsc --noEmit         # Type-check without emitting
 ```
+
+---
+
+npm run format:check # Prettier (CI check)
 
 ---
 
@@ -155,6 +191,25 @@ npx tsc --noEmit         # Type-check without emitting
 2. Add the tab key to the `TABS` array in `components/Shell.tsx`.
 3. Add a matching `{tab === "<name>" && <NameTab />}` render block in `Shell.tsx`.
 4. Wrap it in `<TabErrorBoundary>` like the existing tabs.
+
+---
+
+## Deploy rollback automation
+
+`.github/workflows/rollback.yml` rolls production back to the last known-good build
+when health signals (error rate, synthetic-monitoring failures) breach configured
+thresholds inside the observation window of a new deploy. Rolling back is "serve the
+previous build" — the app is stateless, so there is no data migration to unwind.
+
+Thresholds, hooks and the manual force/prevent overrides are all configuration, not
+code. See **[docs/rollback.md](docs/rollback.md)** for the full contract: which
+repository variables and secrets to set, the health-signal payload shape, how to wire
+the deploy pipeline's `deploy_completed` dispatch, and the anti-flap circuit breaker
+that stops rollback/re-promote loops.
+
+The decision logic itself lives in `scripts/deploy/rollback-policy.mjs` and is
+covered by `scripts/deploy/rollback-policy.test.ts`, so it is testable without a
+deploy platform.
 
 ---
 
@@ -173,6 +228,8 @@ Notable milestones on the path to a working testnet client:
       `useLiveContractInfo`), falling back to mock data when no wallet/contract is configured
 - [x] Integrate `@creit.tech/stellar-wallets-kit` (Freighter / xBull) for wallet connection
       (`lib/wallet/`)
+- [x] Command palette (`Cmd/Ctrl+K`) for tab navigation, key actions, and settings toggles
+      (`components/command-palette/CommandPalette.tsx`)
 - [ ] Backend relay service for `register_transaction`, `start_processing`, `complete_transaction`,
       `fail_transaction`, and `register_callback` webhooks
 - [ ] Fetch `admin` / `relay_signer` from the deployed contract once it exposes a getter for them
@@ -188,7 +245,7 @@ Notable milestones on the path to a working testnet client:
 | UI             | React 19, inline styles + Tailwind CSS v4        |
 | Font           | IBM Plex Mono                                    |
 | Language       | TypeScript 5                                     |
-| Linting        | ESLint + Prettier + Husky pre-commit             |
+| Linting        | ESLint + Prettier + Husky pre-commit / pre-push  |
 | Testing        | Vitest + Testing Library                         |
 | CI             | GitHub Actions (lint → typecheck → test → build) |
 | Target network | Stellar Testnet (Soroban)                        |
