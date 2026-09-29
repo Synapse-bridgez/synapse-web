@@ -7,6 +7,7 @@ import { SorobanTip } from "@/components/ui/SorobanTip";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { useToast } from "@/components/ui/Toast";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useSoroban } from "@/lib/soroban/SorobanProvider";
 import { invokeContract, simulateContractCall, stringArg } from "@/lib/soroban/contract";
 import { AMBER, BG1, BG2, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { formatAmount, shortId } from "@/lib/utils";
@@ -14,7 +15,9 @@ import { TxTimeline, type TxTimelineEvent } from "@/components/transactions/TxTi
 import type { Transaction } from "@/lib/types";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
-const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
+
+// A transaction pending beyond this many milliseconds is eligible for a fee-bump "speed up".
+const STUCK_THRESHOLD_MS = Number(process.env.NEXT_PUBLIC_STUCK_TX_THRESHOLD_MS ?? 120_000);
 
 interface TxDetailModalProps {
   tx: Transaction;
@@ -39,13 +42,19 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
   const [showFailPrompt, setShowFailPrompt] = useState(false);
   const [failReason, setFailReason] = useState("");
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [estimatedFee, setEstimatedFee] = useState<string | null>(null);
+  const [feeBumpHash, setFeeBumpHash] = useState<string | null>(null);
   const { address, connect } = useWallet();
+  const { contractId } = useSoroban();
   const { toast } = useToast();
   const m = STATUS_META[tx.status];
 
+  const isStuck =
+    tx.status === "PENDING" && Date.now() - new Date(tx.created_at).getTime() > STUCK_THRESHOLD_MS;
+
   async function runTxCall(method: string, extraArgs: string[] = []) {
-    if (!CONTRACT_ID) {
-      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
       return;
     }
     if (!address) {
@@ -56,7 +65,10 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
     setPendingAction(method);
     try {
       const args = [stringArg(tx.id), ...extraArgs.map(stringArg)];
-      const result = await invokeContract(RPC_URL, CONTRACT_ID, address, method, args);
+      // Estimate the network fee from the simulation's resource usage before signing.
+      const preview = await simulateContractCall(RPC_URL, contractId, address, method, args);
+      setEstimatedFee(preview.estimatedFee);
+      const result = await invokeContract(RPC_URL, contractId, address, method, args);
       toast(
         `${method}() ${result.status === "SUCCESS" ? "succeeded" : "failed"} · tx ${shortId(result.hash)}`,
         result.status === "SUCCESS" ? "success" : "error"
@@ -69,8 +81,8 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
   }
 
   async function runIsDuplicate() {
-    if (!CONTRACT_ID) {
-      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
       return;
     }
     if (!address) {
@@ -80,13 +92,44 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
     }
     setPendingAction("is_duplicate");
     try {
-      const simulated = await simulateContractCall(RPC_URL, CONTRACT_ID, address, "is_duplicate", [
+      const simulated = await simulateContractCall(RPC_URL, contractId, address, "is_duplicate", [
         stringArg(tx.id),
       ]);
+      setEstimatedFee(simulated.estimatedFee);
       const isDuplicate = simulated.result ? scValToNative(simulated.result.retval) : undefined;
       toast(`is_duplicate(${shortId(tx.id)}) → ${JSON.stringify(isDuplicate)}`, "info");
     } catch (err) {
       toast(err instanceof Error ? err.message : "is_duplicate() failed", "error");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function runSpeedUp() {
+    if (!CONTRACT_ID) {
+      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+      return;
+    }
+    if (!address) {
+      toast("Connect a wallet to sign the fee-bump transaction", "error");
+      await connect();
+      return;
+    }
+    setPendingAction("speed_up");
+    try {
+      const bumped = await invokeContract(RPC_URL, CONTRACT_ID, address, "speed_up", [
+        stringArg(tx.id),
+      ]);
+      setFeeBumpHash(bumped.hash);
+      toast(`Fee-bump submitted · tx ${shortId(bumped.hash)}`, "success");
+    } catch (err) {
+      // A transaction that confirms in the interim is not a bug: surface it as info, not an error.
+      const message = err instanceof Error ? err.message : "speed_up() failed";
+      if (/already (confirmed|succeeded)|not found|no longer pending/i.test(message)) {
+        toast(`Transaction ${shortId(tx.id)} already confirmed — no fee-bump needed`, "info");
+      } else {
+        toast(message, "error");
+      }
     } finally {
       setPendingAction(null);
     }
@@ -212,6 +255,63 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
           </tbody>
         </table>
 
+        {/* Estimated network fee from simulation preview */}
+        {estimatedFee && (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: "8px 12px",
+              background: BG2,
+              border: `1px solid ${BORDER}`,
+              borderRadius: 4,
+              fontFamily: MONO,
+              fontSize: 10,
+              color: DIM,
+            }}
+          >
+            ESTIMATED NETWORK FEE: <span style={{ color: AMBER }}>{estimatedFee}</span>
+          </div>
+        )}
+
+        {/* Speed up (fee-bump) for stuck transactions */}
+        {isStuck && (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: 16,
+              background: BG2,
+              border: `1px solid ${AMBER}33`,
+              borderRadius: 4,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: MONO,
+                fontSize: 10,
+                color: AMBER,
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                marginBottom: 8,
+              }}
+            >
+              TRANSACTION PENDING UNUSUALLY LONG
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: DIM, marginBottom: 12 }}>
+              Submit a fee-bump transaction to speed this up. This requires a new signature.
+            </div>
+            <ActionButton
+              label={pendingAction === "speed_up" ? "Submitting…" : "Speed up"}
+              disabled={pendingAction === "speed_up"}
+              onClick={runSpeedUp}
+            />
+            {feeBumpHash && (
+              <div style={{ fontFamily: MONO, fontSize: 10, color: DIM, marginTop: 8 }}>
+                Fee-bump tx: {shortId(feeBumpHash)}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Lifecycle timeline */}
         <div style={{ marginBottom: 16 }}>
           <div
@@ -310,6 +410,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
               >
                 CANCEL
               </button>
+              </button>
             </div>
           </div>
         ) : (
@@ -330,9 +431,30 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
               onClick={() => setShowFailPrompt(true)}
             />
             <ActionButton
-              label="IS DUPLICATE"
-              pending={pendingAction === "is_duplicate"}
+              label={pendingAction === "is_duplicate" ? "Checking…" : "Check Duplicate"}
+              disabled={pendingAction === "is_duplicate"}
               onClick={runIsDuplicate}
+            />
+            <ActionButton
+              label="Fail Transaction"
+              disabled={pendingAction === "fail_transaction"}
+              onClick={() => setShowFailPrompt(true)}
+            />
+          </div>
+        )}
+
+        <SorobanTip />
+      </div>
+    </div>
+  );
+}
+
+              onClick={runIsDuplicate}
+            />
+            <ActionButton
+              label="Fail Transaction"
+              disabled={pendingAction === "fail_transaction"}
+              onClick={() => setShowFailPrompt(true)}
             />
           </div>
         )}
