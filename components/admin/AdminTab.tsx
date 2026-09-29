@@ -8,12 +8,12 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useSoroban } from "@/lib/soroban/SorobanProvider";
 import { addressArg, invokeContract, simulateContractCall } from "@/lib/soroban/contract";
 import { shortId } from "@/lib/utils";
 import { AMBER, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
-const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,6 +45,7 @@ function AdminCard({
   btnLabel,
   btnColor = AMBER,
   confirm,
+  disabled = false,
 }: {
   title: string;
   tip: string;
@@ -53,6 +54,7 @@ function AdminCard({
   btnLabel: string;
   btnColor?: string;
   confirm?: ConfirmConfig;
+  disabled?: boolean;
 }) {
   const [vals, setVals] = useState<Record<string, string>>(
     Object.fromEntries(fields.map((f) => [f.key, ""]))
@@ -70,6 +72,7 @@ function AdminCard({
   }
 
   function handleClick() {
+    if (disabled) return;
     if (confirm) {
       setPendingVals({ ...vals });
     } else {
@@ -104,7 +107,7 @@ function AdminCard({
             label={submitting ? "SUBMITTING…" : btnLabel}
             color={btnColor}
             onClick={handleClick}
-            disabled={submitting}
+            disabled={submitting || disabled}
           />
         </div>
         <SorobanTip>{tip}</SorobanTip>
@@ -130,12 +133,21 @@ function AdminCard({
 // ---------------------------------------------------------------------------
 
 export function AdminTab() {
-  const { address, connect } = useWallet();
+  const { address, connect, mode } = useWallet();
+  const { contractId } = useSoroban();
   const { toast } = useToast();
 
+  const isWatchOnly = mode === "watch";
+
   async function runAdminCall(method: string, addresses: string[]) {
-    if (!CONTRACT_ID) {
-      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+    if (isWatchOnly) {
+      toast("Watch-only mode: connect a signing wallet to submit admin transactions", "error");
+      return;
+    }
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
+      return;
+    }
       return;
     }
     if (!address) {
@@ -149,7 +161,7 @@ export function AdminTab() {
     }
     try {
       const args = addresses.map(addressArg);
-      const result = await invokeContract(RPC_URL, CONTRACT_ID, address, method, args);
+      const result = await invokeContract(RPC_URL, contractId, address, method, args);
       toast(
         `${method}() ${result.status === "SUCCESS" ? "succeeded" : "failed"} · tx ${shortId(result.hash)}`,
         result.status === "SUCCESS" ? "success" : "error"
@@ -160,8 +172,8 @@ export function AdminTab() {
   }
 
   async function runDiagnostic(method: string) {
-    if (!CONTRACT_ID) {
-      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
       return;
     }
     if (!address) {
@@ -170,7 +182,7 @@ export function AdminTab() {
       return;
     }
     try {
-      const simulated = await simulateContractCall(RPC_URL, CONTRACT_ID, address, method);
+      const simulated = await simulateContractCall(RPC_URL, contractId, address, method);
       const value = simulated.result ? scValToNative(simulated.result.retval) : undefined;
       toast(`${method}() → ${JSON.stringify(value)}`, "info");
     } catch (err) {
@@ -200,6 +212,29 @@ export function AdminTab() {
         </span>
       </div>
 
+      {/* Watch-only notice */}
+      {isWatchOnly && (
+        <div
+          style={{
+            background: "rgba(255,193,7,0.06)",
+            border: `1px solid ${AMBER}`,
+            padding: "10px 16px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              color: AMBER,
+              fontFamily: MONO,
+              letterSpacing: "0.06em",
+            }}
+          >
+            👁 WATCH-ONLY MODE — admin write actions are disabled. Connect a signing wallet to
+            perform privileged operations.
+          </span>
+        </div>
+      )}
+
       {/* Initialize */}
       <AdminCard
         title="INITIALIZE CONTRACT"
@@ -209,6 +244,7 @@ export function AdminTab() {
           { label: "relay_signer", key: "relay_signer", placeholder: "G… relay signer address" },
         ]}
         btnLabel="INITIALIZE →"
+        disabled={isWatchOnly}
         onSubmit={(v) => runAdminCall("initialize", [v.admin ?? "", v.relay_signer ?? ""])}
       />
 
@@ -219,6 +255,7 @@ export function AdminTab() {
         fields={[{ label: "new_admin", key: "new_admin", placeholder: "G… new admin address" }]}
         btnLabel="TRANSFER →"
         btnColor={STATUS_META.FAILED.color}
+        disabled={isWatchOnly}
         confirm={{
           title: "TRANSFER ADMIN — IRREVERSIBLE",
           message:
@@ -240,71 +277,34 @@ export function AdminTab() {
         ]}
         btnLabel="SET SIGNER →"
         btnColor={STATUS_META.PROCESSING.color}
+        disabled={isWatchOnly}
         confirm={{
-          title: "REPLACE RELAY SIGNER",
+          title: "SET RELAY SIGNER",
           message:
-            "You are replacing the relay signer address. " +
-            "The current relay signer will immediately lose the ability to submit transactions. " +
-            "Confirm only if you have the new signer ready.",
+            "This updates the relay signer authorized to submit relayed transactions. " +
+            "Confirm the new signer address is correct before continuing.",
           accentColor: STATUS_META.PROCESSING.color,
         }}
         onSubmit={(v) => runAdminCall("set_relay_signer", [v.new_signer ?? ""])}
       />
 
-      {/* Diagnostics */}
+      {/* Diagnostics — read-only, allowed in watch mode */}
       <Panel title="DIAGNOSTICS">
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={() => runDiagnostic("health")}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              background: "transparent",
-              border: `1px solid ${BORDER}`,
-              color: DIM,
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#fff";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = DIM;
-              e.currentTarget.style.borderColor = BORDER;
-            }}
-          >
-            health()
-          </button>
-          <button
-            onClick={() => runDiagnostic("version")}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              background: "transparent",
-              border: `1px solid ${BORDER}`,
-              color: DIM,
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#fff";
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = DIM;
-              e.currentTarget.style.borderColor = BORDER;
-            }}
-          >
-            version()
-          </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <ActionButton
+            label="PING →"
+            color={DIM}
+            onClick={() => runDiagnostic("ping")}
+          />
+          <ActionButton
+            label="GET ADMIN →"
+            color={DIM}
+            onClick={() => runDiagnostic("get_admin")}
+          />
         </div>
         <SorobanTip>
-          health() + version() → read-only simulations via rpc.Server; no signing required
+          Read-only simulations. These do not require signing and remain available in watch-only
+          mode.
         </SorobanTip>
       </Panel>
     </div>

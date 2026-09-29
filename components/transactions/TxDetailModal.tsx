@@ -7,13 +7,13 @@ import { SorobanTip } from "@/components/ui/SorobanTip";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { useToast } from "@/components/ui/Toast";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useSoroban } from "@/lib/soroban/SorobanProvider";
 import { invokeContract, simulateContractCall, stringArg } from "@/lib/soroban/contract";
 import { AMBER, BG1, BG2, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { formatAmount, shortId } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
-const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID;
 
 // A transaction pending beyond this many milliseconds is eligible for a fee-bump "speed up".
 const STUCK_THRESHOLD_MS = Number(process.env.NEXT_PUBLIC_STUCK_TX_THRESHOLD_MS ?? 120_000);
@@ -30,6 +30,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
   const [estimatedFee, setEstimatedFee] = useState<string | null>(null);
   const [feeBumpHash, setFeeBumpHash] = useState<string | null>(null);
   const { address, connect } = useWallet();
+  const { contractId } = useSoroban();
   const { toast } = useToast();
   const m = STATUS_META[tx.status];
 
@@ -37,8 +38,8 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
     tx.status === "PENDING" && Date.now() - new Date(tx.created_at).getTime() > STUCK_THRESHOLD_MS;
 
   async function runTxCall(method: string, extraArgs: string[] = []) {
-    if (!CONTRACT_ID) {
-      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
       return;
     }
     if (!address) {
@@ -50,9 +51,9 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
     try {
       const args = [stringArg(tx.id), ...extraArgs.map(stringArg)];
       // Estimate the network fee from the simulation's resource usage before signing.
-      const preview = await simulateContractCall(RPC_URL, CONTRACT_ID, address, method, args);
+      const preview = await simulateContractCall(RPC_URL, contractId, address, method, args);
       setEstimatedFee(preview.estimatedFee);
-      const result = await invokeContract(RPC_URL, CONTRACT_ID, address, method, args);
+      const result = await invokeContract(RPC_URL, contractId, address, method, args);
       toast(
         `${method}() ${result.status === "SUCCESS" ? "succeeded" : "failed"} · tx ${shortId(result.hash)}`,
         result.status === "SUCCESS" ? "success" : "error"
@@ -65,8 +66,8 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
   }
 
   async function runIsDuplicate() {
-    if (!CONTRACT_ID) {
-      toast("NEXT_PUBLIC_CONTRACT_ID is not configured", "error");
+    if (!contractId) {
+      toast("No contract ID is currently selected or configured", "error");
       return;
     }
     if (!address) {
@@ -76,7 +77,7 @@ export function TxDetailModal({ tx, onClose }: TxDetailModalProps) {
     }
     setPendingAction("is_duplicate");
     try {
-      const simulated = await simulateContractCall(RPC_URL, CONTRACT_ID, address, "is_duplicate", [
+      const simulated = await simulateContractCall(RPC_URL, contractId, address, "is_duplicate", [
         stringArg(tx.id),
       ]);
       setEstimatedFee(simulated.estimatedFee);
