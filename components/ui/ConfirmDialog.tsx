@@ -33,6 +33,7 @@ export function ConfirmDialog({
   const [typed, setTyped] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   const needsRetype = Boolean(retypeValue);
   const canConfirm = needsRetype ? typed === retypeValue : true;
@@ -140,9 +141,7 @@ export function ConfirmDialog({
                 spellCheck={false}
                 autoComplete="off"
                 aria-invalid={typed.length > 0 && typed !== retypeValue}
-                aria-describedby={
-                  typed.length > 0 && typed !== retypeValue ? "retype-error-msg" : undefined
-                }
+                aria-describedby={typed.length > 0 && typed !== retypeValue ? "retype-error-msg" : undefined}
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
