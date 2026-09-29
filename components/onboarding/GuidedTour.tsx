@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { AMBER, BG0, BG1, BORDER, DIM, MONO } from "@/lib/constants";
+import { AMBER, BG0, BG1, BG2, BORDER, DIM, MONO, TEXT } from "@/lib/constants";
 import { WALLET_DOMAIN_BINDING_DOCS } from "@/lib/wallet/origin";
 
 /**
@@ -22,6 +22,7 @@ interface Step {
   title: string;
   body: string;
   links?: { label: string; href: string }[];
+  target?: string;
 }
 
 const STEPS: Step[] = [
@@ -75,10 +76,12 @@ interface GuidedTourProps {
    * A counter the header increments to force the briefing open on demand, even
    * for a user who has completed it before. Never auto-opens for them again.
    */
-  reopenSignal: number;
+  reopenSignal?: number;
+  /** Increment to manually re-trigger the tour from outside. */
+  trigger?: number;
 }
 
-export function GuidedTour({ reopenSignal }: GuidedTourProps) {
+export function GuidedTour({ reopenSignal = 0, trigger = 0 }: GuidedTourProps) {
   const [open, setOpen] = useState<boolean>(() => {
     // First visit: show it. The "browse the app but keep reality in view"
     // choice means a returning user is never nagged again.
@@ -101,118 +104,149 @@ export function GuidedTour({ reopenSignal }: GuidedTourProps) {
     setStep(0);
   }
 
-  const close = () => {
+  // Support the legacy `trigger` prop as an additional reopen signal.
+  const [handledTrigger, setHandledTrigger] = useState(trigger);
+  if (handledTrigger !== trigger) {
+    setHandledTrigger(trigger);
+    if (trigger > 0) {
+      setOpen(true);
+      setStep(0);
+    }
+  }
+
+  const close = useCallback(() => {
     markSeen();
     setOpen(false);
-  };
+  }, []);
 
-  const advance = () => {
-    if (step + 1 >= STEPS.length) {
-      close();
-    } else {
-      setStep((s) => s + 1);
-    }
-  };
+  const advance = useCallback(() => {
+    setStep((s) => {
+      if (s + 1 >= STEPS.length) {
+        markSeen();
+        setOpen(false);
+        return s;
+      }
+      return s + 1;
+    });
+  }, []);
+
+  const back = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);
+
+  const current = STEPS[step] ?? STEPS[0]!;
+
+  const rect = useMemo(() => {
+    if (!open || !current?.target || typeof document === "undefined") return null;
+    const el = document.querySelector(current.target);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { top: r.top, left: r.left, width: r.width, height: r.height };
+  }, [open, current, step]);
 
   if (!open) return null;
 
-  const current = STEPS[step] ?? STEPS[0]!;
+  const isLast = step === STEPS.length - 1;
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Wallet security briefing"
+      aria-label="Guided tour"
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 100,
-        background: "rgba(0,0,0,0.8)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 20,
+        zIndex: 1000,
+        background: "rgba(0,0,0,0.55)",
       }}
     >
-      <div
-        style={{
-          maxWidth: 560,
-          width: "100%",
-          background: BG1,
-          border: `1px solid ${BORDER}`,
-          boxShadow: "0 0 40px rgba(0,0,0,0.6)",
-          fontFamily: MONO,
-          color: "#fff",
-        }}
-      >
-        <div style={{ padding: "18px 22px", borderBottom: `1px solid ${BORDER}` }}>
-          <p style={{ margin: 0, fontSize: 10, letterSpacing: "0.14em", color: DIM }}>
-            WALLET SECURITY BRIEFING · {step + 1} / {STEPS.length}
-          </p>
-          <h2 style={{ margin: "6px 0 0", fontSize: 16, letterSpacing: "0.06em" }}>
-            {current.title}
-          </h2>
-        </div>
-
-        <div style={{ padding: "18px 22px", fontSize: 12, lineHeight: 1.8, color: "#d9dde3" }}>
-          <p style={{ margin: 0 }}>{current.body}</p>
-          {current.links && (
-            <ul style={{ margin: "12px 0 0", paddingLeft: 18 }}>
-              {current.links.map((link) => (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: AMBER }}
-                  >
-                    {link.label} ↗
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
+      {rect && (
         <div
           style={{
-            padding: "14px 22px",
-            borderTop: `1px solid ${BORDER}`,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            position: "fixed",
+            top: rect.top - 6,
+            left: rect.left - 6,
+            width: rect.width + 12,
+            height: rect.height + 12,
+            border: `2px solid ${TEXT}`,
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          width: 320,
+          background: BG2,
+          border: `1px solid ${BORDER}`,
+          padding: "16px 18px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 9,
+            letterSpacing: "0.14em",
+            color: DIM,
+            fontFamily: MONO,
+            marginBottom: 8,
           }}
         >
+          STEP {step + 1} / {STEPS.length}
+        </div>
+        <div style={{ fontSize: 14, color: TEXT, marginBottom: 8 }}>{current.title}</div>
+        <div style={{ fontSize: 12, color: DIM, lineHeight: 1.5, marginBottom: 16 }}>
+          {current.body}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
           <button
             type="button"
-            onClick={close}
+            onClick={dismiss}
             style={{
-              background: "none",
+              background: "transparent",
               border: "none",
               color: DIM,
               fontFamily: MONO,
-              cursor: "pointer",
-              fontSize: 10,
-            }}
-          >
-            skip forever
-          </button>
-          <button
-            type="button"
-            onClick={advance}
-            style={{
-              background: AMBER,
-              border: "none",
-              color: BG0,
-              fontFamily: MONO,
               fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              padding: "8px 18px",
               cursor: "pointer",
+              padding: 0,
             }}
           >
-            {step + 1 >= STEPS.length ? "I understand" : "next"}
+            Skip tour
           </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {step > 0 && (
+              <button
+                type="button"
+                onClick={back}
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${BORDER}`,
+                  color: TEXT,
+                  fontFamily: MONO,
+                  fontSize: 11,
+                  cursor: "pointer",
+                  padding: "6px 12px",
+                }}
+              >
+                Back
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={next}
+              style={{
+                background: TEXT,
+                border: `1px solid ${TEXT}`,
+                color: BG2,
+                fontFamily: MONO,
+                fontSize: 11,
+                cursor: "pointer",
+                padding: "6px 12px",
+              }}
+            >
+              {isLast ? "Finish" : "Next"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
