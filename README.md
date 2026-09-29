@@ -26,6 +26,8 @@ synapse-web/
 │   └── error.tsx / not-found.tsx
 ├── components/
 │   ├── Shell.tsx           # Top-level shell: header, tab bar, footer
+│   ├── command-palette/
+│   │   └── CommandPalette.tsx      # Cmd/Ctrl+K fuzzy-searchable command list
 │   ├── dashboard/
 │   │   ├── DashboardTab.tsx        # Composes the dashboard view
 │   │   ├── StatCards.tsx           # PENDING / PROCESSING / COMPLETED / FAILED counts
@@ -85,6 +87,37 @@ take over — see `lib/soroban/transactionMerge.ts` and `lib/soroban/useLiveCont
 
 ---
 
+## Runtime Contract Switcher & Multi-Deployment Tracking
+
+The dashboard allows tracking and switching between multiple deployed Soroban contract IDs at runtime (for example, switching between a personal Testnet deployment and a shared staging deployment) without requiring environment changes or frontend rebuilds.
+
+### Features
+- **Contract-Switcher UI**: Integrated directly into the shell header with dropdown navigation, tracked deployments list, active badge indicators, and "+ ADD CONTRACT ID" form.
+- **LocalStorage Persistence**: Contract selections and custom added deployments are persisted across browser reloads via `localStorage` (matching the pattern in `lib/wallet/storage.ts`).
+- **Clean Re-scoping & Zero Stale-Data Leakage**:
+  - Switching contracts tears down the existing `lib/soroban/events.ts` poller and establishes a fresh one scoped to the new contract ID.
+  - Event poller cursors in `localStorage` are scoped per contract ID (`soroban-event-cursor:<contractId>`), ensuring event feeds never collide.
+  - `useLiveTransactions` immediately wipes cached enrichment state and resets fetch registries upon contract switch.
+  - `useLiveContractInfo` immediately wipes previous live health/version state and cancels any pending in-flight read requests.
+  - `AdminTab`, `TransactionsTab`, and `TxDetailModal` automatically route all simulations and contract invocations to the active contract ID.
+
+### Demonstration: Switching Live Between Two Testnet Instances
+1. **Initial Contract A (Shared Testnet)**:
+   - Select or configure Contract A: `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`.
+   - The contract info panel reflects Contract A's address and simulated `health()`/`version()`.
+   - Live events from Contract A are streamed into the pipeline and transaction tables.
+2. **Switching to Contract B (Personal Testnet)**:
+   - Click the **CONTRACT: ...** switcher in the header.
+   - Click **+ ADD CONTRACT ID** and enter Contract B: `CA3D5KRYMCMCZKPO722ECQQQ3QHOFGT2TJNITW5OECVOAQCEK7ALISVN` with label `Personal Testnet`.
+   - Click **Save & Switch**.
+   - Contract A's event poller is torn down and stopped immediately.
+   - All displayed events and enriched transaction state from Contract A are flushed to avoid stale leakage.
+   - Poller for Contract B connects with its own scoped cursor and starts polling Contract B.
+   - Contract info panel switches to Contract B, resetting old fields and re-fetching `health()` and `version()` for Contract B.
+   - Your selection is remembered in `localStorage` on page reload.
+
+---
+
 ## Getting started
 
 ```bash
@@ -93,9 +126,7 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The app starts on the
-**dashboard** tab showing mock data. Connect a Freighter or xBull wallet and set
-`NEXT_PUBLIC_CONTRACT_ID` (plus optionally `NEXT_PUBLIC_SOROBAN_RPC_URL`) to switch
-to live contract data instead.
+**dashboard** tab. Connect a Freighter or xBull wallet and use the runtime **CONTRACT** switcher in the header (or configure `NEXT_PUBLIC_CONTRACT_ID` / `NEXT_PUBLIC_SOROBAN_RPC_URL` in `.env.local`) to interact with live Testnet contracts.
 
 Other scripts:
 
@@ -112,59 +143,7 @@ npm run format:check # Prettier (CI check)
 
 ---
 
-## Git hooks
-
-`npm install` wires up [Husky](https://typicode.github.io/husky/), so the hooks
-are active on a fresh clone. Two hooks run:
-
-| Hook         | Runs                                                | Catches                                                                           |
-| ------------ | --------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `pre-commit` | Prettier + ESLint `--fix`, **on staged files only** | Bad formatting, unused vars, `let` vs `const`, bad React hooks, `any` sneaking in |
-| `pre-push`   | `tsc --noEmit`, then the unit test suite            | Type errors anywhere in the project, failing/regressed tests                      |
-
-`pre-commit` is scoped to staged files on purpose — a full-project lint is slow
-enough that people start reaching for `--no-verify`, which is the outcome this
-setup is trying to avoid. Anything that needs to see the whole project
-(typecheck, tests) lives in `pre-push`, where a few extra seconds is a fair
-price for not finding out in CI.
-
-`pre-push` runs **unit tests only**. The full browser E2E suite is deliberately
-out of scope for local hooks — it is far too slow, and it is CI-only. If a
-Playwright suite is added later, its specs belong in `e2e/` and `test:unit` must
-be kept from picking them up; today the whole suite is unit tests, so
-`test:unit` and `test` are the same command on purpose.
-
-### Emergency bypass
-
-Every so often the hooks are wrong — a hook bug, a broken toolchain, or a
-`main`-only type error you cannot fix from this branch. There is a sanctioned
-way out. It is not `--no-verify`:
-
-```bash
-SYNAPSE_HOOK_BYPASS="<why the hook cannot pass right now>" git commit -m "..."
-SYNAPSE_HOOK_BYPASS="<why the hook cannot pass right now>" git push
-```
-
-This is deliberate rather than a convenience:
-
-- **A reason is required.** `SYNAPSE_HOOK_BYPASS=""` is treated as a mistake
-  and the hook _fails_ with instructions. A bypass you cannot describe is a bug,
-  not an emergency.
-- **The reason gets printed.** The hook prints your reason back to you before
-  letting the commit through, so it is a deliberate act rather than a muscle
-  memory one.
-- **The reason has to follow you into the PR.** Copy it into a "Bypassed hooks"
-  section in the PR description. The bypass is only acceptable if the next
-  person can see why the checks were skipped.
-
-`--no-verify` (or `HUSKY=0`) still works, because it is Git and Husky, not us.
-It is not the sanctioned path: it skips the hook _and_ the reminder above, so it
-is silent. Reach for it only when the hook itself is wedged — and say so in the
-PR. Routine `--no-verify` erodes the hooks for everyone and is the one thing
-this setup is meant to prevent.
-
-If you push with a bypass, CI still runs every check, so you are buying delay,
-not immunity. Expect review to ask.
+npm run format:check # Prettier (CI check)
 
 ---
 
@@ -192,6 +171,8 @@ Notable milestones on the path to a working testnet client:
       `useLiveContractInfo`), falling back to mock data when no wallet/contract is configured
 - [x] Integrate `@creit.tech/stellar-wallets-kit` (Freighter / xBull) for wallet connection
       (`lib/wallet/`)
+- [x] Command palette (`Cmd/Ctrl+K`) for tab navigation, key actions, and settings toggles
+      (`components/command-palette/CommandPalette.tsx`)
 - [ ] Backend relay service for `register_transaction`, `start_processing`, `complete_transaction`,
       `fail_transaction`, and `register_callback` webhooks
 - [ ] Fetch `admin` / `relay_signer` from the deployed contract once it exposes a getter for them
