@@ -24,6 +24,24 @@ What you expected to happen.
 
 What actually happened.
 
+## Affected Area
+
+Which part of the codebase does this affect? (used for automated labeling)
+
+- [ ] Wallet (`components/wallet/`)
+- [ ] Auth (`components/auth/`)
+- [ ] API (`api/`)
+- [ ] UI / Components (`components/`)
+- [ ] Docs (`docs/`)
+- [ ] Other (describe below)
+
+## Category
+
+- [ ] Bug
+- [ ] Regression
+- [ ] Performance
+- [ ] Security
+
 ## Relevant Files
 
 - `path/to/file.tsx`
