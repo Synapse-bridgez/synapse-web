@@ -1,0 +1,49 @@
+name: Welcome First-Time Contributors
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Welcome first-time issue authors
+        if: github.event_name == 'issues'
+        uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            👋 Welcome, and thanks for opening your first issue here!
+
+            We're glad you're contributing. A maintainer will take a look soon.
+            In the meantime, our [Contributing Guide](https://github.com/${{ github.repository }}/blob/HEAD/CONTRIBUTING.md)
+            covers local setup, coding conventions, testing expectations, and how to
+            claim and work a Drips Wave issue.
+
+            If this is a bug report, adding steps to reproduce, expected vs. actual
+            behavior, and your environment helps us help you faster.
+
+      - name: Welcome first-time pull request authors
+        if: github.event_name == 'pull_request_target'
+        uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-message: |
+            🎉 Thanks for your first pull request!
+
+            We really appreciate you taking the time to contribute. A maintainer will
+            review it soon. Before then, please make sure:
+
+            - Your PR links the issue it addresses (e.g. `Closes #123`).
+            - Tests pass locally and new behavior is covered.
+            - You've reviewed our [Contributing Guide](https://github.com/${{ github.repository }}/blob/HEAD/CONTRIBUTING.md)
+              for conventions and the PR process.
+
+            If you get stuck or have questions, just ask in a comment — we're happy to help.

@@ -1,0 +1,59 @@
+name: Key Rotation Reminder
+
+on:
+  schedule:
+    # Quarterly: 09:00 UTC on the first day of Jan, Apr, Jul, Oct.
+    - cron: '0 9 1 1,4,7,10 *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open key rotation tracking issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const quarter = Math.floor(new Date().getUTCMonth() / 3) + 1;
+            const year = new Date().getUTCFullYear();
+            const title = `Key rotation review — Q${quarter} ${year}`;
+
+            const keys = [
+              'Telemetry provider public key (error telemetry)',
+              'Web Vitals reporting identifier',
+              'RPC provider key (if a client-side RPC provider is used)',
+            ];
+
+            const body = [
+              'This is the scheduled quarterly review of client-exposed keys.',
+              '',
+              'These keys ship in the public client bundle and are not truly secret, but',
+              'they can still be abused (e.g. scraped to run up usage against the project\'s',
+              'quota). Review each key below and decide whether to rotate it.',
+              '',
+              'See `docs/security/key-inventory.md` for owners, exposure surfaces, and the',
+              'manual rotation procedure.',
+              '',
+              '## Keys to review',
+              '',
+              ...keys.map((k) => `- [ ] ${k} — review / rotate decision`),
+              '',
+              '## Checklist',
+              '',
+              '- [ ] Reviewed each key above for signs of abuse or unexpected usage',
+              '- [ ] Rotated any key that needs it (follow the manual procedure in the inventory)',
+              '- [ ] Updated the "last rotated" date in `docs/security/key-inventory.md`',
+              '- [ ] Confirmed the inventory is still complete (no new client-exposed keys missing)',
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['security'],
+            });
