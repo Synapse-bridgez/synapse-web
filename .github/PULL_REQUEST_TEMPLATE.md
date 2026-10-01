@@ -1,15 +1,51 @@
+## Linked Issue
+
+Closes #<!-- issue number -->
+
 ## What
 
 Brief description of the change.
 
 ## Why
 
-Link to issue or reason for the change.
+Reason for the change and any relevant context.
 
-## Checklist
+## Affected Area
+
+<!-- Check all that apply so the auto-labeling workflow can apply the right labels. -->
+
+- [ ] `wallet`
+- [ ] `contracts`
+- [ ] `frontend`
+- [ ] `backend`
+- [ ] `docs`
+- [ ] `ci`
+
+## Category
+
+<!-- Check one. -->
+
+- [ ] Bug fix
+- [ ] Feature
+- [ ] Refactor
+- [ ] Documentation
+- [ ] Chore
+
+## Test Evidence
+
+<!-- Describe how this was tested and paste relevant output, logs, or screenshots. -->
+
+```
+# commands run and their results
+```
+
+## Self-Review Checklist
 
 - [ ] `npm run lint` passes
 - [ ] `npx tsc --noEmit` passes
 - [ ] `npm run test` passes
 - [ ] `npm run build` passes
 - [ ] Screenshots attached (if UI changes)
+- [ ] Linked issue referenced above
+- [ ] Test evidence provided
+- [ ] No unrelated changes included

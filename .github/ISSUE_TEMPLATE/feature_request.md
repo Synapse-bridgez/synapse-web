@@ -22,6 +22,33 @@ How you think this should work.
 
 Other approaches you've thought about.
 
+## Affected Area
+
+Which part of the codebase does this touch? Select all that apply.
+
+- [ ] Wallet (`components/wallet/`)
+- [ ] Payments (`components/payments/`)
+- [ ] Auth (`components/auth/`)
+- [ ] API (`api/`)
+- [ ] Docs (`docs/`)
+- [ ] Other / not sure
+
+## Category
+
+- [ ] Governance & Community
+- [ ] Core Feature
+- [ ] Developer Experience
+- [ ] Documentation
+- [ ] Other
+
+## Complexity
+
+Maintainer judgment required — do not auto-assign. Estimate the effort:
+
+- [ ] Low
+- [ ] Medium
+- [ ] High
+
 ## Acceptance Criteria
 
 - [ ] Criterion 1

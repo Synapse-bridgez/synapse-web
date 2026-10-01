@@ -1,0 +1,143 @@
+name: Auto Label
+
+on:
+  issues:
+    types: [opened, edited]
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  label-issues:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply labels from issue template answers
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = (issue.body || '').toLowerCase();
+            const labels = new Set();
+
+            // Category labels derived from the selected template / structured fields.
+            const categoryMap = {
+              'bug report': 'bug',
+              'bug': 'bug',
+              'feature request': 'enhancement',
+              'feature': 'enhancement',
+              'drips wave': 'drips-wave',
+              'wave issue claim': 'drips-wave',
+            };
+            for (const [needle, label] of Object.entries(categoryMap)) {
+              if (body.includes(needle)) labels.add(label);
+            }
+
+            // Area labels from structured "Affected area" fields.
+            const areaMap = {
+              'wallet': 'wallet',
+              'payments': 'payments',
+              'auth': 'auth',
+              'authentication': 'auth',
+              'ui': 'ui',
+              'frontend': 'frontend',
+              'backend': 'backend',
+              'api': 'api',
+              'docs': 'documentation',
+              'documentation': 'documentation',
+              'infra': 'infrastructure',
+              'infrastructure': 'infrastructure',
+            };
+            for (const [needle, label] of Object.entries(areaMap)) {
+              if (body.includes(needle)) labels.add(label);
+            }
+
+            // Complexity labels are prompted in the template but only applied
+            // when explicitly stated by the reporter (no auto-assignment).
+            const complexityMap = {
+              'low': 'complexity: low',
+              'medium': 'complexity: medium',
+              'high': 'complexity: high',
+            };
+            for (const [needle, label] of Object.entries(complexityMap)) {
+              if (body.includes(`complexity: ${needle}`)) labels.add(label);
+            }
+
+            if (labels.size === 0) return;
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: [...labels],
+            });
+
+  label-pull-requests:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply labels from changed file paths and PR body
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labels = new Set();
+
+            // Path-based area labeling. Multiple areas are applied gracefully.
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const pathMap = [
+              { pattern: /(^|\/)components\/wallet\//i, label: 'wallet' },
+              { pattern: /(^|\/)components\/payments\//i, label: 'payments' },
+              { pattern: /(^|\/)components\/auth\//i, label: 'auth' },
+              { pattern: /(^|\/)components\//i, label: 'frontend' },
+              { pattern: /(^|\/)pages\//i, label: 'frontend' },
+              { pattern: /(^|\/)app\//i, label: 'frontend' },
+              { pattern: /(^|\/)api\//i, label: 'api' },
+              { pattern: /(^|\/)server\//i, label: 'backend' },
+              { pattern: /(^|\/)backend\//i, label: 'backend' },
+              { pattern: /(^|\/)docs\//i, label: 'documentation' },
+              { pattern: /\.md$/i, label: 'documentation' },
+              { pattern: /(^|\/)\.github\/workflows\//i, label: 'infrastructure' },
+              { pattern: /(^|\/)infra\//i, label: 'infrastructure' },
+              { pattern: /(^|\/)tests?\//i, label: 'tests' },
+              { pattern: /\.(test|spec)\.[jt]sx?$/i, label: 'tests' },
+            ];
+
+            for (const file of files) {
+              for (const { pattern, label } of pathMap) {
+                if (pattern.test(file.filename)) labels.add(label);
+              }
+            }
+
+            // Category labels from the PR body / linked issue references.
+            const body = (pr.body || '').toLowerCase();
+            const bodyMap = {
+              'bug': 'bug',
+              'fix': 'bug',
+              'feature': 'enhancement',
+              'enhancement': 'enhancement',
+              'drips wave': 'drips-wave',
+              'documentation': 'documentation',
+            };
+            for (const [needle, label] of Object.entries(bodyMap)) {
+              if (body.includes(needle)) labels.add(label);
+            }
+
+            if (labels.size === 0) return;
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: [...labels],
+            });
