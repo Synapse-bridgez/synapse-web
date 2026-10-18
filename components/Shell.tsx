@@ -512,7 +512,9 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
       {/* ── No Wallet Guidance Modal ── */}
       {showGuidance && (
         <div
-          role="presentation"
+          role="button"
+          tabIndex={0}
+          aria-label="Close wallet guidance"
           style={{
             position: "fixed",
             inset: 0,
@@ -523,9 +525,17 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
             justifyContent: "center",
             padding: 16,
           }}
-          onClick={() => setShowGuidance(false)}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setShowGuidance(false);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setShowGuidance(false);
+            }
+          }}
         >
-          <div onClick={(e) => e.stopPropagation()}>
+          <div>
             <NoWalletGuidance
               onClose={() => setShowGuidance(false)}
               onProceedAnyway={() => {

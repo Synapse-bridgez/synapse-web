@@ -4,6 +4,11 @@ import { ABI_ENDPOINTS, AMBER, BORDER, DIM, MONO } from "@/lib/constants";
 import { encodeArg } from "@/lib/soroban/args";
 import { simulateCall, submitCall } from "@/lib/soroban/contract";
 
+interface DocsTabProps {
+  loading?: boolean;
+  error?: string;
+}
+
 const ACCESS_COLORS: Record<string, string> = {
   "one-time": "#A78BFA",
   relay_signer: "#4FC3F7",
@@ -222,7 +227,10 @@ function PlaygroundForm({ ep }: { ep: (typeof ABI_ENDPOINTS)[number] }) {
   );
 }
 
-export function DocsTab() {
+export function DocsTab({ loading = false, error }: DocsTabProps = {}) {
+  if (loading) return <p role="status">Loading contract documentation…</p>;
+  if (error) return <p role="alert">Unable to load contract documentation: {error}</p>;
+  if (ABI_ENDPOINTS.length === 0) return <p>No contract endpoints are documented yet.</p>;
   const [open, setOpen] = useState<string | null>(null);
 
   return (

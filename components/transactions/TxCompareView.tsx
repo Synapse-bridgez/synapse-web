@@ -47,6 +47,9 @@ export function TxCompareView({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label="Close transaction comparison"
       style={{
         position: "fixed",
         inset: 0,
@@ -57,10 +60,17 @@ export function TxCompareView({
         zIndex: 60,
         padding: 24,
       }}
-      onClick={onClose}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           width: "min(1100px, 100%)",
           maxHeight: "90vh",
