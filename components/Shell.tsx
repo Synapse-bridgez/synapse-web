@@ -14,7 +14,7 @@ import { GuidedTour, useGuidedTour } from "@/components/onboarding/GuidedTour";
 import { CommandPalette, type Command } from "./command-palette/CommandPalette";
 import { SessionAuditPanel } from "@/components/wallet/SessionAuditPanel";
 import { ContractSwitcher } from "@/components/ui/ContractSwitcher";
-import { AMBER, BG1, BORDER, DIM, DOCS_SITE_URL, MONO, STATUS_META } from "@/lib/constants";
+import { AMBER, BG1, BORDER, DIM, DOCS_SITE_URL, MONO, NEUTRAL, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useToast } from "@/components/ui/Toast";
@@ -342,7 +342,7 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
               }}
             >
               {LOCALES.map((l) => (
-                <option key={l} value={l} style={{ background: BG1, color: "#fff" }}>
+                <option key={l} value={l} style={{ background: BG1, color: NEUTRAL }}>
                   {LOCALE_LABELS[l]}
                 </option>
               ))}
@@ -413,7 +413,7 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
                 padding: "7px 18px",
                 background: connected ? "transparent" : "rgba(245,166,35,0.08)",
                 border: `1px solid ${connected ? BORDER : AMBER}`,
-                color: connected ? "#aaa" : AMBER,
+                color: connected ? DIM : AMBER,
                 fontFamily: MONO,
                 fontSize: 11,
                 fontWeight: 600,
@@ -465,7 +465,7 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
                         background: active ? "rgba(245,166,35,0.08)" : "transparent",
                         border: "none",
                         borderBottom: `1px solid ${BORDER}`,
-                        color: active ? AMBER : "#aaa",
+                        color: active ? AMBER : DIM,
                         fontFamily: MONO,
                         fontSize: 11,
                         textAlign: "left",

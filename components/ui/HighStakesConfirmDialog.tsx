@@ -26,11 +26,12 @@
  */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { BG2, BG3, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
 import { ActionButton } from "./ActionButton";
+import { HighStakesConfirmationField } from "./HighStakesConfirmationField";
+import { useHighStakesConfirmation } from "./useHighStakesConfirmation";
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -78,24 +79,7 @@ export function HighStakesConfirmDialog({
   onCancel,
   children,
 }: HighStakesConfirmDialogProps) {
-  const [typed, setTyped] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const matched = typed === confirmValue;
-
-  // Focus the input immediately so keyboard users don't have to tab to it.
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  // Close on Escape.
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onCancel]);
+  const { typed, setTyped, inputRef, matched } = useHighStakesConfirmation(confirmValue, onCancel);
 
   const mono: CSSProperties = { fontFamily: MONO };
 
@@ -191,61 +175,7 @@ export function HighStakesConfirmDialog({
           {/* Optional extra content slot */}
           {children}
 
-          {/* Typed-confirmation input */}
-          <div style={{ marginBottom: 22 }}>
-            <label
-              htmlFor="hsc-input"
-              style={{
-                display: "block",
-                fontSize: 10,
-                letterSpacing: "0.1em",
-                color: DIM,
-                marginBottom: 6,
-              }}
-            >
-              {confirmLabel}
-            </label>
-            <input
-              id="hsc-input"
-              data-testid="hsc-input"
-              ref={inputRef}
-              type="text"
-              value={typed}
-              onChange={(e) => setTyped(e.target.value)}
-              placeholder={confirmValue}
-              spellCheck={false}
-              autoComplete="off"
-              aria-describedby="hsc-match-feedback"
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "9px 12px",
-                background: BG3,
-                border: `1px solid ${matched ? DANGER + "99" : BORDER}`,
-                color: matched ? DANGER : "rgba(255,255,255,0.8)",
-                fontSize: 11,
-                outline: "none",
-                transition: "border-color 0.15s, color 0.15s",
-                ...mono,
-              }}
-            />
-            {/* Live feedback — only shown once user starts typing */}
-            <div
-              id="hsc-match-feedback"
-              data-testid="hsc-feedback"
-              aria-live="polite"
-              style={{
-                fontSize: 10,
-                marginTop: 5,
-                letterSpacing: "0.04em",
-                minHeight: 16,
-                color: matched ? "#66BB6A" : DANGER,
-              }}
-            >
-              {typed.length > 0 && !matched && "value mismatch — confirm button remains locked"}
-              {matched && "✓ match confirmed"}
-            </div>
-          </div>
+          <HighStakesConfirmationField label={confirmLabel} confirmValue={confirmValue} typed={typed} matched={matched} inputRef={inputRef} onChange={setTyped} />
 
           {/* Actions */}
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
