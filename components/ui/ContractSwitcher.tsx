@@ -165,7 +165,16 @@ export function ContractSwitcher() {
                 return (
                   <div
                     key={c.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
                     onClick={() => handleSelect(c.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handleSelect(c.id);
+                      }
+                    }}
                     style={{
                       display: "flex",
                       alignItems: "center",

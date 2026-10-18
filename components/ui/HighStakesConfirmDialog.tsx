@@ -104,7 +104,16 @@ export function HighStakesConfirmDialog({
       {/* Backdrop */}
       <div
         data-testid="hsc-backdrop"
+        role="button"
+        tabIndex={0}
+        aria-label="Cancel confirmation"
         onClick={onCancel}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onCancel();
+          }
+        }}
         style={{
           position: "fixed",
           inset: 0,

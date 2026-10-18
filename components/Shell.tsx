@@ -29,6 +29,7 @@ import { NoWalletGuidance } from "@/components/wallet/NoWalletGuidance";
 import { Profiled, ProfilerOverlay } from "@/lib/dev-tools/ProfilerOverlay";
 import { resolveActiveTab, visibleTabs, type FlagKey } from "@/lib/flags/definitions";
 import { useFlag, useFlags } from "@/lib/flags/FlagProvider";
+import { ShellTabButton } from "@/components/shell/ShellTabButton";
 
 const TabLoadingFallback = () => (
   <div
@@ -545,42 +546,15 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {TABS.map((t, idx) => (
-          <button
-            key={t}
-            id={`tab-${t}`}
-            role="tab"
-            aria-selected={tab === t}
-            aria-controls={`tabpanel-${t}`}
-            tabIndex={tab === t ? 0 : -1}
-            data-tour={t}
-            onClick={() => handleTabSelect(t)}
-            onKeyDown={(e) => handleTabKeyDown(e, idx)}
-            style={{
-              padding: isMobile ? "12px 16px" : "12px 22px",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              letterSpacing: "0.1em",
-              color: tab === t ? "var(--fg-strong)" : DIM,
-              borderBottom: tab === t ? `2px solid ${AMBER}` : "2px solid transparent",
-              marginBottom: -1,
-              transition: "color 0.15s",
-              flex: isMobile ? "1 0 auto" : undefined,
-              whiteSpace: "nowrap",
-              outlineOffset: "-2px",
-            }}
-            onMouseEnter={(e) => {
-              if (tab !== tabKey) e.currentTarget.style.color = "var(--fg-hover)";
-            }}
-            onMouseLeave={(e) => {
-              if (tab !== tabKey) e.currentTarget.style.color = DIM;
-            }}
-          >
-              if (tab !== tabKey) e.currentTarget.style.color = "var(--fg-hover)";
-          </button>
+        {TABS.map((tabKey, index) => (
+          <ShellTabButton
+            key={tabKey}
+            tab={tabKey}
+            active={tab === tabKey}
+            mobile={isMobile}
+            onSelect={() => handleTabSelect(tabKey)}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
+          />
         ))}
       </nav>
 
