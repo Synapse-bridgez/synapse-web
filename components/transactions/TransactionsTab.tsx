@@ -126,7 +126,7 @@ export function TransactionsTab() {
               flex: 1,
               background: BG3,
               border: `1px solid ${BORDER}`,
-              color: "#eee",
+              color: "var(--fg)",
               fontFamily: MONO,
               fontSize: 12,
               padding: "9px 12px",
