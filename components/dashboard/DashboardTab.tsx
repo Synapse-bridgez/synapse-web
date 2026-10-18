@@ -19,7 +19,12 @@ import {
   type DashboardWidgetId,
 } from "@/lib/dashboard/layoutPreferences";
 
-export function DashboardTab() {
+interface DashboardTabProps {
+  loading?: boolean;
+  error?: string;
+}
+
+export function DashboardTab({ loading = false, error }: DashboardTabProps = {}) {
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [layout, setLayout] = useState<DashboardLayout>(() =>
     loadDashboardLayout(),
@@ -28,6 +33,12 @@ export function DashboardTab() {
   const [dragOverId, setDragOverId] = useState<DashboardWidgetId | null>(null);
   const txs = useLiveTransactions();
   const contractInfo = useLiveContractInfo();
+
+  if (loading) return <p role="status">Loading dashboard…</p>;
+  if (error) return <p role="alert">Unable to load dashboard: {error}</p>;
+  if (txs.length === 0 && !contractInfo) {
+    return <p>No dashboard activity is available yet.</p>;
+  }
 
   useEffect(() => {
     saveDashboardLayout(layout);
