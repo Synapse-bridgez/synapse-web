@@ -1,7 +1,7 @@
 "use client";
 import { TxTimeline } from "./TxTimeline";
 import { Panel } from "@/components/ui/Panel";
-import { AMBER, BG3, BORDER, MONO } from "@/lib/constants";
+import { ACCENT_SOFT, ACCENT_WEAK, AMBER, BG3, BORDER, FG_MUTED, MONO } from "@/lib/constants";
 import type { Transaction } from "@/lib/types";
 
 const COMPARE_FIELDS: { key: keyof Transaction; label: string }[] = [
@@ -36,13 +36,7 @@ export function diffFields(txs: Transaction[]): Set<keyof Transaction> {
   return differing;
 }
 
-export function TxCompareView({
-  txs,
-  onClose,
-}: {
-  txs: Transaction[];
-  onClose: () => void;
-}) {
+export function TxCompareView({ txs, onClose }: { txs: Transaction[]; onClose: () => void }) {
   const differing = diffFields(txs);
 
   return (
@@ -93,7 +87,7 @@ export function TxCompareView({
             style={{
               background: "transparent",
               border: `1px solid ${BORDER}`,
-              color: "#eee",
+              color: FG_MUTED,
               fontFamily: MONO,
               fontSize: 11,
               padding: "6px 14px",
@@ -130,8 +124,8 @@ export function TxCompareView({
                     key={`${tx.id}-${key}`}
                     style={{
                       ...cellStyle(false),
-                      background: isDiff ? "rgba(245,166,35,0.12)" : BG3,
-                      color: isDiff ? AMBER : "#ddd",
+                      background: isDiff ? ACCENT_SOFT : BG3,
+                      color: isDiff ? AMBER : FG_MUTED,
                     }}
                   >
                     {fieldValue(tx, key)}
@@ -163,8 +157,8 @@ export function TxCompareView({
 
 function cellStyle(header: boolean): React.CSSProperties {
   return {
-    background: header ? "rgba(245,166,35,0.08)" : BG3,
-    color: header ? AMBER : "#ddd",
+    background: header ? ACCENT_WEAK : BG3,
+    color: header ? AMBER : FG_MUTED,
     fontFamily: MONO,
     fontSize: 11,
     padding: "8px 10px",

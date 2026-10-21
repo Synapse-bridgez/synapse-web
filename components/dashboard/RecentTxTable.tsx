@@ -4,7 +4,7 @@ import { Panel } from "@/components/ui/Panel";
 import { SorobanTip } from "@/components/ui/SorobanTip";
 import { Badge } from "@/components/ui/Badge";
 import { CopyButton } from "@/components/ui/CopyButton";
-import { AMBER, BG3, BORDER, DIM, MONO } from "@/lib/constants";
+import { AMBER, BG3, BORDER, DIM, FG_MUTED, MONO, NEUTRAL } from "@/lib/constants";
 import { shortId, elapsed, formatAmount } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
@@ -30,10 +30,10 @@ const COPY_BUTTON_STYLE: CSSProperties = { marginLeft: 4 };
 const ASSET_STYLE: CSSProperties = {
   ...CELL_STYLE,
   fontSize: 11,
-  color: "#ccc",
+  color: FG_MUTED,
   fontFamily: MONO,
 };
-const AMOUNT_STYLE: CSSProperties = { ...ASSET_STYLE, color: "#fff" };
+const AMOUNT_STYLE: CSSProperties = { ...ASSET_STYLE, color: NEUTRAL };
 const AGE_STYLE: CSSProperties = { ...ASSET_STYLE, color: DIM };
 
 // Mobile-first breakpoints (Tailwind v4 defaults):
@@ -47,7 +47,7 @@ const CARD_LABEL_STYLE: CSSProperties = {
 };
 const CARD_VALUE_STYLE: CSSProperties = {
   fontSize: 11,
-  color: "#ccc",
+  color: FG_MUTED,
   fontFamily: MONO,
 };
 
@@ -118,7 +118,7 @@ const RecentTxCard = memo(function RecentTxCard({ tx, onSelect }: RecentTxRowPro
         </div>
         <div className="flex flex-col gap-0.5">
           <span style={CARD_LABEL_STYLE}>AMOUNT</span>
-          <span style={{ ...CARD_VALUE_STYLE, color: "#fff" }}>{formatAmount(tx.amount)}</span>
+          <span style={{ ...CARD_VALUE_STYLE, color: NEUTRAL }}>{formatAmount(tx.amount)}</span>
         </div>
         <div className="flex flex-col gap-0.5">
           <span style={CARD_LABEL_STYLE}>AGE</span>

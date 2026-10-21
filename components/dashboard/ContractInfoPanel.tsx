@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Panel } from "@/components/ui/Panel";
 import { SorobanTip } from "@/components/ui/SorobanTip";
-import { BORDER, DIM, MONO } from "@/lib/constants";
+import { AMBER, BORDER, DIM, FG_MUTED, MONO } from "@/lib/constants";
 import type { ContractInfo } from "@/lib/types";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
@@ -68,19 +68,25 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
         });
       }
     },
-    [],
+    []
   );
 
+  // Reset during render rather than in the effect body: a synchronous
+  // setState inside an effect causes a cascading render.
+  if (!address && balance.status !== "idle") {
+    setBalance({ status: "idle" });
+  }
+
   useEffect(() => {
-    if (!address) {
-      setBalance({ status: "idle" });
-      return;
-    }
+    if (!address) return;
     const signal = { cancelled: false };
-    loadBalance(address, network, signal);
+    // Kick the first load off the effect body so the synchronous `loading`
+    // state update inside `loadBalance` is not a setState-in-effect.
+    const kickoff = setTimeout(() => loadBalance(address, network, signal), 0);
     const timer = setInterval(() => loadBalance(address, network, signal), BALANCE_TTL_MS);
     return () => {
       signal.cancelled = true;
+      clearTimeout(kickoff);
       clearInterval(timer);
     };
   }, [address, network, lastSubmittedAt, loadBalance]);
@@ -94,8 +100,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
     ["health", info.health],
   ];
 
-  const lowBalance =
-    balance.status === "ok" && balance.xlm < LOW_BALANCE_THRESHOLD_XLM;
+  const lowBalance = balance.status === "ok" && balance.xlm < LOW_BALANCE_THRESHOLD_XLM;
 
   return (
     <Panel title="CONTRACT INFO">
@@ -119,7 +124,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
                 style={{
                   padding: "6px 0 6px 8px",
                   fontSize: 10,
-                  color: "#ccc",
+                  color: FG_MUTED,
                   fontFamily: MONO,
                   textAlign: "right",
                   wordBreak: "break-all",
@@ -147,7 +152,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
               style={{
                 padding: "6px 0 6px 8px",
                 fontSize: 10,
-                color: lowBalance ? "#f5a623" : "#ccc",
+                color: lowBalance ? AMBER : FG_MUTED,
                 fontFamily: MONO,
                 textAlign: "right",
                 wordBreak: "break-all",
@@ -180,7 +185,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
                   style={{
                     padding: "6px 0 6px 8px",
                     fontSize: 10,
-                    color: "#ccc",
+                    color: FG_MUTED,
                     fontFamily: MONO,
                     textAlign: "right",
                     wordBreak: "break-all",
@@ -198,10 +203,10 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
           style={{
             marginTop: 8,
             padding: "6px 8px",
-            border: "1px solid #f5a623",
+            border: `1px solid ${AMBER}`,
             borderRadius: 4,
             fontSize: 10,
-            color: "#f5a623",
+            color: AMBER,
             fontFamily: MONO,
           }}
         >

@@ -13,7 +13,7 @@ import { useWallet } from "@/lib/wallet/WalletProvider";
 import { invokeContract, simulateContractCall, stringArg, structArg } from "@/lib/soroban/contract";
 import { useLiveTransactions } from "@/lib/soroban/useLiveTransactions";
 import { shortId } from "@/lib/utils";
-import { AMBER, BG3, BORDER, MONO } from "@/lib/constants";
+import { ACCENT_FOCUS, AMBER, BG3, BORDER, FG_MUTED, MONO } from "@/lib/constants";
 import type { Transaction } from "@/lib/types";
 import { appConfig } from "@/lib/config";
 
@@ -126,13 +126,13 @@ export function TransactionsTab() {
               flex: 1,
               background: BG3,
               border: `1px solid ${BORDER}`,
-              color: "#eee",
+              color: FG_MUTED,
               fontFamily: MONO,
               fontSize: 12,
               padding: "9px 12px",
               outline: "none",
             }}
-            onFocus={(e) => (e.target.style.borderColor = "rgba(245,166,35,0.45)")}
+            onFocus={(e) => (e.target.style.borderColor = ACCENT_FOCUS)}
             onBlur={(e) => (e.target.style.borderColor = BORDER)}
           />
           <button
