@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AMBER, BG1, BORDER, DIM, MONO } from "@/lib/constants";
+import { AMBER, BG1, BORDER, DIM, FG_MUTED, MONO, NEUTRAL } from "@/lib/constants";
 
 export type Command = {
   id: string;
@@ -91,7 +91,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
       onClose();
       cmd.action();
     },
-    [onClose],
+    [onClose]
   );
 
   const onKeyDown = useCallback(
@@ -101,9 +101,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
         setActiveIndex((i) => (results.length ? (i + 1) % results.length : 0));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIndex((i) =>
-          results.length ? (i - 1 + results.length) % results.length : 0,
-        );
+        setActiveIndex((i) => (results.length ? (i - 1 + results.length) % results.length : 0));
       } else if (e.key === "Enter") {
         e.preventDefault();
         runCommand(results[activeIndex]);
@@ -116,7 +114,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
         inputRef.current?.focus();
       }
     },
-    [results, activeIndex, runCommand, onClose],
+    [results, activeIndex, runCommand, onClose]
   );
 
   // Scroll the active option into view as the user navigates.
@@ -178,7 +176,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
             background: "transparent",
             border: "none",
             borderBottom: `1px solid ${BORDER}`,
-            color: "#fff",
+            color: NEUTRAL,
             fontFamily: MONO,
             fontSize: 13,
             outline: "none",
@@ -221,7 +219,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
                 padding: "10px 14px",
                 fontSize: 12,
                 cursor: "pointer",
-                color: i === activeIndex ? "#fff" : "#bbb",
+                color: i === activeIndex ? NEUTRAL : FG_MUTED,
                 background: i === activeIndex ? "rgba(245,166,35,0.14)" : "transparent",
                 borderLeft: i === activeIndex ? `2px solid ${AMBER}` : "2px solid transparent",
                 letterSpacing: "0.04em",

@@ -3,7 +3,19 @@ import { useState, useRef, useEffect } from "react";
 import { useContractSelection } from "@/lib/soroban/SorobanProvider";
 import { useToast } from "@/components/ui/Toast";
 import { shortId } from "@/lib/utils";
-import { AMBER, BG1, BG2, BG3, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import {
+  AMBER,
+  BG1,
+  BG2,
+  BG3,
+  BORDER,
+  DIM,
+  FG_SOFT,
+  MONO,
+  NEUTRAL,
+  ON_ACCENT,
+  STATUS_META,
+} from "@/lib/constants";
 
 export function ContractSwitcher() {
   const { contractId, setContractId, availableContracts, addContract, removeContract } =
@@ -78,7 +90,7 @@ export function ContractSwitcher() {
           padding: "6px 12px",
           background: "rgba(245,166,35,0.06)",
           border: `1px solid ${contractId ? BORDER : "rgba(239,83,80,0.5)"}`,
-          color: contractId ? "#fff" : STATUS_META.FAILED.color,
+          color: contractId ? NEUTRAL : STATUS_META.FAILED.color,
           fontFamily: MONO,
           fontSize: 11,
           fontWeight: 600,
@@ -105,7 +117,15 @@ export function ContractSwitcher() {
           }}
         />
         <span style={{ color: DIM, fontSize: 10, textTransform: "uppercase" }}>CONTRACT:</span>
-        <span style={{ color: "#fff", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span
+          style={{
+            color: NEUTRAL,
+            maxWidth: 140,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           {displayName}
         </span>
         <span style={{ fontSize: 9, color: DIM, marginLeft: 2 }}>{open ? "▲" : "▼"}</span>
@@ -193,7 +213,7 @@ export function ContractSwitcher() {
                           style={{
                             fontSize: 11,
                             fontWeight: isSelected ? 700 : 500,
-                            color: isSelected ? AMBER : "#eee",
+                            color: isSelected ? AMBER : FG_SOFT,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
@@ -238,7 +258,9 @@ export function ContractSwitcher() {
                           padding: "2px 6px",
                           marginLeft: 6,
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = STATUS_META.FAILED.color)}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.color = STATUS_META.FAILED.color)
+                        }
                         onMouseLeave={(e) => (e.currentTarget.style.color = DIM)}
                       >
                         ✕
@@ -274,7 +296,7 @@ export function ContractSwitcher() {
                 style={{
                   background: BG1,
                   border: `1px solid ${BORDER}`,
-                  color: "#fff",
+                  color: NEUTRAL,
                   fontFamily: MONO,
                   fontSize: 10,
                   padding: "6px 8px",
@@ -291,7 +313,7 @@ export function ContractSwitcher() {
                 style={{
                   background: BG1,
                   border: `1px solid ${BORDER}`,
-                  color: "#fff",
+                  color: NEUTRAL,
                   fontFamily: MONO,
                   fontSize: 10,
                   padding: "6px 8px",
@@ -319,7 +341,7 @@ export function ContractSwitcher() {
                   style={{
                     background: AMBER,
                     border: `1px solid ${AMBER}`,
-                    color: "#000",
+                    color: ON_ACCENT,
                     fontFamily: MONO,
                     fontSize: 10,
                     fontWeight: 700,

@@ -67,7 +67,7 @@ export interface HighStakesConfirmDialogProps {
 // Component
 // ---------------------------------------------------------------------------
 
-const DANGER = STATUS_META.FAILED.color; // #EF5350
+const DANGER = STATUS_META.FAILED.color; // themed via --status-failed
 
 export function HighStakesConfirmDialog({
   title,
@@ -239,7 +239,7 @@ export function HighStakesConfirmDialog({
                 marginTop: 5,
                 letterSpacing: "0.04em",
                 minHeight: 16,
-                color: matched ? "#66BB6A" : DANGER,
+                color: matched ? STATUS_META.COMPLETED.color : DANGER,
               }}
             >
               {typed.length > 0 && !matched && "value mismatch — confirm button remains locked"}
