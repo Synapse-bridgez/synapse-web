@@ -1,7 +1,7 @@
 "use client";
 import { Panel } from "@/components/ui/Panel";
 import { SorobanTip } from "@/components/ui/SorobanTip";
-import { BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import { BORDER, DIM, MONO, ON_ACCENT, STATUS_META } from "@/lib/constants";
 import type { Transaction, TxStatus } from "@/lib/types";
 
 interface PipelineProps {
@@ -120,7 +120,7 @@ export function Pipeline({ txs }: PipelineProps) {
                       marginBottom: 8,
                       display: "grid",
                       placeItems: "center",
-                      color: active ? "#0A0B0D" : DIM,
+                      color: active ? ON_ACCENT : DIM,
                       fontSize: 10,
                       fontWeight: 700,
                       fontFamily: MONO,
