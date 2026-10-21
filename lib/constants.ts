@@ -33,6 +33,8 @@ export const STATUS_META: Record<TxStatus, StatusMeta> = {
 
 export const AMBER = "var(--accent)";
 export const NEUTRAL = "var(--fg)";
+/** Text drawn on top of a STATUS_META[*].color fill. */
+export const ON_STATUS = "var(--on-status)";
 export const BG0 = "var(--bg-0)";
 export const BG1 = "var(--bg-1)";
 export const BG2 = "var(--bg-2)";
@@ -62,13 +64,7 @@ export const MONO = "var(--font-ibm-plex-mono), monospace";
  * encoders in `lib/soroban/args.ts`.
  */
 export type AbiParamKind =
-  | "address"
-  | "string"
-  | "u32"
-  | "i128"
-  | "bool"
-  | "tx_payload"
-  | "callback_payload";
+  "address" | "string" | "u32" | "i128" | "bool" | "tx_payload" | "callback_payload";
 
 export interface AbiParam {
   name: string;
@@ -115,9 +111,7 @@ export const ABI_ENDPOINTS: AbiEndpoint[] = [
     sig: "register_transaction(payload: TxPayload) → tx_id: String",
     access: "relay_signer",
     desc: "Register a new transaction. Returns a UUID. Emits TransactionRegistered event.",
-    params: [
-      { name: "payload", type: "struct", struct: "TxPayload" },
-    ] as AbiParam[],
+    params: [{ name: "payload", type: "struct", struct: "TxPayload" }] as AbiParam[],
     stateChanging: true,
   },
   {
@@ -165,9 +159,7 @@ export const ABI_ENDPOINTS: AbiEndpoint[] = [
     sig: "register_callback(payload: CallbackPayload)",
     access: "relay_signer",
     desc: "Register a webhook URL for a transaction lifecycle event notification.",
-    params: [
-      { name: "payload", type: "struct", struct: "CallbackPayload" },
-    ] as AbiParam[],
+    params: [{ name: "payload", type: "struct", struct: "CallbackPayload" }] as AbiParam[],
     stateChanging: true,
   },
   {
