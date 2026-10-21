@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AMBER, BG1, BG2, BORDER, DIM, MONO } from "@/lib/constants";
+import { AMBER, BG1, BG2, BORDER, DIM, MONO, NEUTRAL, ON_ACCENT } from "@/lib/constants";
 
 export default function NotFound() {
   return (
@@ -40,7 +40,7 @@ export default function NotFound() {
           404
         </div>
 
-        <h1 style={{ margin: "16px 0 10px", fontSize: 28, color: "#fff" }}>Route not found</h1>
+        <h1 style={{ margin: "16px 0 10px", fontSize: 28, color: NEUTRAL }}>Route not found</h1>
 
         <p style={{ margin: 0, color: DIM, lineHeight: 1.6 }}>
           The page you requested could not be located. Head back to the Synapse core dashboard to
@@ -54,7 +54,7 @@ export default function NotFound() {
             marginTop: 18,
             padding: "10px 16px",
             background: AMBER,
-            color: "#0A0B0D",
+            color: ON_ACCENT,
             textDecoration: "none",
             fontWeight: 700,
             fontFamily: MONO,

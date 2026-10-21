@@ -94,7 +94,7 @@ export default function PerformancePage() {
         maxWidth: 1080,
         margin: "0 auto",
         padding: "36px 24px",
-        color: "#fff",
+        color: "var(--fg)",
         fontFamily: "var(--font-ibm-plex-mono), monospace",
       }}
     >

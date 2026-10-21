@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { AMBER, BG1, BG2, BORDER, DIM, MONO } from "@/lib/constants";
+import { AMBER, BG1, BG2, BORDER, DIM, MONO, NEUTRAL, ON_ACCENT } from "@/lib/constants";
 
 export default function GlobalError({
   error,
@@ -52,7 +52,9 @@ export default function GlobalError({
           Application error
         </div>
 
-        <h1 style={{ margin: "16px 0 10px", fontSize: 28, color: "#fff" }}>Something went wrong</h1>
+        <h1 style={{ margin: "16px 0 10px", fontSize: 28, color: NEUTRAL }}>
+          Something went wrong
+        </h1>
 
         <p style={{ margin: 0, color: DIM, lineHeight: 1.6 }}>
           The app hit an unexpected render error. You can safely retry this route and recover the
@@ -65,7 +67,7 @@ export default function GlobalError({
             marginTop: 18,
             padding: "10px 16px",
             background: AMBER,
-            color: "#0A0B0D",
+            color: ON_ACCENT,
             border: "none",
             cursor: "pointer",
             fontWeight: 700,
