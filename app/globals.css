@@ -13,6 +13,7 @@
   --border: rgba(245, 166, 35, 0.15);
   --dim: rgba(255, 255, 255, 0.35);
   --fg: #ffffff;
+  --fg-muted: rgba(255, 255, 255, 0.8);
   --pending: #f5a623;
   --processing: #4fc3f7;
   --completed: #66bb6a;
@@ -58,6 +59,7 @@
   --border: rgba(0, 0, 0, 0.14);
   --dim: rgba(0, 0, 0, 0.55);
   --fg: #14171d;
+  --fg-muted: rgba(0, 0, 0, 0.72);
   --pending: #b26a00;
   --processing: #0277bd;
   --completed: #2e7d32;

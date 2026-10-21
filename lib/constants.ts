@@ -33,6 +33,8 @@ export const STATUS_META: Record<TxStatus, StatusMeta> = {
 
 export const AMBER = "var(--accent)";
 export const NEUTRAL = "var(--fg)";
+/** Secondary body text, e.g. table values. */
+export const FG_MUTED = "var(--fg-muted)";
 /** Text drawn on top of a STATUS_META[*].color fill. */
 export const ON_STATUS = "var(--on-status)";
 export const BG0 = "var(--bg-0)";
