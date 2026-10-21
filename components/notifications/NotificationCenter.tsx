@@ -1,8 +1,18 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import { useNotifications } from "@/lib/notifications/NotificationStore";
-import { STATUS_META } from "@/lib/constants";
-import { AMBER, BG2, BG3, BORDER, DIM, MONO } from "@/lib/constants";
+import {
+  AMBER,
+  BG2,
+  BG3,
+  BORDER,
+  DIM,
+  FG_SOFT,
+  MONO,
+  NEUTRAL,
+  ON_ACCENT,
+  STATUS_META,
+} from "@/lib/constants";
 import type { TxStatus } from "@/lib/types";
 
 function timeAgo(ts: number): string {
@@ -84,7 +94,7 @@ export function NotificationCenter() {
         }}
         onMouseEnter={(e) => {
           if (!open) {
-            e.currentTarget.style.color = "#fff";
+            e.currentTarget.style.color = NEUTRAL;
             e.currentTarget.style.borderColor = AMBER;
           }
         }}
@@ -105,7 +115,7 @@ export function NotificationCenter() {
               top: -5,
               right: -5,
               background: AMBER,
-              color: "#000",
+              color: ON_ACCENT,
               borderRadius: "50%",
               width: 16,
               height: 16,
@@ -170,7 +180,7 @@ export function NotificationCenter() {
                   padding: 0,
                   transition: "color 0.15s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                onMouseEnter={(e) => (e.currentTarget.style.color = NEUTRAL)}
                 onMouseLeave={(e) => (e.currentTarget.style.color = DIM)}
               >
                 CLEAR ALL
@@ -179,11 +189,7 @@ export function NotificationCenter() {
           </div>
 
           {/* List */}
-          <div
-            role="list"
-            style={{ overflowY: "auto", flex: 1 }}
-            aria-label="Notification list"
-          >
+          <div role="list" style={{ overflowY: "auto", flex: 1 }} aria-label="Notification list">
             {notifications.length === 0 ? (
               <div
                 style={{
@@ -228,7 +234,7 @@ export function NotificationCenter() {
                     <div
                       style={{
                         fontSize: 10,
-                        color: "#eee",
+                        color: FG_SOFT,
                         fontFamily: MONO,
                         wordBreak: "break-word",
                         marginBottom: 3,
@@ -236,7 +242,9 @@ export function NotificationCenter() {
                     >
                       {n.message}
                     </div>
-                    <div style={{ fontSize: 8, color: DIM, fontFamily: MONO, letterSpacing: "0.08em" }}>
+                    <div
+                      style={{ fontSize: 8, color: DIM, fontFamily: MONO, letterSpacing: "0.08em" }}
+                    >
                       {timeAgo(n.timestamp)}
                     </div>
                   </div>
@@ -253,7 +261,7 @@ export function NotificationCenter() {
                       flexShrink: 0,
                       transition: "color 0.15s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = NEUTRAL)}
                     onMouseLeave={(e) => (e.currentTarget.style.color = DIM)}
                   >
                     ✕

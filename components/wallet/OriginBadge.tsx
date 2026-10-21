@@ -1,7 +1,7 @@
 "use client";
 import { useSyncExternalStore } from "react";
 
-import { MONO } from "@/lib/constants";
+import { DANGER, INFO, MONO, SUCCESS } from "@/lib/constants";
 import { classifyOrigin } from "@/lib/wallet/origin";
 import type { OriginClassification, OriginState } from "@/lib/wallet/origin";
 
@@ -25,28 +25,28 @@ const STATE_META: Record<
 > = {
   genuine: {
     label: "GENUINE ORIGIN",
-    color: "#8fce8f",
+    color: SUCCESS,
     bg: "rgba(102,187,106,0.08)",
     border: "rgba(102,187,106,0.35)",
     hint: "You are on the published Synapse Core dashboard. Verify the host below against the address bar before signing.",
   },
   dev: {
     label: "LOCAL DEV · NO SIGNING",
-    color: "#7fa8c9",
+    color: INFO,
     bg: "rgba(79,195,247,0.07)",
     border: "rgba(79,195,247,0.3)",
     hint: "Local preview. No wallet flow on this page is real; production is at https://synapse.example.com.",
   },
   unknown: {
     label: "UNVERIFIED ORIGIN",
-    color: "#ff8f8f",
+    color: DANGER,
     bg: "rgba(239,83,80,0.1)",
     border: "rgba(239,83,80,0.5)",
     hint: "This page is not running from a known Synapse Core origin. Check the address bar: a wallet signing on this page signs for whatever domain hosts it. Do not proceed if the host looks wrong.",
   },
   framed: {
     label: "EMBEDDED · DO NOT SIGN",
-    color: "#ff6f6f",
+    color: DANGER,
     bg: "rgba(239,83,80,0.14)",
     border: "rgba(239,83,80,0.65)",
     hint: "This page is running inside another page's frame, so what you see is not the real dashboard at all. Close the tab and open the domain you know directly.",
