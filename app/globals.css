@@ -62,6 +62,21 @@
   --failed: #c62828;
 }
 
+/*
+ * Semantic aliases used by lib/constants.ts (AMBER, BG0–BG3). They were
+ * referenced but never declared, so those constants resolved to nothing.
+ * Each points at the active palette above, so it follows the theme toggle.
+ */
+:root,
+[data-theme] {
+  --accent: var(--amber);
+  --accent-dim: var(--amber-dim);
+  --bg-0: var(--bg0);
+  --bg-1: var(--bg1);
+  --bg-2: var(--bg2);
+  --bg-3: var(--bg3);
+}
+
 * {
   box-sizing: border-box;
 }
