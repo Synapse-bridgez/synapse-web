@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AMBER, BG1, BG2, BORDER, DIM, MONO } from "@/lib/constants";
+import { ACCENT_WEAK, AMBER, BG1, BG2, BORDER, DIM, MONO, NEUTRAL } from "@/lib/constants";
 import { SUPPORTED_WALLETS } from "@/lib/wallet/kit";
 import { useWalletExtensionDetection } from "@/lib/wallet/detection";
 
@@ -25,10 +25,17 @@ export function NoWalletGuidance({ onClose, onProceedAnyway }: NoWalletGuidanceP
         width: "100%",
         boxSizing: "border-box",
         fontFamily: MONO,
-        color: "#fff",
+        color: NEUTRAL,
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          marginBottom: "16px",
+        }}
+      >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
             <span
@@ -46,7 +53,7 @@ export function NoWalletGuidance({ onClose, onProceedAnyway }: NoWalletGuidanceP
                 fontWeight: 700,
                 letterSpacing: "0.08em",
                 margin: 0,
-                color: "#fff",
+                color: NEUTRAL,
               }}
             >
               NO STELLAR WALLET DETECTED
@@ -60,8 +67,9 @@ export function NoWalletGuidance({ onClose, onProceedAnyway }: NoWalletGuidanceP
               lineHeight: 1.5,
             }}
           >
-            To interact with Synapse Core and Soroban contracts on Testnet, you will need a supported wallet.
-            Install one of the recommended extensions below, then refresh or return here.
+            To interact with Synapse Core and Soroban contracts on Testnet, you will need a
+            supported wallet. Install one of the recommended extensions below, then refresh or
+            return here.
           </p>
         </div>
 
@@ -93,8 +101,7 @@ export function NoWalletGuidance({ onClose, onProceedAnyway }: NoWalletGuidanceP
       >
         {SUPPORTED_WALLETS.map((wallet) => {
           const isInstalled =
-            (wallet.id === "freighter" && freighter) ||
-            (wallet.id === "xbull" && xbull);
+            (wallet.id === "freighter" && freighter) || (wallet.id === "xbull" && xbull);
 
           return (
             <div
@@ -110,8 +117,15 @@ export function NoWalletGuidance({ onClose, onProceedAnyway }: NoWalletGuidanceP
               }}
             >
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                  <span style={{ fontWeight: 600, fontSize: "12px", color: "#fff" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "4px",
+                  }}
+                >
+                  <span style={{ fontWeight: 600, fontSize: "12px", color: NEUTRAL }}>
                     {wallet.name}
                   </span>
                   <span
@@ -138,7 +152,7 @@ export function NoWalletGuidance({ onClose, onProceedAnyway }: NoWalletGuidanceP
                   rel="noopener noreferrer"
                   style={{
                     display: "inline-block",
-                    background: "rgba(245,166,35,0.08)",
+                    background: ACCENT_WEAK,
                     border: `1px solid ${AMBER}`,
                     color: AMBER,
                     fontSize: "10px",
@@ -171,7 +185,7 @@ export function NoWalletGuidance({ onClose, onProceedAnyway }: NoWalletGuidanceP
           style={{
             background: "transparent",
             border: `1px solid ${BORDER}`,
-            color: "#fff",
+            color: NEUTRAL,
             fontSize: "10px",
             padding: "6px 14px",
             cursor: "pointer",
