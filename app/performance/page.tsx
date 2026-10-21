@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { NEUTRAL } from "@/lib/constants";
 import history from "../../public/performance/history.json";
 
 interface PerformanceRecord {
@@ -94,13 +96,13 @@ export default function PerformancePage() {
         maxWidth: 1080,
         margin: "0 auto",
         padding: "36px 24px",
-        color: "#fff",
+        color: NEUTRAL,
         fontFamily: "var(--font-ibm-plex-mono), monospace",
       }}
     >
-      <a href="/" style={{ color: "var(--status-processing)", fontSize: 12 }}>
+      <Link href="/" style={{ color: "var(--status-processing)", fontSize: 12 }}>
         Synapse Core
-      </a>
+      </Link>
       <header style={{ margin: "24px 0 28px" }}>
         <p style={{ color: "var(--status-pending)", fontSize: 10, margin: "0 0 8px" }}>
           CI PERFORMANCE

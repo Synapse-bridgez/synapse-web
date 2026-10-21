@@ -3,7 +3,25 @@ import { useState, useRef, useEffect } from "react";
 import { useContractSelection } from "@/lib/soroban/SorobanProvider";
 import { useToast } from "@/components/ui/Toast";
 import { shortId } from "@/lib/utils";
-import { AMBER, BG1, BG2, BG3, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import {
+  ACCENT_BORDER,
+  ACCENT_SOFT,
+  ACCENT_WEAK,
+  AMBER,
+  AMBER_GLOW,
+  BG1,
+  BG2,
+  BG3,
+  BORDER,
+  DANGER,
+  DANGER_BORDER,
+  DIM,
+  FG_MUTED,
+  MONO,
+  NEUTRAL,
+  ON_ACCENT,
+  STATUS_META,
+} from "@/lib/constants";
 
 export function ContractSwitcher() {
   const { contractId, setContractId, availableContracts, addContract, removeContract } =
@@ -76,9 +94,9 @@ export function ContractSwitcher() {
           alignItems: "center",
           gap: 7,
           padding: "6px 12px",
-          background: "rgba(245,166,35,0.06)",
-          border: `1px solid ${contractId ? BORDER : "rgba(239,83,80,0.5)"}`,
-          color: contractId ? "#fff" : STATUS_META.FAILED.color,
+          background: ACCENT_WEAK,
+          border: `1px solid ${contractId ? BORDER : DANGER_BORDER}`,
+          color: contractId ? NEUTRAL : STATUS_META.FAILED.color,
           fontFamily: MONO,
           fontSize: 11,
           fontWeight: 600,
@@ -90,7 +108,7 @@ export function ContractSwitcher() {
           e.currentTarget.style.borderColor = AMBER;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = contractId ? BORDER : "rgba(239,83,80,0.5)";
+          e.currentTarget.style.borderColor = contractId ? BORDER : DANGER_BORDER;
         }}
         title={contractId ? `Active Contract: ${contractId}` : "No contract selected"}
       >
@@ -101,11 +119,19 @@ export function ContractSwitcher() {
             height: 7,
             borderRadius: "50%",
             background: contractId ? AMBER : STATUS_META.FAILED.color,
-            boxShadow: contractId ? `0 0 6px 1px rgba(245,166,35,0.5)` : "none",
+            boxShadow: contractId ? `0 0 6px 1px ${AMBER_GLOW}` : "none",
           }}
         />
         <span style={{ color: DIM, fontSize: 10, textTransform: "uppercase" }}>CONTRACT:</span>
-        <span style={{ color: "#fff", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span
+          style={{
+            color: NEUTRAL,
+            maxWidth: 140,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           {displayName}
         </span>
         <span style={{ fontSize: 9, color: DIM, marginLeft: 2 }}>{open ? "▲" : "▼"}</span>
@@ -171,7 +197,7 @@ export function ContractSwitcher() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "7px 10px",
-                      background: isSelected ? "rgba(245,166,35,0.12)" : BG2,
+                      background: isSelected ? ACCENT_SOFT : BG2,
                       border: `1px solid ${isSelected ? AMBER : "transparent"}`,
                       cursor: "pointer",
                       transition: "all 0.15s",
@@ -193,7 +219,7 @@ export function ContractSwitcher() {
                           style={{
                             fontSize: 11,
                             fontWeight: isSelected ? 700 : 500,
-                            color: isSelected ? AMBER : "#eee",
+                            color: isSelected ? AMBER : FG_MUTED,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
@@ -206,9 +232,9 @@ export function ContractSwitcher() {
                             style={{
                               fontSize: 8,
                               padding: "1px 4px",
-                              background: "rgba(245,166,35,0.2)",
+                              background: ACCENT_SOFT,
                               color: AMBER,
-                              border: `1px solid ${AMBER}66`,
+                              border: `1px solid ${ACCENT_BORDER}`,
                             }}
                           >
                             ACTIVE
@@ -238,7 +264,7 @@ export function ContractSwitcher() {
                           padding: "2px 6px",
                           marginLeft: 6,
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = STATUS_META.FAILED.color)}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = DANGER)}
                         onMouseLeave={(e) => (e.currentTarget.style.color = DIM)}
                       >
                         ✕
@@ -274,7 +300,7 @@ export function ContractSwitcher() {
                 style={{
                   background: BG1,
                   border: `1px solid ${BORDER}`,
-                  color: "#fff",
+                  color: NEUTRAL,
                   fontFamily: MONO,
                   fontSize: 10,
                   padding: "6px 8px",
@@ -291,7 +317,7 @@ export function ContractSwitcher() {
                 style={{
                   background: BG1,
                   border: `1px solid ${BORDER}`,
-                  color: "#fff",
+                  color: NEUTRAL,
                   fontFamily: MONO,
                   fontSize: 10,
                   padding: "6px 8px",
@@ -319,7 +345,7 @@ export function ContractSwitcher() {
                   style={{
                     background: AMBER,
                     border: `1px solid ${AMBER}`,
-                    color: "#000",
+                    color: ON_ACCENT,
                     fontFamily: MONO,
                     fontSize: 10,
                     fontWeight: 700,
@@ -352,7 +378,7 @@ export function ContractSwitcher() {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = AMBER;
-                  e.currentTarget.style.background = "rgba(245,166,35,0.06)";
+                  e.currentTarget.style.background = ACCENT_WEAK;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = BORDER;

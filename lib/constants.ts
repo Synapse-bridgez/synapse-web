@@ -31,14 +31,33 @@ export const STATUS_META: Record<TxStatus, StatusMeta> = {
   },
 };
 
-export const AMBER = "var(--accent)";
+// These names must match the custom properties declared in app/globals.css —
+// the theme toggle swaps those, so a component that imports these tokens
+// follows the selected theme automatically.
+export const AMBER = "var(--amber)";
 export const NEUTRAL = "var(--fg)";
-export const BG0 = "var(--bg-0)";
-export const BG1 = "var(--bg-1)";
-export const BG2 = "var(--bg-2)";
-export const BG3 = "var(--bg-3)";
+export const FG_MUTED = "var(--fg-muted)";
+export const ON_ACCENT = "var(--on-accent)";
+export const BG0 = "var(--bg0)";
+export const BG1 = "var(--bg1)";
+export const BG2 = "var(--bg2)";
+export const BG3 = "var(--bg3)";
 export const BORDER = "var(--border)";
 export const DIM = "var(--dim)";
+export const DANGER = "var(--danger)";
+export const DANGER_BG = "var(--danger-bg)";
+export const DANGER_BORDER = "var(--danger-border)";
+export const ACCENT_WEAK = "var(--accent-weak)";
+export const ACCENT_SOFT = "var(--accent-soft)";
+export const ACCENT_BORDER = "var(--accent-border)";
+export const ACCENT_FOCUS = "var(--accent-focus)";
+export const AMBER_GLOW = "var(--amber-glow)";
+export const HOVER = "var(--hover)";
+export const TRACK = "var(--track)";
+export const ACCESS_ONE_TIME = "var(--access-one-time)";
+export const ACCESS_RELAY = "var(--access-relay)";
+export const ACCESS_ADMIN = "var(--access-admin)";
+export const ACCESS_PUBLIC = "var(--access-public)";
 
 /**
  * The app's monospace stack.
@@ -62,13 +81,7 @@ export const MONO = "var(--font-ibm-plex-mono), monospace";
  * encoders in `lib/soroban/args.ts`.
  */
 export type AbiParamKind =
-  | "address"
-  | "string"
-  | "u32"
-  | "i128"
-  | "bool"
-  | "tx_payload"
-  | "callback_payload";
+  "address" | "string" | "u32" | "i128" | "bool" | "tx_payload" | "callback_payload";
 
 export interface AbiParam {
   name: string;
@@ -115,9 +128,7 @@ export const ABI_ENDPOINTS: AbiEndpoint[] = [
     sig: "register_transaction(payload: TxPayload) → tx_id: String",
     access: "relay_signer",
     desc: "Register a new transaction. Returns a UUID. Emits TransactionRegistered event.",
-    params: [
-      { name: "payload", type: "struct", struct: "TxPayload" },
-    ] as AbiParam[],
+    params: [{ name: "payload", type: "struct", struct: "TxPayload" }] as AbiParam[],
     stateChanging: true,
   },
   {
@@ -165,9 +176,7 @@ export const ABI_ENDPOINTS: AbiEndpoint[] = [
     sig: "register_callback(payload: CallbackPayload)",
     access: "relay_signer",
     desc: "Register a webhook URL for a transaction lifecycle event notification.",
-    params: [
-      { name: "payload", type: "struct", struct: "CallbackPayload" },
-    ] as AbiParam[],
+    params: [{ name: "payload", type: "struct", struct: "CallbackPayload" }] as AbiParam[],
     stateChanging: true,
   },
   {

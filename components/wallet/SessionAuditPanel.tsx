@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { AMBER, BG1, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import { AMBER, AMBER_GLOW, BG1, BORDER, DIM, FG_MUTED, MONO, STATUS_META } from "@/lib/constants";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useLiveContractInfo } from "@/lib/soroban/useLiveContractInfo";
 import { shortId } from "@/lib/utils";
@@ -13,7 +13,7 @@ import { shortId } from "@/lib/utils";
 export function deriveAuthorization(
   address: string | null,
   admin: string | null | undefined,
-  relaySigner: string | null | undefined,
+  relaySigner: string | null | undefined
 ): { isAdmin: boolean; isRelaySigner: boolean; canSignAdminActions: boolean } {
   const isAdmin = !!address && !!admin && address === admin;
   const isRelaySigner = !!address && !!relaySigner && address === relaySigner;
@@ -24,7 +24,7 @@ function Row({ label, value, color }: { label: string; value: string; color?: st
   return (
     <div style={{ display: "flex", justifyContent: "space-between", gap: 16, padding: "5px 0" }}>
       <span style={{ fontSize: 9, color: DIM, letterSpacing: "0.12em" }}>{label}</span>
-      <span style={{ fontSize: 10, color: color ?? "#ddd", fontFamily: MONO }}>{value}</span>
+      <span style={{ fontSize: 10, color: color ?? FG_MUTED, fontFamily: MONO }}>{value}</span>
     </div>
   );
 }
@@ -47,7 +47,7 @@ export function SessionAuditPanel() {
   const { isAdmin, isRelaySigner, canSignAdminActions } = deriveAuthorization(
     address,
     admin,
-    relaySigner,
+    relaySigner
   );
 
   const scopeColor = canSignAdminActions ? AMBER : STATUS_META.COMPLETED.color;
@@ -82,7 +82,7 @@ export function SessionAuditPanel() {
             borderRadius: "50%",
             background: scopeColor,
             display: "inline-block",
-            boxShadow: `0 0 6px 2px ${canSignAdminActions ? "rgba(245,166,35,0.55)" : STATUS_META.COMPLETED.glow}`,
+            boxShadow: `0 0 6px 2px ${canSignAdminActions ? AMBER_GLOW : STATUS_META.COMPLETED.glow}`,
           }}
         />
         {scopeLabel}

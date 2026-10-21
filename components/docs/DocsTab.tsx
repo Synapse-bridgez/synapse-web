@@ -1,14 +1,34 @@
 "use client";
 import { useState } from "react";
-import { ABI_ENDPOINTS, AMBER, BORDER, DIM, MONO } from "@/lib/constants";
+import {
+  ABI_ENDPOINTS,
+  ACCESS_ADMIN,
+  ACCESS_ONE_TIME,
+  ACCESS_PUBLIC,
+  ACCESS_RELAY,
+  ACCENT_BORDER,
+  AMBER,
+  BG0,
+  BG2,
+  BG3,
+  BORDER,
+  DANGER,
+  DANGER_BG,
+  DIM,
+  FG_MUTED,
+  MONO,
+  NEUTRAL,
+  ON_ACCENT,
+  STATUS_META,
+} from "@/lib/constants";
 import { encodeArg } from "@/lib/soroban/args";
 import { simulateCall, submitCall } from "@/lib/soroban/contract";
 
 const ACCESS_COLORS: Record<string, string> = {
-  "one-time": "#A78BFA",
-  relay_signer: "#4FC3F7",
-  admin: "#EF5350",
-  public: "#66BB6A",
+  "one-time": ACCESS_ONE_TIME,
+  relay_signer: ACCESS_RELAY,
+  admin: ACCESS_ADMIN,
+  public: ACCESS_PUBLIC,
 };
 
 const STATE_CHANGING = new Set(["one-time", "relay_signer", "admin"]);
@@ -77,10 +97,7 @@ function PlaygroundForm({ ep }: { ep: (typeof ABI_ENDPOINTS)[number] }) {
         </div>
       )}
       {params.map((p) => (
-        <label
-          key={p.name}
-          style={{ display: "flex", flexDirection: "column", gap: 4 }}
-        >
+        <label key={p.name} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontFamily: MONO, fontSize: 9, color: DIM, letterSpacing: "0.08em" }}>
             {p.name} · {p.type}
           </span>
@@ -89,9 +106,9 @@ function PlaygroundForm({ ep }: { ep: (typeof ABI_ENDPOINTS)[number] }) {
             onChange={(e) => setValues((v) => ({ ...v, [p.name]: e.target.value }))}
             placeholder={p.type}
             style={{
-              background: "#0E1116",
+              background: BG0,
               border: `1px solid ${BORDER}`,
-              color: "#fff",
+              color: NEUTRAL,
               fontFamily: MONO,
               fontSize: 11,
               padding: "6px 8px",
@@ -130,8 +147,8 @@ function PlaygroundForm({ ep }: { ep: (typeof ABI_ENDPOINTS)[number] }) {
               letterSpacing: "0.08em",
               padding: "6px 14px",
               background: "transparent",
-              border: `1px solid #EF5350`,
-              color: "#EF5350",
+              border: `1px solid ${DANGER}`,
+              color: DANGER,
               cursor: busy ? "wait" : "pointer",
             }}
           >
@@ -143,15 +160,15 @@ function PlaygroundForm({ ep }: { ep: (typeof ABI_ENDPOINTS)[number] }) {
       {confirming && (
         <div
           style={{
-            border: `1px solid #EF5350`,
-            background: "#1A1113",
+            border: `1px solid ${DANGER}`,
+            background: DANGER_BG,
             padding: "10px 12px",
             display: "flex",
             flexDirection: "column",
             gap: 8,
           }}
         >
-          <div style={{ fontFamily: MONO, fontSize: 10, color: "#EF5350", lineHeight: 1.6 }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, color: DANGER, lineHeight: 1.6 }}>
             WARNING: {ep.name} is a state-changing entrypoint. Submitting will sign and broadcast a
             real transaction on the connected network. Continue?
           </div>
@@ -164,9 +181,9 @@ function PlaygroundForm({ ep }: { ep: (typeof ABI_ENDPOINTS)[number] }) {
                 fontFamily: MONO,
                 fontSize: 10,
                 padding: "5px 12px",
-                background: "#EF5350",
+                background: DANGER,
                 border: "none",
-                color: "#0E1116",
+                color: ON_ACCENT,
                 cursor: busy ? "wait" : "pointer",
               }}
             >
@@ -197,7 +214,7 @@ function PlaygroundForm({ ep }: { ep: (typeof ABI_ENDPOINTS)[number] }) {
           style={{
             fontFamily: MONO,
             fontSize: 10,
-            color: "#EF5350",
+            color: DANGER,
             whiteSpace: "pre-wrap",
             margin: 0,
           }}
@@ -210,7 +227,7 @@ function PlaygroundForm({ ep }: { ep: (typeof ABI_ENDPOINTS)[number] }) {
           style={{
             fontFamily: MONO,
             fontSize: 10,
-            color: "#66BB6A",
+            color: STATUS_META.COMPLETED.color,
             whiteSpace: "pre-wrap",
             margin: 0,
           }}
@@ -230,7 +247,7 @@ export function DocsTab() {
       {/* Intro */}
       <div
         style={{
-          background: "#14171D",
+          background: BG2,
           border: `1px solid ${BORDER}`,
           padding: "16px 20px",
           marginBottom: 10,
@@ -250,7 +267,7 @@ export function DocsTab() {
         <p
           style={{
             fontSize: 11,
-            color: "rgba(255,255,255,0.55)",
+            color: DIM,
             fontFamily: MONO,
             lineHeight: 1.75,
             margin: 0,
@@ -295,7 +312,7 @@ export function DocsTab() {
         <div
           key={ep.name}
           style={{
-            background: "#14171D",
+            background: BG2,
             border: `1px solid ${BORDER}`,
             padding: "14px 20px",
             display: "grid",
@@ -304,8 +321,8 @@ export function DocsTab() {
             alignItems: "start",
             transition: "background 0.15s",
           }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "#1A1E26")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "#14171D")}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = BG3)}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = BG2)}
         >
           <div>
             <div
@@ -323,7 +340,7 @@ export function DocsTab() {
               style={{
                 fontFamily: MONO,
                 fontSize: 10,
-                color: "rgba(255,255,255,0.4)",
+                color: DIM,
                 marginBottom: 8,
                 letterSpacing: "0.02em",
               }}
@@ -334,7 +351,7 @@ export function DocsTab() {
               style={{
                 fontFamily: MONO,
                 fontSize: 11,
-                color: "rgba(255,255,255,0.6)",
+                color: FG_MUTED,
                 lineHeight: 1.6,
               }}
             >
@@ -364,8 +381,8 @@ export function DocsTab() {
               fontSize: 9,
               fontFamily: MONO,
               padding: "3px 10px",
-              border: `1px solid ${ACCESS_COLORS[ep.access] ?? "#888"}44`,
-              color: ACCESS_COLORS[ep.access] ?? "#888",
+              border: `1px solid ${ACCENT_BORDER}`,
+              color: ACCESS_COLORS[ep.access] ?? DIM,
               borderRadius: 2,
               whiteSpace: "nowrap",
             }}

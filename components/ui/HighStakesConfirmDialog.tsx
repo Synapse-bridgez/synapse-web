@@ -29,7 +29,18 @@
 import { useState, useEffect, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { BG2, BG3, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import {
+  BG2,
+  BG3,
+  BORDER,
+  DANGER_BG,
+  DANGER_BORDER,
+  DIM,
+  FG_MUTED,
+  MONO,
+  NEUTRAL,
+  STATUS_META,
+} from "@/lib/constants";
 import { ActionButton } from "./ActionButton";
 
 // ---------------------------------------------------------------------------
@@ -67,7 +78,7 @@ export interface HighStakesConfirmDialogProps {
 // Component
 // ---------------------------------------------------------------------------
 
-const DANGER = STATUS_META.FAILED.color; // #EF5350
+const DANGER = STATUS_META.FAILED.color;
 
 export function HighStakesConfirmDialog({
   title,
@@ -129,7 +140,7 @@ export function HighStakesConfirmDialog({
           zIndex: 1001,
           width: "min(520px, calc(100vw - 32px))",
           background: BG2,
-          border: `1px solid ${DANGER}88`,
+          border: `1px solid ${DANGER_BORDER}`,
           ...mono,
         }}
       >
@@ -156,8 +167,8 @@ export function HighStakesConfirmDialog({
           <div
             data-testid="hsc-danger-banner"
             style={{
-              background: `${DANGER}12`,
-              border: `1px solid ${DANGER}55`,
+              background: DANGER_BG,
+              border: `1px solid ${DANGER_BORDER}`,
               padding: "10px 14px",
               marginBottom: 16,
             }}
@@ -179,7 +190,7 @@ export function HighStakesConfirmDialog({
               style={{
                 fontSize: 12,
                 lineHeight: 1.65,
-                color: "rgba(255,255,255,0.70)",
+                color: FG_MUTED,
                 margin: 0,
                 ...mono,
               }}
@@ -221,8 +232,8 @@ export function HighStakesConfirmDialog({
                 boxSizing: "border-box",
                 padding: "9px 12px",
                 background: BG3,
-                border: `1px solid ${matched ? DANGER + "99" : BORDER}`,
-                color: matched ? DANGER : "rgba(255,255,255,0.8)",
+                border: `1px solid ${matched ? DANGER_BORDER : BORDER}`,
+                color: matched ? DANGER : NEUTRAL,
                 fontSize: 11,
                 outline: "none",
                 transition: "border-color 0.15s, color 0.15s",
@@ -239,7 +250,7 @@ export function HighStakesConfirmDialog({
                 marginTop: 5,
                 letterSpacing: "0.04em",
                 minHeight: 16,
-                color: matched ? "#66BB6A" : DANGER,
+                color: matched ? STATUS_META.COMPLETED.color : DANGER,
               }}
             >
               {typed.length > 0 && !matched && "value mismatch — confirm button remains locked"}
@@ -249,7 +260,7 @@ export function HighStakesConfirmDialog({
 
           {/* Actions */}
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <ActionButton label="CANCEL" color={DIM.replace("0.35", "0.55")} onClick={onCancel} />
+            <ActionButton label="CANCEL" color={DIM} onClick={onCancel} />
             {/*
              * The button is disabled at the DOM level via ActionButton's own
              * `disabled` prop, which sets disabled on the underlying <button>
