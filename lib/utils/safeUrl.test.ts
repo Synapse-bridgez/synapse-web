@@ -76,3 +76,27 @@ describe("toSafeHttpUrl", () => {
     expect(toSafeHttpUrl({})).toBeUndefined();
   });
 });
+
+describe("toSafeUrlLabel", () => {
+  it("returns the trimmed string for safe URLs", () => {
+    expect(toSafeUrlLabel("https://example.com")).toBe("https://example.com");
+    expect(toSafeUrlLabel("  https://example.com  ")).toBe("https://example.com");
+  });
+
+  it("returns unsafe values as-is (trimmed) so they remain visible as text", () => {
+    expect(toSafeUrlLabel("javascript:alert(1)")).toBe("javascript:alert(1)");
+    expect(toSafeUrlLabel("  data:text/html,hi ")).toBe("data:text/html,hi");
+  });
+
+  it("returns an empty string for empty or whitespace-only input", () => {
+    expect(toSafeUrlLabel("")).toBe("");
+    expect(toSafeUrlLabel("   ")).toBe("");
+  });
+
+  it("returns an empty string for non-string input", () => {
+    expect(toSafeUrlLabel(undefined)).toBe("");
+    expect(toSafeUrlLabel(null)).toBe("");
+    expect(toSafeUrlLabel(42)).toBe("");
+    expect(toSafeUrlLabel({})).toBe("");
+  });
+});
