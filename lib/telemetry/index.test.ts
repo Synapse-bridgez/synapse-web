@@ -1,5 +1,10 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { scrubContext, isTelemetryEnabled } from "./index";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import {
+  scrubContext,
+  isTelemetryEnabled,
+  reportError,
+  setTelemetryProvider,
+} from "./index";
 
 describe("scrubContext", () => {
   it("keeps non-sensitive fields as-is", () => {
@@ -61,3 +66,40 @@ describe("isTelemetryEnabled", () => {
   });
 });
 
+describe("reportError", () => {
+  beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_TELEMETRY_DISABLED", "false");
+  });
+
+  afterEach(() => {
+    setTelemetryProvider(null);
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("sends the error and scrubbed context to the provider", () => {
+    const provider = vi.fn();
+    setTelemetryProvider(provider);
+    const err = new Error("boom");
+    reportError(err, { tabName: "bridge", privateKey: "secret" });
+    expect(provider).toHaveBeenCalledWith(err, { tabName: "bridge" });
+  });
+
+  it("falls back to console.error when no provider is set", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = new Error("boom");
+    reportError(err);
+    expect(spy).toHaveBeenCalledWith("[telemetry] unhandled error", err, {});
+  });
+
+  it("is a no-op when telemetry is disabled", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const provider = vi.fn();
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    setTelemetryProvider(provider);
+    reportError(new Error("boom"));
+    expect(provider).not.toHaveBeenCalled();
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
