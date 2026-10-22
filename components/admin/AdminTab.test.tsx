@@ -1,7 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
+import { afterEach, describe, it, expect } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DefaultAdminTab, { AdminTab, SafeUrlLink, isSafeHttpUrl } from "./AdminTab";
+
+afterEach(cleanup);
 
 const UNSAFE_URLS = [
   "javascript:alert(1)",
@@ -34,6 +37,18 @@ describe("isSafeHttpUrl", () => {
     ["number", 42],
     ["object", { href: "https://example.com" }],
   ])("rejects %s", (_label, value) => {
+    expect(isSafeHttpUrl(value)).toBe(false);
+  });
+});
+
+describe("SafeUrlLink", () => {
+  it("renders an http(s) URL as an external link with safe rel attributes", () => {
+    render(<SafeUrlLink url="https://hooks.example.com/cb" className="link" />);
+
+    const link = screen.getByRole("link", { name: "https://hooks.example.com/cb" });
+    expect(link).toHaveAttribute("href", "https://hooks.example.com/cb");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).t
     expect(isSafeHttpUrl(value)).toBe(false);
   });
 });
@@ -134,5 +149,7 @@ describe("AdminTab", () => {
     expect(preview).toHaveTextContent(payload);
     expect(preview.querySelector("img")).toBeNull();
     expect(preview.children).toHaveLength(0);
+  });
+});
   });
 });
