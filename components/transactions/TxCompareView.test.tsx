@@ -21,7 +21,7 @@ function makeTx(overrides: Record<string, unknown> = {}): Tx {
     asset: "USDC",
     amount: 5,
     memo: "ref-001",
-    callbackUrl: "https://api.example.com/cb/001",
+    callback_url: "https://api.example.com/cb/001",
     ...overrides,
   } as unknown as Tx;
 }
@@ -59,8 +59,8 @@ describe("TxCompareView rendering", () => {
 
   it("renders missing, null and empty values as an em dash", () => {
     renderView([
-      makeTx({ id: "tx-a", memo: undefined, callbackUrl: null }),
-      makeTx({ id: "tx-b", memo: "", callbackUrl: "https://x.test/cb" }),
+      makeTx({ id: "tx-a", memo: undefined, callback_url: null }),
+      makeTx({ id: "tx-b", memo: "", callback_url: "https://x.test/cb" }),
     ]);
 
     expect(rowCells("memo").map((c) => c.textContent)).toEqual(["—", "—"]);
@@ -130,9 +130,9 @@ describe("TxCompareView interactions", () => {
     const { onClose } = renderView([makeTx({ id: "tx-a" }), makeTx({ id: "tx-b" })]);
 
     await userEvent.click(screen.getByText("COMPARE 2 TRANSACTIONS"));
-    await userEvent.click(rowCells("amount")[0]);
+    await userEvent.click(rowCells("amount")[0]!);
     await userEvent.click(
-      within(screen.getByText("TIMELINE · tx-a").closest("section")!).getByTestId("tx-timeline")
+      within(screen.getByText("TIMELINE · tx-a").parentElement!).getByTestId("tx-timeline")
     );
 
     expect(onClose).not.toHaveBeenCalled();
@@ -181,10 +181,10 @@ describe("diffFields", () => {
 
   it("flags a field that is present on some transactions and missing on others", () => {
     const result = diffFields([
-      makeTx({ id: "tx-a", callbackUrl: "https://x.test/cb" }),
-      makeTx({ id: "tx-b", callbackUrl: undefined }),
+      makeTx({ id: "tx-a", callback_url: "https://x.test/cb" }),
+      makeTx({ id: "tx-b", callback_url: undefined }),
     ]);
-    expect(result.has("callbackUrl")).toBe(true);
+    expect(result.has("callback_url")).toBe(true);
   });
 
   it("compares values by their string form", () => {
