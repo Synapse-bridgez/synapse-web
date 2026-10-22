@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getSavedViews, storeSavedViews } from "./savedViews";
+import { createSavedViewId, getSavedViews, storeSavedViews } from "./savedViews";
 
 const KEY = "synapse-transactions-saved-views";
 
@@ -48,5 +48,21 @@ describe("storeSavedViews", () => {
       vi.unstubAllGlobals();
     }
     expect(localStorage.getItem(KEY)).toBeNull();
+  });
+});
+
+describe("createSavedViewId", () => {
+  it("has the view-<time>-<random> format", () => {
+    expect(createSavedViewId()).toMatch(/^view-[a-z0-9]+-[a-z0-9]{1,6}$/);
+  });
+
+  it("uses the current time", () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    expect(createSavedViewId().split("-")[1]).toBe((1_000_000).toString(36));
+  });
+
+  it("produces distinct ids", () => {
+    const ids = new Set(Array.from({ length: 50 }, createSavedViewId));
+    expect(ids.size).toBe(50);
   });
 });
