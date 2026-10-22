@@ -54,3 +54,75 @@ describe("normalizeTx", () => {
     expect(result.amount).toBeUndefined();
   });
 });
+
+describe("TxCache (in-memory fallback)", () => {
+  it("reports non-persistent without IndexedDB", () => {
+    expect(new TxCache().isPersistent).toBe(false);
+  });
+
+  it("ignores empty batches", async () => {
+    const cache = new TxCache();
+    await cache.putMany([]);
+    expect(await cache.getAll()).toEqual([]);
+  });
+
+  it("stores records and returns them newest first", async () => {
+    const cache = new TxCache();
+    await cache.putMany([
+      buildMockTx({ id: "old", timestamp: 1 }),
+      buildMockTx({ id: "new", timestamp: 3 }),
+      buildMockTx({ id: "mid", timestamp: 2 }),
+    ]);
+    expect((await cache.getAll()).map((t) => t.id)).toEqual(["new", "mid", "old"]);
+  });
+
+  it("upserts by id", async () => {
+    const cache = new TxCache();
+    await cache.putMany([buildMockTx({ id: "a", status: "PENDING" })]);
+    await cache.putMany([buildMockTx({ id: "a", status: "COMPLETED" })]);
+    const all = await cache.getAll();
+    expect(all).toHaveLength(1);
+    expect(all[0].status).toBe("COMPLETED");
+  });
+
+  it("evicts oldest records beyond retentionCap", async () => {
+    const cache = new TxCache({ retentionCap: 2 });
+    await cache.putMany([
+      buildMockTx({ id: "a", timestamp: 1 }),
+      buildMockTx({ id: "b", timestamp: 2 }),
+      buildMockTx({ id: "c", timestamp: 3 }),
+    ]);
+    expect((await cache.getAll()).map((t) => t.id)).toEqual(["c", "b"]);
+  });
+
+  it("clear removes everything", async () => {
+    const cache = new TxCache();
+    await cache.putMany([buildMockTx({ id: "a" })]);
+    await cache.clear();
+    expect(await cache.getAll()).toEqual([]);
+  });
+
+  it("falls back to memory when indexedDB.open throws", async () => {
+    vi.stubGlobal("indexedDB", {
+      open: () => {
+        throw new Error("denied");
+      },
+    });
+    const cache = new TxCache({ dbName: "test-db" });
+    await cache.putMany([buildMockTx({ id: "a" })]);
+    expect((await cache.getAll()).map((t) => t.id)).toEqual(["a"]);
+  });
+
+  it("falls back to memory when open errors", async () => {
+    vi.stubGlobal("indexedDB", {
+      open: () => {
+        const req: Record<string, unknown> = {};
+        queueMicrotask(() => (req.onerror as () => void)());
+        return req;
+      },
+    });
+    const cache = new TxCache();
+    await cache.putMany([buildMockTx({ id: "a" })]);
+    expect(await cache.getAll()).toHaveLength(1);
+  });
+});
