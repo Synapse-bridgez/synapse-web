@@ -119,6 +119,7 @@ export function TransactionsTab() {
       <Panel title="TRANSACTION LOOKUP">
         <div style={{ display: "flex", gap: 8 }}>
           <input
+            aria-label="Filter transactions"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="filter by tx_id · status · asset · memo…"

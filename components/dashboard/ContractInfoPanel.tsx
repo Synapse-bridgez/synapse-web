@@ -25,7 +25,7 @@ type BalanceState =
 
 function horizonUrlFor(network: string): string {
   const key = (network || "").toLowerCase();
-  return HORIZON_URLS[key] ?? HORIZON_URLS.testnet;
+  return HORIZON_URLS[key] ?? HORIZON_URLS.testnet!;
 }
 
 function formatXlm(value: number): string {
@@ -68,7 +68,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
         });
       }
     },
-    [],
+    []
   );
 
   useEffect(() => {
@@ -94,8 +94,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
     ["health", info.health],
   ];
 
-  const lowBalance =
-    balance.status === "ok" && balance.xlm < LOW_BALANCE_THRESHOLD_XLM;
+  const lowBalance = balance.status === "ok" && balance.xlm < LOW_BALANCE_THRESHOLD_XLM;
 
   return (
     <Panel title="CONTRACT INFO">

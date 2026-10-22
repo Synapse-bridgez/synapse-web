@@ -13,7 +13,7 @@ import { shortId } from "@/lib/utils";
 export function deriveAuthorization(
   address: string | null,
   admin: string | null | undefined,
-  relaySigner: string | null | undefined,
+  relaySigner: string | null | undefined
 ): { isAdmin: boolean; isRelaySigner: boolean; canSignAdminActions: boolean } {
   const isAdmin = !!address && !!admin && address === admin;
   const isRelaySigner = !!address && !!relaySigner && address === relaySigner;
@@ -38,7 +38,7 @@ function Row({ label, value, color }: { label: string; value: string; color?: st
 export function SessionAuditPanel() {
   const [open, setOpen] = useState(false);
   const { address, provider, network } = useWallet();
-  const { info } = useLiveContractInfo();
+  const info = useLiveContractInfo();
 
   if (!address) return null;
 
@@ -47,7 +47,7 @@ export function SessionAuditPanel() {
   const { isAdmin, isRelaySigner, canSignAdminActions } = deriveAuthorization(
     address,
     admin,
-    relaySigner,
+    relaySigner
   );
 
   const scopeColor = canSignAdminActions ? AMBER : STATUS_META.COMPLETED.color;

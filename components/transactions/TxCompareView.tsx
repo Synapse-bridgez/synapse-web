@@ -1,5 +1,5 @@
 "use client";
-import { TxTimeline } from "./TxTimeline";
+import { TxTimeline, type TxTimelineEvent } from "./TxTimeline";
 import { Panel } from "@/components/ui/Panel";
 import { AMBER, BG3, BORDER, MONO } from "@/lib/constants";
 import type { Transaction } from "@/lib/types";
@@ -10,7 +10,7 @@ const COMPARE_FIELDS: { key: keyof Transaction; label: string }[] = [
   { key: "asset", label: "asset" },
   { key: "amount", label: "amount" },
   { key: "memo", label: "memo" },
-  { key: "callbackUrl", label: "callback_url" },
+  { key: "callback_url", label: "callback_url" },
 ];
 
 function fieldValue(tx: Transaction, key: keyof Transaction): string {
@@ -28,7 +28,7 @@ export function diffFields(txs: Transaction[]): Set<keyof Transaction> {
   const differing = new Set<keyof Transaction>();
   if (txs.length < 2) return differing;
   for (const { key } of COMPARE_FIELDS) {
-    const first = fieldValue(txs[0], key);
+    const first = fieldValue(txs[0]!, key);
     if (txs.some((tx) => fieldValue(tx, key) !== first)) {
       differing.add(key);
     }
@@ -36,13 +36,14 @@ export function diffFields(txs: Transaction[]): Set<keyof Transaction> {
   return differing;
 }
 
-export function TxCompareView({
-  txs,
-  onClose,
-}: {
-  txs: Transaction[];
-  onClose: () => void;
-}) {
+/** Derives a minimal two-point timeline (created, then current status) from a transaction. */
+function timelineEvents(tx: Transaction): TxTimelineEvent[] {
+  const events: TxTimelineEvent[] = [{ status: "PENDING", timestamp: tx.created_at }];
+  if (tx.status !== "PENDING") events.push({ status: tx.status, timestamp: tx.timestamp });
+  return events;
+}
+
+export function TxCompareView({ txs, onClose }: { txs: Transaction[]; onClose: () => void }) {
   const differing = diffFields(txs);
 
   return (
@@ -152,7 +153,10 @@ export function TxCompareView({
         >
           {txs.map((tx) => (
             <Panel key={tx.id} title={`TIMELINE · ${tx.id}`}>
-              <TxTimeline tx={tx} />
+              <TxTimeline
+                events={timelineEvents(tx)}
+                inProgress={tx.status === "PENDING" || tx.status === "PROCESSING"}
+              />
             </Panel>
           ))}
         </div>

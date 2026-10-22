@@ -78,6 +78,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
       const id = requestAnimationFrame(() => inputRef.current?.focus());
       return () => cancelAnimationFrame(id);
     }
+    return undefined;
   }, [open]);
 
   // Keep the active index within bounds as results change.
@@ -91,7 +92,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
       onClose();
       cmd.action();
     },
-    [onClose],
+    [onClose]
   );
 
   const onKeyDown = useCallback(
@@ -101,9 +102,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
         setActiveIndex((i) => (results.length ? (i + 1) % results.length : 0));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIndex((i) =>
-          results.length ? (i - 1 + results.length) % results.length : 0,
-        );
+        setActiveIndex((i) => (results.length ? (i - 1 + results.length) % results.length : 0));
       } else if (e.key === "Enter") {
         e.preventDefault();
         runCommand(results[activeIndex]);
@@ -116,7 +115,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
         inputRef.current?.focus();
       }
     },
-    [results, activeIndex, runCommand, onClose],
+    [results, activeIndex, runCommand, onClose]
   );
 
   // Scroll the active option into view as the user navigates.

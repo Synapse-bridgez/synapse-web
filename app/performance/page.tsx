@@ -65,7 +65,7 @@ function TrendChart({
           const x = records.length === 1 ? 50 : (index / (records.length - 1)) * 100;
           const y = 88 - ((item - minimum) / range) * 72;
           return (
-            <circle key={`${records[index].commit}-${index}`} cx={x} cy={y} r="2.5" fill={color} />
+            <circle key={`${records[index]!.commit}-${index}`} cx={x} cy={y} r="2.5" fill={color} />
           );
         })}
       </svg>
@@ -77,8 +77,8 @@ function TrendChart({
           color: "var(--dim)",
         }}
       >
-        <span>{format(values[0])}</span>
-        <span>{format(values[values.length - 1])}</span>
+        <span>{format(values[0]!)}</span>
+        <span>{format(values[values.length - 1]!)}</span>
       </div>
     </section>
   );

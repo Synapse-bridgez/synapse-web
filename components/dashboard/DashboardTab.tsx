@@ -1,9 +1,9 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { StatCards } from "./StatCards";
 import { Pipeline } from "./Pipeline";
 import { ContractInfoPanel } from "./ContractInfoPanel";
-import { HealthWidget } from "./HealthWidget";
+import HealthWidget from "./HealthWidget";
 import { RecentTxTable } from "./RecentTxTable";
 import { TxDetailModal } from "@/components/transactions/TxDetailModal";
 import { useLiveTransactions } from "@/lib/soroban/useLiveTransactions";
@@ -15,15 +15,14 @@ import {
   moveWidget,
   resetDashboardLayout,
   saveDashboardLayout,
+  toggleWidgetVisibility,
   type DashboardLayout,
   type DashboardWidgetId,
 } from "@/lib/dashboard/layoutPreferences";
 
 export function DashboardTab() {
   const [selected, setSelected] = useState<Transaction | null>(null);
-  const [layout, setLayout] = useState<DashboardLayout>(() =>
-    loadDashboardLayout(),
-  );
+  const [layout, setLayout] = useState<DashboardLayout>(() => loadDashboardLayout());
   const [draggingId, setDraggingId] = useState<DashboardWidgetId | null>(null);
   const [dragOverId, setDragOverId] = useState<DashboardWidgetId | null>(null);
   const txs = useLiveTransactions();
@@ -44,60 +43,49 @@ export function DashboardTab() {
     });
   }, []);
 
-  const moveByOffset = useCallback(
-    (id: DashboardWidgetId, offset: number) => {
-      setLayout((prev) => {
-        const fromIndex = prev.order.indexOf(id);
-        const toIndex = fromIndex + offset;
-        if (fromIndex === -1 || toIndex < 0 || toIndex >= prev.order.length) {
-          return prev;
-        }
-        return { ...prev, order: moveWidget(prev.order, fromIndex, toIndex) };
-      });
-    },
-    [],
-  );
+  const moveByOffset = useCallback((id: DashboardWidgetId, offset: number) => {
+    setLayout((prev) => {
+      const fromIndex = prev.order.indexOf(id);
+      const toIndex = fromIndex + offset;
+      if (fromIndex === -1 || toIndex < 0 || toIndex >= prev.order.length) {
+        return prev;
+      }
+      return { ...prev, order: moveWidget(prev.order, fromIndex, toIndex) };
+    });
+  }, []);
 
   const toggleVisibility = useCallback((id: DashboardWidgetId) => {
-    setLayout((prev) => ({
-      ...prev,
-      visibility: { ...prev.visibility, [id]: !prev.visibility[id] },
-    }));
+    setLayout((prev) => ({ ...prev, hidden: toggleWidgetVisibility(prev.hidden, id) }));
   }, []);
 
   const handleReset = useCallback(() => {
     setLayout(resetDashboardLayout());
   }, []);
 
-  const widgets = useMemo(
+  const widgets = useMemo<Record<DashboardWidgetId, ReactNode>>(
     () => ({
       statCards: <StatCards txs={txs} />,
       pipeline: <Pipeline txs={txs} />,
-      contractInfo: <ContractInfoPanel info={contractInfo} />,
-      recentTx: <RecentTxTable txs={txs} onSelect={setSelected} />,
+      health: <HealthWidget />,
+      contractInfoPanel: <ContractInfoPanel info={contractInfo} />,
+      recentTxTable: <RecentTxTable txs={txs} onSelect={setSelected} />,
     }),
-    [txs, contractInfo],
+    [txs, contractInfo]
   );
 
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", gap: 12 }}
-      className="animate-fade-in"
-    >
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="animate-fade-in">
       {selected && <TxDetailModal tx={selected} onClose={() => setSelected(null)} />}
       <div
         className="dashboard-layout-controls"
         style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}
       >
         {layout.order.map((id, index) => (
-          <span
-            key={id}
-            style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-          >
+          <span key={id} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <label style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <input
                 type="checkbox"
-                checked={layout.visibility[id]}
+                checked={!layout.hidden.includes(id)}
                 onChange={() => toggleVisibility(id)}
                 aria-label={`Toggle ${DASHBOARD_WIDGET_LABELS[id]} visibility`}
               />
@@ -127,7 +115,7 @@ export function DashboardTab() {
       </div>
 
       {layout.order.map((id) => {
-        if (!layout.visibility[id]) {
+        if (layout.hidden.includes(id)) {
           return null;
         }
         const isDragging = draggingId === id;
@@ -154,8 +142,7 @@ export function DashboardTab() {
             onDrop={(event) => {
               event.preventDefault();
               const source =
-                draggingId ??
-                (event.dataTransfer.getData("text/plain") as DashboardWidgetId);
+                draggingId ?? (event.dataTransfer.getData("text/plain") as DashboardWidgetId);
               if (source && source !== id) {
                 reorder(source, id);
               }

@@ -30,6 +30,7 @@ export function ContractSwitcher() {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
+    return undefined;
   }, [open]);
 
   function handleSelect(id: string) {
@@ -105,7 +106,15 @@ export function ContractSwitcher() {
           }}
         />
         <span style={{ color: DIM, fontSize: 10, textTransform: "uppercase" }}>CONTRACT:</span>
-        <span style={{ color: "#fff", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span
+          style={{
+            color: "#fff",
+            maxWidth: 140,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           {displayName}
         </span>
         <span style={{ fontSize: 9, color: DIM, marginLeft: 2 }}>{open ? "▲" : "▼"}</span>
@@ -238,7 +247,9 @@ export function ContractSwitcher() {
                           padding: "2px 6px",
                           marginLeft: 6,
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = STATUS_META.FAILED.color)}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.color = STATUS_META.FAILED.color)
+                        }
                         onMouseLeave={(e) => (e.currentTarget.style.color = DIM)}
                       >
                         ✕

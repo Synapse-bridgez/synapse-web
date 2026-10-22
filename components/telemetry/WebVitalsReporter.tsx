@@ -1,6 +1,6 @@
 "use client";
 
-import { useReportWebVitals } from "next/navigation";
+import { useReportWebVitals } from "next/web-vitals";
 import { sendWebVitalsMetric } from "@/lib/telemetry/webVitals";
 
 export function WebVitalsReporter() {

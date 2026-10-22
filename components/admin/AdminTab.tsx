@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 /**
  * Returns true only when the given value is a safe, clickable http(s) URL.
@@ -7,12 +7,12 @@ import { useState } from 'react';
  * them as an `href`.
  */
 export function isSafeHttpUrl(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
+  if (typeof value !== "string") return false;
   const trimmed = value.trim();
-  if (trimmed === '') return false;
+  if (trimmed === "") return false;
   try {
     const parsed = new URL(trimmed);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch {
     return false;
   }
@@ -25,7 +25,7 @@ export function isSafeHttpUrl(value: unknown): value is string {
  */
 export function SafeUrlLink({ url, className }: { url: unknown; className?: string }) {
   if (!isSafeHttpUrl(url)) {
-    return <span className={className}>{typeof url === 'string' ? url : ''}</span>;
+    return <span className={className}>{typeof url === "string" ? url : ""}</span>;
   }
   return (
     <a href={url} className={className} target="_blank" rel="noopener noreferrer nofollow">
@@ -39,8 +39,8 @@ interface AdminTabProps {
   addressLabel?: string;
 }
 
-export default function AdminTab({ callbackUrl, addressLabel }: AdminTabProps) {
-  const [label, setLabel] = useState(addressLabel ?? '');
+export function AdminTab({ callbackUrl, addressLabel }: AdminTabProps) {
+  const [label, setLabel] = useState(addressLabel ?? "");
 
   return (
     <div className="admin-tab">
@@ -50,9 +50,10 @@ export default function AdminTab({ callbackUrl, addressLabel }: AdminTabProps) {
       </section>
 
       <section className="admin-tab__section">
-        <h3>Address Label</h3>
+        <h3 id="admin-address-label-heading">Address Label</h3>
         <input
           type="text"
+          aria-labelledby="admin-address-label-heading"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           className="admin-tab__address-label"
@@ -63,3 +64,5 @@ export default function AdminTab({ callbackUrl, addressLabel }: AdminTabProps) {
     </div>
   );
 }
+
+export default AdminTab;

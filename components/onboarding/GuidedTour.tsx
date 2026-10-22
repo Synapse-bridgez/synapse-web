@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { AMBER, BG0, BG1, BG2, BORDER, DIM, MONO, TEXT } from "@/lib/constants";
+import { AMBER, BG0, BG1, BG2, BORDER, DIM, MONO, NEUTRAL } from "@/lib/constants";
 import { WALLET_DOMAIN_BINDING_DOCS } from "@/lib/wallet/origin";
 
 /**
@@ -165,7 +165,7 @@ export function GuidedTour({ reopenSignal = 0, trigger = 0 }: GuidedTourProps) {
             left: rect.left - 6,
             width: rect.width + 12,
             height: rect.height + 12,
-            border: `2px solid ${TEXT}`,
+            border: `2px solid ${NEUTRAL}`,
             boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
             pointerEvents: "none",
           }}
@@ -193,14 +193,14 @@ export function GuidedTour({ reopenSignal = 0, trigger = 0 }: GuidedTourProps) {
         >
           STEP {step + 1} / {STEPS.length}
         </div>
-        <div style={{ fontSize: 14, color: TEXT, marginBottom: 8 }}>{current.title}</div>
+        <div style={{ fontSize: 14, color: NEUTRAL, marginBottom: 8 }}>{current.title}</div>
         <div style={{ fontSize: 12, color: DIM, lineHeight: 1.5, marginBottom: 16 }}>
           {current.body}
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
           <button
             type="button"
-            onClick={dismiss}
+            onClick={close}
             style={{
               background: "transparent",
               border: "none",
@@ -221,7 +221,7 @@ export function GuidedTour({ reopenSignal = 0, trigger = 0 }: GuidedTourProps) {
                 style={{
                   background: "transparent",
                   border: `1px solid ${BORDER}`,
-                  color: TEXT,
+                  color: NEUTRAL,
                   fontFamily: MONO,
                   fontSize: 11,
                   cursor: "pointer",
@@ -233,10 +233,10 @@ export function GuidedTour({ reopenSignal = 0, trigger = 0 }: GuidedTourProps) {
             )}
             <button
               type="button"
-              onClick={next}
+              onClick={advance}
               style={{
-                background: TEXT,
-                border: `1px solid ${TEXT}`,
+                background: NEUTRAL,
+                border: `1px solid ${NEUTRAL}`,
                 color: BG2,
                 fontFamily: MONO,
                 fontSize: 11,

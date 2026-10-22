@@ -1,16 +1,78 @@
-import { useCallback, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+"use client";
+import { useCallback, useMemo, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-export type BulkItemStatus =
-  | "pending"
-  | "signing"
-  | "success"
-  | "failed"
-  | "skipped";
+type ButtonVariant = "default" | "outline" | "ghost";
+
+function Button({
+  variant = "default",
+  size: _size,
+  className,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: "sm" }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "rounded-md px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50",
+        variant === "default" && "bg-[var(--accent)] text-black",
+        variant === "outline" && "border border-[var(--border)]",
+        variant === "ghost" && "bg-transparent",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+function Card({ className, children }: { className?: string; children: ReactNode }) {
+  return <section className={cn("rounded-lg border p-4", className)}>{children}</section>;
+}
+
+function CardHeader({ className, children }: { className?: string; children: ReactNode }) {
+  return <header className={cn("mb-3", className)}>{children}</header>;
+}
+
+function CardTitle({ className, children }: { className?: string; children: ReactNode }) {
+  return <h3 className={className}>{children}</h3>;
+}
+
+function CardContent({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={className}>{children}</div>;
+}
+
+function Badge({
+  variant,
+  children,
+}: {
+  variant: "default" | "secondary" | "destructive" | "outline";
+  children: ReactNode;
+}) {
+  return (
+    <span
+      data-variant={variant}
+      className="shrink-0 rounded border px-2 py-0.5 text-[10px] uppercase tracking-wide"
+    >
+      {children}
+    </span>
+  );
+}
+
+function Progress({ value }: { value: number }) {
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={value}
+      className="h-2 w-full overflow-hidden rounded bg-[var(--bg-2)]"
+    >
+      <div className="h-full bg-[var(--accent)]" style={{ width: `${value}%` }} />
+    </div>
+  );
+}
+
+export type BulkItemStatus = "pending" | "signing" | "success" | "failed" | "skipped";
 
 export interface BulkActionItem {
   id: string;
@@ -31,9 +93,7 @@ export interface BulkActionBarProps {
    * Must throw (or return { ok: false }) when the item is ineligible so the
    * bar can mark it as skipped instead of failed.
    */
-  onRunItem: (
-    id: string,
-  ) => Promise<{ ok: boolean; skipped?: boolean; message?: string }>;
+  onRunItem: (id: string) => Promise<{ ok: boolean; skipped?: boolean; message?: string }>;
   /** Called once the batch finishes (fully or partially). */
   onComplete?: (items: BulkActionItem[]) => void;
   /** Clears the current selection after a batch completes. */
@@ -49,16 +109,14 @@ const STATUS_LABEL: Record<BulkItemStatus, string> = {
   skipped: "Skipped",
 };
 
-const STATUS_VARIANT: Record<
-  BulkItemStatus,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  pending: "outline",
-  signing: "secondary",
-  success: "default",
-  failed: "destructive",
-  skipped: "secondary",
-};
+const STATUS_VARIANT: Record<BulkItemStatus, "default" | "secondary" | "destructive" | "outline"> =
+  {
+    pending: "outline",
+    signing: "secondary",
+    success: "default",
+    failed: "destructive",
+    skipped: "secondary",
+  };
 
 /**
  * BulkActionBar orchestrates a sequential sign-and-submit loop across a set of
@@ -90,6 +148,7 @@ export function BulkActionBar({
 
     setRunning(true);
     setCancelled(false);
+    cancelledRef.current = false;
 
     const initial: BulkActionItem[] = selectedIds.map((id) => ({
       id,
@@ -107,12 +166,12 @@ export function BulkActionBar({
       if (wasCancelled) break;
 
       working = working.map((item, idx) =>
-        idx === i ? { ...item, status: "signing", message: undefined } : item,
+        idx === i ? { ...item, status: "signing", message: undefined } : item
       );
       setItems(working);
 
       try {
-        const result = await onRunItem(working[i].id);
+        const result = await onRunItem(working[i]!.id);
         working = working.map((item, idx) => {
           if (idx !== i) return item;
           if (result.skipped) {
@@ -132,10 +191,9 @@ export function BulkActionBar({
           };
         });
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Unexpected error while signing.";
+        const message = err instanceof Error ? err.message : "Unexpected error while signing.";
         working = working.map((item, idx) =>
-          idx === i ? { ...item, status: "failed", message } : item,
+          idx === i ? { ...item, status: "failed", message } : item
         );
       }
 
@@ -161,7 +219,7 @@ export function BulkActionBar({
   }, [cancelledRef]);
 
   const completed = items.filter(
-    (item) => item.status === "success" || item.status === "failed" || item.status === "skipped",
+    (item) => item.status === "success" || item.status === "failed" || item.status === "skipped"
   ).length;
   const progress = items.length === 0 ? 0 : Math.round((completed / items.length) * 100);
   const hasPartial = cancelled && completed < items.length;
@@ -169,20 +227,14 @@ export function BulkActionBar({
   return (
     <Card className="border-dashed">
       <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
-        <CardTitle className="text-sm font-medium">
-          Bulk action: {actionLabel}
-        </CardTitle>
+        <CardTitle className="text-sm font-medium">Bulk action: {actionLabel}</CardTitle>
         <div className="flex items-center gap-2">
           {running ? (
             <Button variant="outline" size="sm" onClick={cancel}>
               Cancel
             </Button>
           ) : (
-            <Button
-              size="sm"
-              onClick={start}
-              disabled={disabled || selectedIds.length === 0}
-            >
+            <Button size="sm" onClick={start} disabled={disabled || selectedIds.length === 0}>
               Run on {selectedIds.length} selected
             </Button>
           )}
@@ -196,16 +248,16 @@ export function BulkActionBar({
       <CardContent className="space-y-3">
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Select one or more pending transactions to run this action. Each item
-            requires its own wallet signature.
+            Select one or more pending transactions to run this action. Each item requires its own
+            wallet signature.
           </p>
         ) : (
           <>
             <Progress value={progress} />
             {hasPartial && (
               <p className="text-sm text-amber-600">
-                Batch cancelled — {completed} of {items.length} processed. You can
-                re-run to resume the remaining items.
+                Batch cancelled — {completed} of {items.length} processed. You can re-run to resume
+                the remaining items.
               </p>
             )}
             <ul className="space-y-2">
@@ -220,18 +272,14 @@ export function BulkActionBar({
                       <p
                         className={cn(
                           "text-xs",
-                          item.status === "failed"
-                            ? "text-destructive"
-                            : "text-muted-foreground",
+                          item.status === "failed" ? "text-destructive" : "text-muted-foreground"
                         )}
                       >
                         {item.message}
                       </p>
                     )}
                   </div>
-                  <Badge variant={STATUS_VARIANT[item.status]}>
-                    {STATUS_LABEL[item.status]}
-                  </Badge>
+                  <Badge variant={STATUS_VARIANT[item.status]}>{STATUS_LABEL[item.status]}</Badge>
                 </li>
               ))}
             </ul>
