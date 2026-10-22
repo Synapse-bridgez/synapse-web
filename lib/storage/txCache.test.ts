@@ -28,3 +28,29 @@ describe("DEFAULT_RETENTION_CAP", () => {
     expect(all[all.length - 1].id).toBe("tx-3");
   });
 });
+
+describe("normalizeTx", () => {
+  it("keeps only persisted fields", () => {
+    const tx = buildMockTx({ id: "a", memo: "hi" });
+    const dirty = { ...tx, extra: "nope" } as typeof tx;
+    const result = normalizeTx(dirty);
+    expect(result).toEqual(tx);
+    expect(result).not.toHaveProperty("extra");
+  });
+
+  it("returns a new object and does not mutate input", () => {
+    const tx = buildMockTx();
+    const copy = { ...tx };
+    const result = normalizeTx(tx);
+    expect(result).not.toBe(tx);
+    expect(tx).toEqual(copy);
+  });
+
+  it("maps missing optional fields to undefined", () => {
+    const partial = { id: "x" } as unknown as ReturnType<typeof buildMockTx>;
+    const result = normalizeTx(partial);
+    expect(result.id).toBe("x");
+    expect(result.memo).toBeUndefined();
+    expect(result.amount).toBeUndefined();
+  });
+});
