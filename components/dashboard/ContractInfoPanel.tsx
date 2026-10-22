@@ -124,7 +124,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
                 style={{
                   padding: "6px 0 6px 8px",
                   fontSize: 10,
-                  color: FG_MUTED,
+                  color: "var(--fg)",
                   fontFamily: MONO,
                   textAlign: "right",
                   wordBreak: "break-all",
@@ -152,7 +152,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
               style={{
                 padding: "6px 0 6px 8px",
                 fontSize: 10,
-                color: lowBalance ? AMBER : FG_MUTED,
+                color: lowBalance ? "var(--accent)" : "var(--fg)",
                 fontFamily: MONO,
                 textAlign: "right",
                 wordBreak: "break-all",
@@ -185,7 +185,7 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
                   style={{
                     padding: "6px 0 6px 8px",
                     fontSize: 10,
-                    color: FG_MUTED,
+                    color: "var(--fg)",
                     fontFamily: MONO,
                     textAlign: "right",
                     wordBreak: "break-all",
@@ -203,10 +203,10 @@ export function ContractInfoPanel({ info }: { info: ContractInfo }) {
           style={{
             marginTop: 8,
             padding: "6px 8px",
-            border: `1px solid ${AMBER}`,
+            border: "1px solid var(--accent)",
             borderRadius: 4,
             fontSize: 10,
-            color: AMBER,
+            color: "var(--accent)",
             fontFamily: MONO,
           }}
         >

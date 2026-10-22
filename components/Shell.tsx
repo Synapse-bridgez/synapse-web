@@ -42,6 +42,7 @@ import { NoWalletGuidance } from "@/components/wallet/NoWalletGuidance";
 import { Profiled, ProfilerOverlay } from "@/lib/dev-tools/ProfilerOverlay";
 import { resolveActiveTab, visibleTabs, type FlagKey } from "@/lib/flags/definitions";
 import { useFlag, useFlags } from "@/lib/flags/FlagProvider";
+import { ShellTabButton } from "@/components/shell/ShellTabButton";
 
 const TabLoadingFallback = () => (
   <div
@@ -389,6 +390,76 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
                 border: `1px solid ${BORDER}`,
                 color: DIM,
                 fontFamily: MONO,
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                padding: "4px 6px",
+                cursor: "pointer",
+              }}
+            >
+              {LOCALES.map((l) => (
+                <option key={l} value={l} style={{ background: BG1, color: NEUTRAL }}>
+                  {LOCALE_LABELS[l]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: connected ? STATUS_META.COMPLETED.color : "var(--fg-muted)",
+              display: "inline-block",
+              boxShadow: connected ? `0 0 6px 2px ${STATUS_META.COMPLETED.glow}` : "none",
+              transition: "all 0.3s",
+            }}
+          />
+          {connected && <SessionAuditPanel />}
+          <NotificationCenter />
+          <button
+            data-tour="wallet"
+            onClick={() => (connected ? disconnect() : connect())}
+            disabled={connecting}
+            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            style={{
+              padding: "7px 12px",
+              background: "transparent",
+              border: `1px solid ${BORDER}`,
+              color: DIM,
+              fontFamily: MONO,
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: "pointer",
+              letterSpacing: "0.06em",
+              transition: "all 0.2s",
+              opacity: connecting ? 0.6 : 1,
+              flex: isMobile ? 1 : undefined,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = AMBER;
+              e.currentTarget.style.borderColor = AMBER;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = DIM;
+              e.currentTarget.style.borderColor = BORDER;
+            }}
+          >
+            {connecting ? t("connecting") : connected ? shortId(address) : t("connectWallet")}
+          </button>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => (connected ? (canSwitch ? setSwitcherOpen((o) => !o) : disconnect()) : connect())}
+              disabled={connecting}
+              aria-haspopup={canSwitch ? "listbox" : undefined}
+              aria-expanded={canSwitch ? switcherOpen : undefined}
+              style={{
+                padding: "7px 18px",
+                background: connected ? "transparent" : "rgba(245,166,35,0.08)",
+                border: `1px solid ${connected ? BORDER : AMBER}`,
+                color: connected ? DIM : AMBER,
+                fontFamily: MONO,
                 fontSize: 11,
                 fontWeight: 600,
                 cursor: "pointer",
@@ -444,6 +515,58 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
                 <div
                   role="listbox"
                   aria-label="Switch active account"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    right: 0,
+                    minWidth: 220,
+                    background: BG1,
+                    border: `1px solid ${BORDER}`,
+                    zIndex: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  {accounts.map((acct) => {
+                    const active = acct === address;
+                    return (
+                      <button
+                        key={acct}
+                        role="option"
+                        aria-selected={active}
+                        onClick={() => {
+                          if (!active) switchAccount(acct);
+                          setSwitcherOpen(false);
+                        }}
+                        style={{
+                          padding: "9px 14px",
+                          background: active ? "rgba(245,166,35,0.08)" : "transparent",
+                          border: "none",
+                          borderBottom: `1px solid ${BORDER}`,
+                          color: active ? AMBER : DIM,
+                          fontFamily: MONO,
+                          fontSize: 11,
+                          textAlign: "left",
+                          cursor: "pointer",
+                          letterSpacing: "0.04em",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!active) e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        {active ? "● " : "○ "}
+                        {shortId(acct)}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => {
+                      setSwitcherOpen(false);
+                      disconnect();
+                    }}
                   style={{
                     position: "absolute",
                     top: "calc(100% + 6px)",
@@ -594,6 +717,72 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
             </button>
           ))}
         </nav>
+
+        {/* ── No Wallet Guidance Modal ── */}
+        {showGuidance && (
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Close wallet guidance"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setShowGuidance(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setShowGuidance(false);
+              }
+            }}
+          >
+            <div>
+              <NoWalletGuidance
+                onClose={() => setShowGuidance(false)}
+                onProceedAnyway={() => {
+                  setShowGuidance(false);
+                  connect();
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Body ── */}
+        <main
+          className="shell-main"
+          id={`tabpanel-${tab}`}
+
+              }}
+              onMouseEnter={(e) => {
+                if (tab !== tabKey) e.currentTarget.style.color = AMBER;
+              }}
+              onMouseLeave={(e) => {
+                if (tab !== tabKey) e.currentTarget.style.color = DIM;
+              }}
+            >
+              {tabKey.toUpperCase()}
+            </button>
+          ))}
+        </nav>
+
+      {/* ── Tab Bar ── */}
+      <nav ref={navRef} className="shell-nav" role="tablist" aria-label={t("sections")}
+        data-tour="nav"
+        style={{
+          overflowX: isMobile ? "auto" : undefined,
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        {TABS.map((tabKey, index) => (
+          <ShellTabButton
+            key={tabKey}
+            tab={tabKey}
+            active={tab === tabKey}
+            mobile={isMobile}
+            onSelect={() => handleTabSelect(tabKey)}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
+          />
+        ))}
+      </nav>
 
         {/* ── Body ── */}
         <main
