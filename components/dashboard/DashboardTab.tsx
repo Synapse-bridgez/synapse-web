@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { StatCards } from "./StatCards";
 import { Pipeline } from "./Pipeline";
 import { ContractInfoPanel } from "./ContractInfoPanel";
-import { HealthWidget } from "./HealthWidget";
 import { RecentTxTable } from "./RecentTxTable";
 import { TxDetailModal } from "@/components/transactions/TxDetailModal";
 import { useLiveTransactions } from "@/lib/soroban/useLiveTransactions";
@@ -20,13 +19,24 @@ import {
   type DashboardWidgetId,
 } from "@/lib/dashboard/layoutPreferences";
 
-export function DashboardTab() {
+interface DashboardTabProps {
+  loading?: boolean;
+  error?: string;
+}
+
+export function DashboardTab({ loading = false, error }: DashboardTabProps = {}) {
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [layout, setLayout] = useState<DashboardLayout>(() => loadDashboardLayout());
   const [draggingId, setDraggingId] = useState<DashboardWidgetId | null>(null);
   const [dragOverId, setDragOverId] = useState<DashboardWidgetId | null>(null);
   const txs = useLiveTransactions();
   const contractInfo = useLiveContractInfo();
+
+  if (loading) return <p role="status">Loading dashboard…</p>;
+  if (error) return <p role="alert">Unable to load dashboard: {error}</p>;
+  if (txs.length === 0 && !contractInfo) {
+    return <p>No dashboard activity is available yet.</p>;
+  }
 
   useEffect(() => {
     saveDashboardLayout(layout);
@@ -157,7 +167,7 @@ export function DashboardTab() {
             }}
             style={{
               opacity: isDragging ? 0.5 : 1,
-              outline: isDragOver ? `2px dashed ${AMBER}` : undefined,
+              outline: isDragOver ? "2px dashed var(--amber)" : undefined,
               borderRadius: 8,
             }}
             aria-label={`${DASHBOARD_WIDGET_LABELS[id]} widget`}

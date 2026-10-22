@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AMBER, BG1, BORDER, DIM, MONO } from "@/lib/constants";
+import { ACCENT_SOFT, AMBER, BG1, BORDER, DIM, FG_MUTED, MONO, NEUTRAL } from "@/lib/constants";
 
 export type Command = {
   id: string;
@@ -69,21 +69,28 @@ export function CommandPalette({ open, onClose, commands }: Props) {
     return scored.map((s) => s.cmd);
   }, [commands, query]);
 
-  // Reset state whenever the palette is (re)opened.
-  useEffect(() => {
+  // Reset state whenever the palette is (re)opened. Adjusting state during
+  // render (rather than in an effect) avoids an extra render pass and the
+  // `react-hooks/set-state-in-effect` error.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setQuery("");
       setActiveIndex(0);
-      // Focus after paint so the input exists in the DOM.
-      const id = requestAnimationFrame(() => inputRef.current?.focus());
-      return () => cancelAnimationFrame(id);
     }
+  }
+
+  // Focus after paint so the input exists in the DOM.
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
   }, [open]);
 
-  // Keep the active index within bounds as results change.
-  useEffect(() => {
-    setActiveIndex((i) => (i >= results.length ? 0 : i));
-  }, [results.length]);
+  // Keep the active option within bounds as results change without writing
+  // state from an effect; the derived index is what every render uses.
+  const active = results.length ? Math.min(activeIndex, results.length - 1) : 0;
 
   const runCommand = useCallback(
     (cmd: Command | undefined) => {
@@ -91,7 +98,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
       onClose();
       cmd.action();
     },
-    [onClose],
+    [onClose]
   );
 
   const onKeyDown = useCallback(
@@ -101,12 +108,10 @@ export function CommandPalette({ open, onClose, commands }: Props) {
         setActiveIndex((i) => (results.length ? (i + 1) % results.length : 0));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIndex((i) =>
-          results.length ? (i - 1 + results.length) % results.length : 0,
-        );
+        setActiveIndex((i) => (results.length ? (i - 1 + results.length) % results.length : 0));
       } else if (e.key === "Enter") {
         e.preventDefault();
-        runCommand(results[activeIndex]);
+        runCommand(results[active]);
       } else if (e.key === "Escape") {
         e.preventDefault();
         onClose();
@@ -116,15 +121,15 @@ export function CommandPalette({ open, onClose, commands }: Props) {
         inputRef.current?.focus();
       }
     },
-    [results, activeIndex, runCommand, onClose],
+    [results, active, runCommand, onClose]
   );
 
   // Scroll the active option into view as the user navigates.
   useEffect(() => {
     if (!open) return;
-    const el = listRef.current?.children[activeIndex] as HTMLElement | undefined;
+    const el = listRef.current?.children[active] as HTMLElement | undefined;
     el?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex, open]);
+  }, [active, open]);
 
   if (!open) return null;
 
@@ -168,9 +173,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
           placeholder="Type a command or search…"
           aria-label="Search commands"
           aria-controls="command-palette-list"
-          aria-activedescendant={
-            results[activeIndex] ? `cmd-${results[activeIndex].id}` : undefined
-          }
+          aria-activedescendant={results[active] ? `cmd-${results[active].id}` : undefined}
           style={{
             width: "100%",
             boxSizing: "border-box",
@@ -178,7 +181,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
             background: "transparent",
             border: "none",
             borderBottom: `1px solid ${BORDER}`,
-            color: "#fff",
+            color: "var(--fg)",
             fontFamily: MONO,
             fontSize: 13,
             outline: "none",
@@ -214,14 +217,14 @@ export function CommandPalette({ open, onClose, commands }: Props) {
               key={cmd.id}
               id={`cmd-${cmd.id}`}
               role="option"
-              aria-selected={i === activeIndex}
+              aria-selected={i === active}
               onMouseEnter={() => setActiveIndex(i)}
               onClick={() => runCommand(cmd)}
               style={{
                 padding: "10px 14px",
                 fontSize: 12,
                 cursor: "pointer",
-                color: i === activeIndex ? "#fff" : "#bbb",
+                color: i === activeIndex ? "var(--fg)" : "var(--dim)",
                 background: i === activeIndex ? "rgba(245,166,35,0.14)" : "transparent",
                 borderLeft: i === activeIndex ? `2px solid ${AMBER}` : "2px solid transparent",
                 letterSpacing: "0.04em",

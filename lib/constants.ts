@@ -31,18 +31,36 @@ export const STATUS_META: Record<TxStatus, StatusMeta> = {
   },
 };
 
-export const AMBER = "var(--accent)";
+// These names must match the custom properties declared in app/globals.css —
+// the theme toggle swaps those, so a component that imports these tokens
+// follows the selected theme automatically.
+export const AMBER = "var(--amber)";
 export const NEUTRAL = "var(--fg)";
 /** Secondary body text, e.g. table values. */
 export const FG_MUTED = "var(--fg-muted)";
 /** Text drawn on top of a STATUS_META[*].color fill. */
 export const ON_STATUS = "var(--on-status)";
+export const ON_ACCENT = "var(--on-accent)";
 export const BG0 = "var(--bg-0)";
 export const BG1 = "var(--bg-1)";
 export const BG2 = "var(--bg-2)";
 export const BG3 = "var(--bg-3)";
 export const BORDER = "var(--border)";
 export const DIM = "var(--dim)";
+export const DANGER = "var(--danger)";
+export const DANGER_BG = "var(--danger-bg)";
+export const DANGER_BORDER = "var(--danger-border)";
+export const ACCENT_WEAK = "var(--accent-weak)";
+export const ACCENT_SOFT = "var(--accent-soft)";
+export const ACCENT_BORDER = "var(--accent-border)";
+export const ACCENT_FOCUS = "var(--accent-focus)";
+export const AMBER_GLOW = "var(--amber-glow)";
+export const HOVER = "var(--hover)";
+export const TRACK = "var(--track)";
+export const ACCESS_ONE_TIME = "var(--access-one-time)";
+export const ACCESS_RELAY = "var(--access-relay)";
+export const ACCESS_ADMIN = "var(--access-admin)";
+export const ACCESS_PUBLIC = "var(--access-public)";
 
 /**
  * The app's monospace stack.

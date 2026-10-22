@@ -1,6 +1,6 @@
 "use client";
 import React, { useId } from "react";
-import { BG3, BORDER, DIM, MONO } from "@/lib/constants";
+import { ACCENT_FOCUS, AMBER, BG3, BORDER, DANGER, DIM, MONO, NEUTRAL } from "@/lib/constants";
 
 interface FieldProps {
   label: string;
@@ -12,7 +12,15 @@ interface FieldProps {
   error?: string;
 }
 
-export function Field({ label, value, onChange, placeholder, type = "text", id: customId, error }: FieldProps) {
+export function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  id: customId,
+  error,
+}: FieldProps) {
   const generatedId = useId();
   const inputId = customId || generatedId;
   const errorId = `${inputId}-error`;
@@ -43,8 +51,8 @@ export function Field({ label, value, onChange, placeholder, type = "text", id: 
         style={{
           width: "100%",
           background: BG3,
-          border: `1px solid ${error ? "#e06c75" : BORDER}`,
-          color: "#eee",
+          border: `1px solid ${error ? DANGER : BORDER}`,
+          color: NEUTRAL,
           fontFamily: MONO,
           fontSize: 11,
           padding: "7px 10px",
@@ -53,11 +61,11 @@ export function Field({ label, value, onChange, placeholder, type = "text", id: 
           boxSizing: "border-box",
         }}
         onFocus={(e) => {
-          e.target.style.borderColor = "rgba(245,166,35,0.75)";
-          e.target.style.boxShadow = "0 0 0 1px rgba(245,166,35,0.4)";
+          e.target.style.borderColor = AMBER;
+          e.target.style.boxShadow = `0 0 0 1px ${ACCENT_FOCUS}`;
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = error ? "#e06c75" : BORDER;
+          e.target.style.borderColor = error ? DANGER : BORDER;
           e.target.style.boxShadow = "none";
         }}
       />
@@ -67,7 +75,7 @@ export function Field({ label, value, onChange, placeholder, type = "text", id: 
           role="alert"
           style={{
             fontSize: 9,
-            color: "#e06c75",
+            color: DANGER,
             fontFamily: MONO,
             marginTop: 4,
           }}
