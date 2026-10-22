@@ -118,3 +118,85 @@ describe("buildMockEvent", () => {
     expect(evt.txId).toBeUndefined();
   });
 });
+
+describe("withMockSorobanProvider", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("returns a disconnected testnet provider by default", () => {
+    const p = withMockSorobanProvider();
+    expect(p.rpcUrl).toBe("https://soroban-testnet.stellar.org");
+    expect(p.networkPassphrase).toBe("Test SDF Network ; September 2015");
+    expect(p.connected).toBe(false);
+    expect(p.publicKey).toBeNull();
+  });
+
+  it("default request resolves to an empty object", async () => {
+    const p = withMockSorobanProvider();
+    await expect(p.request("getHealth")).resolves.toEqual({});
+  });
+
+  it("applies overrides on top of defaults", () => {
+    const p = withMockSorobanProvider({
+      rpcUrl: "https://rpc.test",
+      connected: true,
+      publicKey: "GABC",
+    });
+    expect(p).toMatchObject({
+      rpcUrl: "https://rpc.test",
+      connected: true,
+      publicKey: "GABC",
+      networkPassphrase: "Test SDF Network ; September 2015",
+    });
+  });
+
+  it("accepts a custom request handler and passes through arguments", async () => {
+    const request = vi.fn().mockResolvedValue({ status: "healthy" });
+    const p = withMockSorobanProvider({ request });
+    await expect(p.request("getHealth", { a: 1 })).resolves.toEqual({
+      status: "healthy",
+    });
+    expect(request).toHaveBeenCalledWith("getHealth", { a: 1 });
+  });
+
+  it("works with fake timers for delayed network responses", async () => {
+    vi.useFakeTimers();
+    const p = withMockSorobanProvider({
+      request: () =>
+        new Promise((resolve) => setTimeout(() => resolve({ ok: true }), 1000)),
+    });
+    const pending = p.request("getLatestLedger");
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(pending).resolves.toEqual({ ok: true });
+  });
+
+  it("handles an empty overrides object and returns fresh objects", () => {
+    const a = withMockSorobanProvider({});
+    const b = withMockSorobanProvider();
+    expect(a).not.toBe(b);
+    expect(a.connected).toBe(false);
+  });
+
+  it("propagates errors from a rejecting request (network failure)", async () => {
+    const p = withMockSorobanProvider({
+      request: vi.fn().mockRejectedValue(new Error("network down")),
+    });
+    await expect(p.request("getHealth")).rejects.toThrow("network down");
+  });
+
+  it("propagates errors from a request that times out", async () => {
+    vi.useFakeTimers();
+    const p = withMockSorobanProvider({
+      request: () =>
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 5000)
+        ),
+    });
+    const pending = p.request("sendTransaction");
+    const assertion = expect(pending).rejects.toThrow("timeout");
+    await vi.advanceTimersByTimeAsync(5000);
+    await assertion;
+  });
+});
