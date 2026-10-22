@@ -1,16 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
+"use client";
+import { useCallback, useRef, useState } from "react";
 
-export type BulkItemStatus =
-  | "pending"
-  | "signing"
-  | "success"
-  | "failed"
-  | "skipped";
+export type BulkItemStatus = "pending" | "signing" | "success" | "failed" | "skipped";
 
 export interface BulkActionItem {
   id: string;
@@ -31,9 +22,7 @@ export interface BulkActionBarProps {
    * Must throw (or return { ok: false }) when the item is ineligible so the
    * bar can mark it as skipped instead of failed.
    */
-  onRunItem: (
-    id: string,
-  ) => Promise<{ ok: boolean; skipped?: boolean; message?: string }>;
+  onRunItem: (id: string) => Promise<{ ok: boolean; skipped?: boolean; message?: string }>;
   /** Called once the batch finishes (fully or partially). */
   onComplete?: (items: BulkActionItem[]) => void;
   /** Clears the current selection after a batch completes. */
@@ -47,17 +36,6 @@ const STATUS_LABEL: Record<BulkItemStatus, string> = {
   success: "Success",
   failed: "Failed",
   skipped: "Skipped",
-};
-
-const STATUS_VARIANT: Record<
-  BulkItemStatus,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  pending: "outline",
-  signing: "secondary",
-  success: "default",
-  failed: "destructive",
-  skipped: "secondary",
 };
 
 /**
@@ -79,10 +57,13 @@ export function BulkActionBar({
   const [items, setItems] = useState<BulkActionItem[]>([]);
   const [running, setRunning] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+  // Read by the async loop so it can observe cancellation between items.
+  const cancelledRef = useRef(false);
 
   const reset = useCallback(() => {
     setItems([]);
     setCancelled(false);
+    cancelledRef.current = false;
   }, []);
 
   const start = useCallback(async () => {
@@ -90,6 +71,7 @@ export function BulkActionBar({
 
     setRunning(true);
     setCancelled(false);
+    cancelledRef.current = false;
 
     const initial: BulkActionItem[] = selectedIds.map((id) => ({
       id,
@@ -107,7 +89,7 @@ export function BulkActionBar({
       if (wasCancelled) break;
 
       working = working.map((item, idx) =>
-        idx === i ? { ...item, status: "signing", message: undefined } : item,
+        idx === i ? { ...item, status: "signing", message: undefined } : item
       );
       setItems(working);
 
@@ -132,10 +114,9 @@ export function BulkActionBar({
           };
         });
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Unexpected error while signing.";
+        const message = err instanceof Error ? err.message : "Unexpected error while signing.";
         working = working.map((item, idx) =>
-          idx === i ? { ...item, status: "failed", message } : item,
+          idx === i ? { ...item, status: "failed", message } : item
         );
       }
 
@@ -152,93 +133,87 @@ export function BulkActionBar({
     onComplete?.(working);
   }, [getLabel, onComplete, onRunItem, running, selectedIds]);
 
-  // Keep a ref in sync so the async loop can observe cancellation without
-  // re-creating the callback on every render.
-  const cancelledRef = useMemo(() => ({ current: false }), []);
   const cancel = useCallback(() => {
     cancelledRef.current = true;
     setCancelled(true);
-  }, [cancelledRef]);
+  }, []);
 
   const completed = items.filter(
-    (item) => item.status === "success" || item.status === "failed" || item.status === "skipped",
+    (item) => item.status === "success" || item.status === "failed" || item.status === "skipped"
   ).length;
   const progress = items.length === 0 ? 0 : Math.round((completed / items.length) * 100);
   const hasPartial = cancelled && completed < items.length;
 
   return (
-    <Card className="border-dashed">
-      <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
-        <CardTitle className="text-sm font-medium">
-          Bulk action: {actionLabel}
-        </CardTitle>
+    <section className="rounded-md border border-dashed" aria-label={`Bulk action: ${actionLabel}`}>
+      <header className="flex flex-row items-center justify-between gap-4 p-4">
+        <h3 className="text-sm font-medium">Bulk action: {actionLabel}</h3>
         <div className="flex items-center gap-2">
           {running ? (
-            <Button variant="outline" size="sm" onClick={cancel}>
+            <button type="button" onClick={cancel}>
               Cancel
-            </Button>
+            </button>
           ) : (
-            <Button
-              size="sm"
-              onClick={start}
-              disabled={disabled || selectedIds.length === 0}
-            >
+            <button type="button" onClick={start} disabled={disabled || selectedIds.length === 0}>
               Run on {selectedIds.length} selected
-            </Button>
+            </button>
           )}
           {!running && items.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={reset}>
+            <button type="button" onClick={reset}>
               Clear
-            </Button>
+            </button>
           )}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
+      </header>
+      <div className="space-y-3 px-4 pb-4">
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Select one or more pending transactions to run this action. Each item
-            requires its own wallet signature.
+            Select one or more pending transactions to run this action. Each item requires its own
+            wallet signature.
           </p>
         ) : (
           <>
-            <Progress value={progress} />
+            <progress
+              className="w-full"
+              max={100}
+              value={progress}
+              aria-label={`${completed} of ${items.length} processed`}
+            />
             {hasPartial && (
               <p className="text-sm text-amber-600">
-                Batch cancelled — {completed} of {items.length} processed. You can
-                re-run to resume the remaining items.
+                Batch cancelled — {completed} of {items.length} processed. You can re-run to resume
+                the remaining items.
               </p>
             )}
             <ul className="space-y-2">
               {items.map((item) => (
                 <li
                   key={item.id}
+                  data-status={item.status}
                   className="flex items-start justify-between gap-3 rounded-md border p-2"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{item.label}</p>
                     {item.message && (
                       <p
-                        className={cn(
-                          "text-xs",
+                        className={
                           item.status === "failed"
-                            ? "text-destructive"
-                            : "text-muted-foreground",
-                        )}
+                            ? "text-xs text-destructive"
+                            : "text-xs text-muted-foreground"
+                        }
                       >
                         {item.message}
                       </p>
                     )}
                   </div>
-                  <Badge variant={STATUS_VARIANT[item.status]}>
-                    {STATUS_LABEL[item.status]}
-                  </Badge>
+                  <span className="text-xs">{STATUS_LABEL[item.status]}</span>
                 </li>
               ))}
             </ul>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
