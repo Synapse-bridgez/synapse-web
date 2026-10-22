@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { AMBER, BG1, BG2, BORDER, DIM, MONO, NEUTRAL, ON_ACCENT } from "@/lib/constants";
+import {
+  ACCENT_WEAK,
+  AMBER,
+  BG1,
+  BG2,
+  BORDER,
+  DIM,
+  MONO,
+  NEUTRAL,
+  ON_ACCENT,
+} from "@/lib/constants";
 
 export default function GlobalError({
   error,
@@ -32,7 +42,7 @@ export default function GlobalError({
           border: `1px solid ${BORDER}`,
           borderRadius: 12,
           background: BG1,
-          boxShadow: `0 0 0 1px rgba(245,166,35,0.05), 0 18px 80px rgba(0,0,0,0.45)`,
+          boxShadow: `0 0 0 1px ${ACCENT_WEAK}, 0 18px 80px rgba(0,0,0,0.45)`,
         }}
       >
         <div
@@ -42,7 +52,7 @@ export default function GlobalError({
             gap: 8,
             padding: "5px 10px",
             border: `1px solid ${BORDER}`,
-            background: "rgba(245,166,35,0.08)",
+            background: ACCENT_WEAK,
             color: AMBER,
             fontSize: 11,
             letterSpacing: "0.12em",
