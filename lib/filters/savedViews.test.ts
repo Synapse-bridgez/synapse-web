@@ -1,8 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   SAVED_VIEW_FILTER_FIELDS,
   sanitizeFilters,
   migrateSavedViews,
+  getSavedViews,
 } from "./savedViews";
 
 describe("SAVED_VIEW_FILTER_FIELDS", () => {
@@ -107,5 +108,53 @@ describe("migrateSavedViews", () => {
   it("returns an empty array when views is not an array", () => {
     expect(migrateSavedViews({ views: "nope" })).toEqual([]);
     expect(migrateSavedViews({})).toEqual([]);
+  });
+});
+
+describe("getSavedViews", () => {
+  const KEY = "synapse-transactions-saved-views";
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns stored views", () => {
+    const views = [{ id: "a", name: "A", filters: { status: "ok" } }];
+    localStorage.setItem(KEY, JSON.stringify({ version: 1, views }));
+    expect(getSavedViews()).toEqual(views);
+  });
+
+  it("returns an empty array when nothing is stored", () => {
+    expect(getSavedViews()).toEqual([]);
+  });
+
+  it("returns an empty array for invalid JSON", () => {
+    localStorage.setItem(KEY, "{not json");
+    expect(getSavedViews()).toEqual([]);
+  });
+
+  it("drops unknown filter fields from stored views", () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ version: 0, views: [{ id: "a", name: "A", filters: { old: "x" } }] }),
+    );
+    expect(getSavedViews()).toEqual([{ id: "a", name: "A", filters: {} }]);
+  });
+
+  it("returns an empty array when localStorage throws", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    expect(getSavedViews()).toEqual([]);
+  });
+
+  it("returns an empty array when window is undefined (SSR)", () => {
+    vi.stubGlobal("window", undefined);
+    expect(getSavedViews()).toEqual([]);
   });
 });
