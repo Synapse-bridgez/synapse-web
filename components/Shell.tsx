@@ -14,7 +14,7 @@ import { GuidedTour, useGuidedTour } from "@/components/onboarding/GuidedTour";
 import { CommandPalette, type Command } from "./command-palette/CommandPalette";
 import { SessionAuditPanel } from "@/components/wallet/SessionAuditPanel";
 import { ContractSwitcher } from "@/components/ui/ContractSwitcher";
-import { AMBER, BG1, BORDER, DIM, DOCS_SITE_URL, MONO, STATUS_META } from "@/lib/constants";
+import { AMBER, BG1, BORDER, DIM, DOCS_SITE_URL, MONO, NEUTRAL, STATUS_META } from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useToast } from "@/components/ui/Toast";
@@ -29,6 +29,7 @@ import { NoWalletGuidance } from "@/components/wallet/NoWalletGuidance";
 import { Profiled, ProfilerOverlay } from "@/lib/dev-tools/ProfilerOverlay";
 import { resolveActiveTab, visibleTabs, type FlagKey } from "@/lib/flags/definitions";
 import { useFlag, useFlags } from "@/lib/flags/FlagProvider";
+import { ShellTabButton } from "@/components/shell/ShellTabButton";
 
 const TabLoadingFallback = () => (
   <div
@@ -342,7 +343,7 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
               }}
             >
               {LOCALES.map((l) => (
-                <option key={l} value={l} style={{ background: BG1, color: "#fff" }}>
+                <option key={l} value={l} style={{ background: BG1, color: NEUTRAL }}>
                   {LOCALE_LABELS[l]}
                 </option>
               ))}
@@ -413,7 +414,7 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
                 padding: "7px 18px",
                 background: connected ? "transparent" : "rgba(245,166,35,0.08)",
                 border: `1px solid ${connected ? BORDER : AMBER}`,
-                color: connected ? "#aaa" : AMBER,
+                color: connected ? DIM : AMBER,
                 fontFamily: MONO,
                 fontSize: 11,
                 fontWeight: 600,
@@ -465,7 +466,7 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
                         background: active ? "rgba(245,166,35,0.08)" : "transparent",
                         border: "none",
                         borderBottom: `1px solid ${BORDER}`,
-                        color: active ? AMBER : "#aaa",
+                        color: active ? AMBER : DIM,
                         fontFamily: MONO,
                         fontSize: 11,
                         textAlign: "left",
@@ -512,7 +513,9 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
       {/* ── No Wallet Guidance Modal ── */}
       {showGuidance && (
         <div
-          role="presentation"
+          role="button"
+          tabIndex={0}
+          aria-label="Close wallet guidance"
           style={{
             position: "fixed",
             inset: 0,
@@ -523,9 +526,17 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
             justifyContent: "center",
             padding: 16,
           }}
-          onClick={() => setShowGuidance(false)}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setShowGuidance(false);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setShowGuidance(false);
+            }
+          }}
         >
-          <div onClick={(e) => e.stopPropagation()}>
+          <div>
             <NoWalletGuidance
               onClose={() => setShowGuidance(false)}
               onProceedAnyway={() => {
@@ -545,42 +556,15 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {TABS.map((t, idx) => (
-          <button
-            key={t}
-            id={`tab-${t}`}
-            role="tab"
-            aria-selected={tab === t}
-            aria-controls={`tabpanel-${t}`}
-            tabIndex={tab === t ? 0 : -1}
-            data-tour={t}
-            onClick={() => handleTabSelect(t)}
-            onKeyDown={(e) => handleTabKeyDown(e, idx)}
-            style={{
-              padding: isMobile ? "12px 16px" : "12px 22px",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: MONO,
-              fontSize: 11,
-              letterSpacing: "0.1em",
-              color: tab === t ? "var(--fg-strong)" : DIM,
-              borderBottom: tab === t ? `2px solid ${AMBER}` : "2px solid transparent",
-              marginBottom: -1,
-              transition: "color 0.15s",
-              flex: isMobile ? "1 0 auto" : undefined,
-              whiteSpace: "nowrap",
-              outlineOffset: "-2px",
-            }}
-            onMouseEnter={(e) => {
-              if (tab !== tabKey) e.currentTarget.style.color = "var(--fg-hover)";
-            }}
-            onMouseLeave={(e) => {
-              if (tab !== tabKey) e.currentTarget.style.color = DIM;
-            }}
-          >
-              if (tab !== tabKey) e.currentTarget.style.color = "var(--fg-hover)";
-          </button>
+        {TABS.map((tabKey, index) => (
+          <ShellTabButton
+            key={tabKey}
+            tab={tabKey}
+            active={tab === tabKey}
+            mobile={isMobile}
+            onSelect={() => handleTabSelect(tabKey)}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
+          />
         ))}
       </nav>
 

@@ -1,8 +1,12 @@
 "use client";
 import { useState } from "react";
 import { ABI_ENDPOINTS, AMBER, BORDER, DIM, MONO } from "@/lib/constants";
-import { encodeArg } from "@/lib/soroban/args";
-import { simulateCall, submitCall } from "@/lib/soroban/contract";
+import { EndpointPlayground } from "@/components/docs/EndpointPlayground";
+
+interface DocsTabProps {
+  loading?: boolean;
+  error?: string;
+}
 
 const ACCESS_COLORS: Record<string, string> = {
   "one-time": "#A78BFA",
@@ -222,7 +226,10 @@ function PlaygroundForm({ ep }: { ep: (typeof ABI_ENDPOINTS)[number] }) {
   );
 }
 
-export function DocsTab() {
+export function DocsTab({ loading = false, error }: DocsTabProps = {}) {
+  if (loading) return <p role="status">Loading contract documentation…</p>;
+  if (error) return <p role="alert">Unable to load contract documentation: {error}</p>;
+  if (ABI_ENDPOINTS.length === 0) return <p>No contract endpoints are documented yet.</p>;
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -357,7 +364,7 @@ export function DocsTab() {
             >
               {open === ep.name ? "CLOSE PLAYGROUND" : "TRY IT"}
             </button>
-            {open === ep.name && <PlaygroundForm ep={ep} />}
+            {open === ep.name && <EndpointPlayground endpoint={ep} />}
           </div>
           <span
             style={{

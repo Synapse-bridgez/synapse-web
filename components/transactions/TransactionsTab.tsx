@@ -23,7 +23,12 @@ import { appConfig } from "@/lib/config";
 const RPC_URL = appConfig.rpcUrl;
 const CONTRACT_ID = appConfig.contractId;
 
-export function TransactionsTab() {
+interface TransactionsTabProps {
+  loading?: boolean;
+  error?: string;
+}
+
+export function TransactionsTab({ loading = false, error }: TransactionsTabProps = {}) {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [cb, setCb] = useState({ tx_id: "", callback_url: "", secret: "" });
@@ -32,6 +37,9 @@ export function TransactionsTab() {
   const txs = useLiveTransactions();
   const { address, connect } = useWallet();
   const { toast } = useToast();
+
+  if (loading) return <p role="status">Loading transactions…</p>;
+  if (error) return <p role="alert">Unable to load transactions: {error}</p>;
 
   async function runLookup() {
     if (!filter.trim()) {
@@ -114,6 +122,7 @@ export function TransactionsTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="animate-fade-in">
       {selected && <TxDetailModal tx={selected} onClose={() => setSelected(null)} />}
+      {txs.length === 0 && <p>No transactions are available yet.</p>}
 
       {/* Lookup */}
       <Panel title="TRANSACTION LOOKUP">

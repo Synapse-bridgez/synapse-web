@@ -1,22 +1,8 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import { useNotifications } from "@/lib/notifications/NotificationStore";
-import { STATUS_META } from "@/lib/constants";
 import { AMBER, BG2, BG3, BORDER, DIM, MONO } from "@/lib/constants";
-import type { TxStatus } from "@/lib/types";
-
-function timeAgo(ts: number): string {
-  const diff = Math.floor((Date.now() - ts) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  return `${Math.floor(diff / 3600)}h ago`;
-}
-
-function statusColor(status?: string): string {
-  if (!status) return AMBER;
-  const up = status.toUpperCase() as TxStatus;
-  return STATUS_META[up]?.color ?? AMBER;
-}
+import { NotificationItem } from "@/components/notifications/NotificationItem";
 
 export function NotificationCenter() {
   const { notifications, unreadCount, markAllRead, dismiss, clearAll } = useNotifications();
@@ -199,67 +185,7 @@ export function NotificationCenter() {
                 No notifications yet
               </div>
             ) : (
-              notifications.map((n) => (
-                <div
-                  key={n.id}
-                  role="listitem"
-                  data-testid="notification-item"
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 10,
-                    padding: "10px 14px",
-                    borderBottom: `1px solid ${BORDER}`,
-                    background: n.read ? "transparent" : "rgba(245,166,35,0.04)",
-                  }}
-                >
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: statusColor(n.toStatus),
-                      marginTop: 4,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        color: "var(--fg)",
-                        fontFamily: MONO,
-                        wordBreak: "break-word",
-                        marginBottom: 3,
-                      }}
-                    >
-                      {n.message}
-                    </div>
-                    <div style={{ fontSize: 8, color: DIM, fontFamily: MONO, letterSpacing: "0.08em" }}>
-                      {timeAgo(n.timestamp)}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => dismiss(n.id)}
-                    aria-label="Dismiss notification"
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: DIM,
-                      cursor: "pointer",
-                      fontSize: 11,
-                      padding: 2,
-                      flexShrink: 0,
-                      transition: "color 0.15s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = DIM)}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))
+              notifications.map((notification) => <NotificationItem key={notification.id} notification={notification} onDismiss={dismiss} />)
             )}
           </div>
 

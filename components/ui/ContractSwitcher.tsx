@@ -3,7 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import { useContractSelection } from "@/lib/soroban/SorobanProvider";
 import { useToast } from "@/components/ui/Toast";
 import { shortId } from "@/lib/utils";
-import { AMBER, BG1, BG2, BG3, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import { AMBER, BG1, BG2, BORDER, DIM, MONO, STATUS_META } from "@/lib/constants";
+import { ContractOption } from "@/components/ui/ContractOption";
 
 export function ContractSwitcher() {
   const { contractId, setContractId, availableContracts, addContract, removeContract } =
@@ -165,7 +166,16 @@ export function ContractSwitcher() {
                 return (
                   <div
                     key={c.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
                     onClick={() => handleSelect(c.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handleSelect(c.id);
+                      }
+                    }}
                     style={{
                       display: "flex",
                       alignItems: "center",
