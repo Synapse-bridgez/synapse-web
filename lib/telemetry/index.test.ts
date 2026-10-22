@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { scrubContext } from "./index";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { scrubContext, isTelemetryEnabled } from "./index";
 
 describe("scrubContext", () => {
   it("keeps non-sensitive fields as-is", () => {
@@ -35,6 +35,29 @@ describe("scrubContext", () => {
   it("returns an empty object for empty input and beyond max depth", () => {
     expect(scrubContext({})).toEqual({});
     expect(scrubContext({ a: 1 }, 7)).toEqual({});
+  });
+});
+
+describe("isTelemetryEnabled", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is false in development", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    expect(isTelemetryEnabled()).toBe(false);
+  });
+
+  it("is false when explicitly disabled", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_TELEMETRY_DISABLED", "true");
+    expect(isTelemetryEnabled()).toBe(false);
+  });
+
+  it("is true in production when not disabled", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_TELEMETRY_DISABLED", "false");
+    expect(isTelemetryEnabled()).toBe(true);
   });
 });
 
