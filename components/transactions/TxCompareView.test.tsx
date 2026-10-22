@@ -3,7 +3,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { TxCompareView } from "./TxCompareView";
+import { TxCompareView, diffFields } from "./TxCompareView";
 import { AMBER } from "@/lib/constants";
 
 // TxTimeline is covered separately; stub it so these tests only exercise the
@@ -136,5 +136,70 @@ describe("TxCompareView interactions", () => {
     );
 
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("diffFields", () => {
+  it("returns an empty set for an empty list", () => {
+    expect(diffFields([]).size).toBe(0);
+  });
+
+  it("returns an empty set for a single transaction", () => {
+    expect(diffFields([makeTx({ id: "solo", amount: 99 })]).size).toBe(0);
+  });
+
+  it("reports only the id when transactions are otherwise identical", () => {
+    const result = diffFields([makeTx({ id: "tx-a" }), makeTx({ id: "tx-b" })]);
+    expect([...result]).toEqual(["id"]);
+  });
+
+  it("reports every compared field that differs", () => {
+    const result = diffFields([
+      makeTx({ id: "tx-a", status: "PENDING", amount: 5, memo: "a" }),
+      makeTx({ id: "tx-b", status: "FAILED", amount: 5, memo: "b" }),
+    ]);
+    expect(result).toEqual(new Set(["id", "status", "memo"]));
+  });
+
+  it("flags a field when any transaction differs from the first, not only adjacent ones", () => {
+    const result = diffFields([
+      makeTx({ id: "tx-a", asset: "USDC" }),
+      makeTx({ id: "tx-b", asset: "USDC" }),
+      makeTx({ id: "tx-c", asset: "XLM" }),
+    ]);
+    expect(result.has("asset")).toBe(true);
+  });
+
+  it("treats undefined, null and empty string as the same missing value", () => {
+    const result = diffFields([
+      makeTx({ id: "tx-a", memo: undefined }),
+      makeTx({ id: "tx-b", memo: null }),
+      makeTx({ id: "tx-c", memo: "" }),
+    ]);
+    expect(result.has("memo")).toBe(false);
+  });
+
+  it("flags a field that is present on some transactions and missing on others", () => {
+    const result = diffFields([
+      makeTx({ id: "tx-a", callbackUrl: "https://x.test/cb" }),
+      makeTx({ id: "tx-b", callbackUrl: undefined }),
+    ]);
+    expect(result.has("callbackUrl")).toBe(true);
+  });
+
+  it("compares values by their string form", () => {
+    const result = diffFields([
+      makeTx({ id: "tx-a", amount: 5 }),
+      makeTx({ id: "tx-b", amount: "5" }),
+    ]);
+    expect(result.has("amount")).toBe(false);
+  });
+
+  it("ignores fields that are not part of the comparison", () => {
+    const result = diffFields([
+      makeTx({ id: "tx-a", from: "GADDR1", retries: 0 }),
+      makeTx({ id: "tx-b", from: "GADDR2", retries: 3 }),
+    ]);
+    expect(result).toEqual(new Set(["id"]));
   });
 });
