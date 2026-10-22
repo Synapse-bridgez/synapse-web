@@ -13,9 +13,10 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "happy-dom",
+    environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     globals: true,
+    exclude: ["node_modules/**", "e2e/**", ".next/**"],
     server: {
       deps: {
         inline: ["@stellar/freighter-api", "@creit.tech/stellar-wallets-kit"],
