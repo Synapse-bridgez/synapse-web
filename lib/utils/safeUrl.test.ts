@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSafeHttpUrl } from "./safeUrl";
+import { isSafeHttpUrl, toSafeHttpUrl, toSafeUrlLabel } from "./safeUrl";
 
 describe("isSafeHttpUrl", () => {
   it("accepts absolute http and https URLs", () => {
@@ -43,5 +43,36 @@ describe("isSafeHttpUrl", () => {
     expect(isSafeHttpUrl(42)).toBe(false);
     expect(isSafeHttpUrl({})).toBe(false);
     expect(isSafeHttpUrl(["https://example.com"])).toBe(false);
+  });
+});
+
+describe("toSafeHttpUrl", () => {
+  it("returns the URL for safe http and https values", () => {
+    expect(toSafeHttpUrl("https://example.com/a?b=1")).toBe("https://example.com/a?b=1");
+    expect(toSafeHttpUrl("http://example.com")).toBe("http://example.com");
+  });
+
+  it("returns the trimmed value", () => {
+    expect(toSafeHttpUrl("  https://example.com  ")).toBe("https://example.com");
+  });
+
+  it("returns undefined for unsafe schemes", () => {
+    expect(toSafeHttpUrl("javascript:alert(1)")).toBeUndefined();
+    expect(toSafeHttpUrl("data:text/html,hi")).toBeUndefined();
+    expect(toSafeHttpUrl("file:///etc/passwd")).toBeUndefined();
+  });
+
+  it("returns undefined for empty, relative, and malformed values", () => {
+    expect(toSafeHttpUrl("")).toBeUndefined();
+    expect(toSafeHttpUrl("   ")).toBeUndefined();
+    expect(toSafeHttpUrl("/relative")).toBeUndefined();
+    expect(toSafeHttpUrl("not a url")).toBeUndefined();
+  });
+
+  it("returns undefined for non-string input", () => {
+    expect(toSafeHttpUrl(undefined)).toBeUndefined();
+    expect(toSafeHttpUrl(null)).toBeUndefined();
+    expect(toSafeHttpUrl(123)).toBeUndefined();
+    expect(toSafeHttpUrl({})).toBeUndefined();
   });
 });
