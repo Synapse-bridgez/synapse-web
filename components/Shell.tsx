@@ -9,7 +9,21 @@ import { GuidedTour } from "@/components/onboarding/GuidedTour";
 import { CommandPalette, type Command } from "./command-palette/CommandPalette";
 import { SessionAuditPanel } from "@/components/wallet/SessionAuditPanel";
 import { ContractSwitcher } from "@/components/ui/ContractSwitcher";
-import { AMBER, BG1, BORDER, DIM, DOCS_SITE_URL, MONO, STATUS_META } from "@/lib/constants";
+import {
+  ACCENT_SOFT,
+  ACCENT_WEAK,
+  AMBER,
+  AMBER_GLOW,
+  BG1,
+  BORDER,
+  DIM,
+  DOCS_SITE_URL,
+  FG_MUTED,
+  HOVER,
+  MONO,
+  NEUTRAL,
+  STATUS_META,
+} from "@/lib/constants";
 import { useSorobanStatus } from "@/lib/soroban/useSorobanStatus";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useToast } from "@/components/ui/Toast";
@@ -23,6 +37,7 @@ import { Profiled, ProfilerOverlay } from "@/lib/dev-tools/ProfilerOverlay";
 import { resolveActiveTab, visibleTabs, type FlagKey } from "@/lib/flags/definitions";
 import { useFlag, useFlags } from "@/lib/flags/FlagProvider";
 import { DEFAULT_TAB, TABS, tabFromPathname, tabPath, type Tab } from "@/lib/tabs";
+import { ShellTabButton } from "@/components/shell/ShellTabButton";
 
 export type { Tab };
 
@@ -76,9 +91,30 @@ function getPreferredTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
-export function Shell({ initialTab }: { initialTab?: Tab }) {
-  const pathname = usePathname();
-  const [selectedTab, setSelectedTab] = useState<Tab>(initialTab ?? tabFromPathname(pathname));
+function isTab(value: string | null): value is Tab {
+  return value !== null && (TABS as string[]).includes(value);
+}
+
+export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: Tab = isTab(tabParam) ? tabParam : initialTab;
+
+  const setTab = useCallback(
+    (next: Tab) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "dashboard") {
+        params.delete("tab");
+      } else {
+        params.set("tab", next);
+      }
+      const qs = params.toString();
+      router.push(qs ? `?${qs}` : "?", { scroll: false });
+    },
+    [router, searchParams]
+  );
+
   const [theme, setTheme] = useState<Theme>("dark");
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [showGuidance, setShowGuidance] = useState(false);
@@ -115,6 +151,7 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
   const { toast } = useToast();
   const t = useTranslations("Shell");
   const locale = useLocale();
+  const tour = useGuidedTour();
   const navRef = useRef<HTMLElement>(null);
 
   // Each tab is a statically prerendered route, so selecting one updates the
@@ -268,12 +305,7 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                letterSpacing: "0.14em",
-                color: "var(--fg-strong)",
-              }}
+              style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.14em", color: NEUTRAL }}
             >
               SYNAPSE
             </span>
@@ -285,16 +317,11 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                 borderRadius: "50%",
                 background: AMBER,
                 display: "inline-block",
-                boxShadow: `0 0 8px 2px rgba(245,166,35,0.55)`,
+                boxShadow: `0 0 8px 2px ${AMBER_GLOW}`,
               }}
             />
             <span
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                letterSpacing: "0.14em",
-                color: "var(--fg-strong)",
-              }}
+              style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.14em", color: NEUTRAL }}
             >
               CORE
             </span>
@@ -368,7 +395,7 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                 }}
               >
                 {LOCALES.map((l) => (
-                  <option key={l} value={l} style={{ background: BG1, color: "#fff" }}>
+                  <option key={l} value={l} style={{ background: BG1, color: NEUTRAL }}>
                     {LOCALE_LABELS[l]}
                   </option>
                 ))}
@@ -389,7 +416,9 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
             {connected && <SessionAuditPanel />}
             <NotificationCenter />
             <button
-              onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+              data-tour="wallet"
+              onClick={() => (connected ? disconnect() : connect())}
+              disabled={connecting}
               aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
               title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
               style={{
@@ -398,11 +427,82 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                 border: `1px solid ${BORDER}`,
                 color: DIM,
                 fontFamily: MONO,
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                padding: "4px 6px",
+                cursor: "pointer",
+              }}
+            >
+              {LOCALES.map((l) => (
+                <option key={l} value={l} style={{ background: BG1, color: NEUTRAL }}>
+                  {LOCALE_LABELS[l]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: connected ? STATUS_META.COMPLETED.color : "var(--fg-muted)",
+              display: "inline-block",
+              boxShadow: connected ? `0 0 6px 2px ${STATUS_META.COMPLETED.glow}` : "none",
+              transition: "all 0.3s",
+            }}
+          />
+          {connected && <SessionAuditPanel />}
+          <NotificationCenter />
+          <button
+            data-tour="wallet"
+            onClick={() => (connected ? disconnect() : connect())}
+            disabled={connecting}
+            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            style={{
+              padding: "7px 12px",
+              background: "transparent",
+              border: `1px solid ${BORDER}`,
+              color: DIM,
+              fontFamily: MONO,
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: "pointer",
+              letterSpacing: "0.06em",
+              transition: "all 0.2s",
+              opacity: connecting ? 0.6 : 1,
+              flex: isMobile ? 1 : undefined,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = AMBER;
+              e.currentTarget.style.borderColor = AMBER;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = DIM;
+              e.currentTarget.style.borderColor = BORDER;
+            }}
+          >
+            {connecting ? t("connecting") : connected ? shortId(address) : t("connectWallet")}
+          </button>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => (connected ? (canSwitch ? setSwitcherOpen((o) => !o) : disconnect()) : connect())}
+              disabled={connecting}
+              aria-haspopup={canSwitch ? "listbox" : undefined}
+              aria-expanded={canSwitch ? switcherOpen : undefined}
+              style={{
+                padding: "7px 18px",
+                background: connected ? "transparent" : "rgba(245,166,35,0.08)",
+                border: `1px solid ${connected ? BORDER : AMBER}`,
+                color: connected ? DIM : AMBER,
+                fontFamily: MONO,
                 fontSize: 11,
                 fontWeight: 600,
                 cursor: "pointer",
                 letterSpacing: "0.06em",
                 transition: "all 0.2s",
+                opacity: connecting ? 0.6 : 1,
                 flex: isMobile ? 1 : undefined,
               }}
               onMouseEnter={(e) => {
@@ -414,7 +514,7 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                 e.currentTarget.style.borderColor = BORDER;
               }}
             >
-              {theme === "dark" ? "☀ light" : "☾ dark"}
+              {connecting ? t("connecting") : connected ? shortId(address) : t("connectWallet")}
             </button>
             <div style={{ position: "relative" }}>
               <button
@@ -434,6 +534,15 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                   background: connected ? "transparent" : "rgba(245,166,35,0.08)",
                   border: `1px solid ${connected ? BORDER : AMBER}`,
                   color: connected ? "#aaa" : AMBER,
+                }
+                disabled={connecting}
+                aria-haspopup={canSwitch ? "listbox" : undefined}
+                aria-expanded={canSwitch ? switcherOpen : undefined}
+                style={{
+                  padding: "7px 18px",
+                  background: connected ? "transparent" : ACCENT_WEAK,
+                  border: `1px solid ${connected ? BORDER : AMBER}`,
+                  color: connected ? FG_MUTED : AMBER,
                   fontFamily: MONO,
                   fontSize: 11,
                   fontWeight: 600,
@@ -443,10 +552,10 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                   opacity: connecting ? 0.6 : 1,
                 }}
                 onMouseEnter={(e) => {
-                  if (!connected) e.currentTarget.style.background = "rgba(245,166,35,0.16)";
+                  if (!connected) e.currentTarget.style.background = ACCENT_SOFT;
                 }}
                 onMouseLeave={(e) => {
-                  if (!connected) e.currentTarget.style.background = "rgba(245,166,35,0.08)";
+                  if (!connected) e.currentTarget.style.background = ACCENT_WEAK;
                 }}
               >
                 {connecting ? t("connecting") : connected ? shortId(address) : t("connectWallet")}
@@ -485,7 +594,7 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                           background: active ? "rgba(245,166,35,0.08)" : "transparent",
                           border: "none",
                           borderBottom: `1px solid ${BORDER}`,
-                          color: active ? AMBER : "#aaa",
+                          color: active ? AMBER : DIM,
                           fontFamily: MONO,
                           fontSize: 11,
                           textAlign: "left",
@@ -509,6 +618,72 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                       setSwitcherOpen(false);
                       disconnect();
                     }}
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    right: 0,
+                    minWidth: 220,
+                    background: BG1,
+                    border: `1px solid ${BORDER}`,
+                    zIndex: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  {accounts.map((acct) => {
+                    const active = acct === address;
+                    return (
+                      <button
+                        key={acct}
+                        role="option"
+                        aria-selected={active}
+                        onClick={() => {
+                          if (!active) switchAccount(acct);
+                          setSwitcherOpen(false);
+                        }}
+                        style={{
+                          padding: "9px 14px",
+                          background: active ? ACCENT_WEAK : "transparent",
+                          border: "none",
+                          borderBottom: `1px solid ${BORDER}`,
+                          color: active ? AMBER : FG_MUTED,
+                          fontFamily: MONO,
+                          fontSize: 11,
+                          textAlign: "left",
+                          cursor: "pointer",
+                          letterSpacing: "0.04em",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!active) e.currentTarget.style.background = HOVER;
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!active) e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        {active ? "● " : "○ "}
+                        {shortId(acct)}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => {
+                      setSwitcherOpen(false);
+                      disconnect();
+                    }}
+                    style={{
+                      padding: "9px 14px",
+                      background: "transparent",
+                      border: "none",
+                      color: DIM,
+                      fontFamily: MONO,
+                      fontSize: 11,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    disconnect
+                  </button>
                     style={{
                       padding: "9px 14px",
                       background: "transparent",
@@ -588,7 +763,7 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                 fontFamily: MONO,
                 fontSize: 11,
                 letterSpacing: "0.1em",
-                color: tab === tabKey ? "var(--fg-strong)" : DIM,
+                color: tab === tabKey ? NEUTRAL : DIM,
                 borderBottom: tab === tabKey ? `2px solid ${AMBER}` : "2px solid transparent",
                 marginBottom: -1,
                 transition: "color 0.15s",
@@ -597,7 +772,7 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
                 outlineOffset: "-2px",
               }}
               onMouseEnter={(e) => {
-                if (tab !== tabKey) e.currentTarget.style.color = "var(--fg-hover)";
+                if (tab !== tabKey) e.currentTarget.style.color = AMBER;
               }}
               onMouseLeave={(e) => {
                 if (tab !== tabKey) e.currentTarget.style.color = DIM;
@@ -607,6 +782,34 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
             </button>
           ))}
         </nav>
+
+        {/* ── No Wallet Guidance Modal ── */}
+        {showGuidance && (
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Close wallet guidance"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setShowGuidance(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setShowGuidance(false);
+              }
+            }}
+          >
+            <div>
+              <NoWalletGuidance
+                onClose={() => setShowGuidance(false)}
+                onProceedAnyway={() => {
+                  setShowGuidance(false);
+                  connect();
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* ── Body ── */}
         <main
@@ -622,39 +825,67 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
               walletConnected={connected}
               walletAddress={address ?? undefined}
             >
+
+            </button>
+          ))}
+        </nav>
+
+      {/* ── Tab Bar ── */}
+      <nav ref={navRef} className="shell-nav" role="tablist" aria-label={t("sections")}
+        data-tour="nav"
+        style={{
+          overflowX: isMobile ? "auto" : undefined,
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        {TABS.map((tabKey, index) => (
+          <ShellTabButton
+            key={tabKey}
+            tab={tabKey}
+            active={tab === tabKey}
+            mobile={isMobile}
+            onSelect={() => handleTabSelect(tabKey)}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
+          />
+        ))}
+      </nav>
+
+        {/* ── Body ── */}
+        <main
+          className="shell-main"
+          id={`tabpanel-${tab}`}
+          role="tabpanel"
+          aria-labelledby={`tab-${tab}`}
+          style={{ overflowX: "hidden" }}
+        >
+          {tab === "dashboard" && (
+            <TabErrorBoundary title={t("tabError", { tab: t("tabs.dashboard") })}>
               <Profiled id="DashboardTab">
                 <DashboardTab />
               </Profiled>
             </TabErrorBoundary>
           )}
           {tab === "transactions" && (
-            <TabErrorBoundary
-              tabName="transactions"
-              walletConnected={connected}
-              walletAddress={address ?? undefined}
-            >
+            <TabErrorBoundary title={t("tabError", { tab: t("tabs.transactions") })}>
               <Profiled id="TransactionsTab">
                 <TransactionsTab />
               </Profiled>
             </TabErrorBoundary>
           )}
+          {tab === "analytics" && (
+            <TabErrorBoundary title={t("tabError", { tab: t("tabs.analytics") })}>
+              <AnalyticsTab />
+            </TabErrorBoundary>
+          )}
           {tab === "admin" && (
-            <TabErrorBoundary
-              tabName="admin"
-              walletConnected={connected}
-              walletAddress={address ?? undefined}
-            >
+            <TabErrorBoundary title={t("tabError", { tab: t("tabs.admin") })}>
               <Profiled id="AdminTab">
                 <AdminTab />
               </Profiled>
             </TabErrorBoundary>
           )}
           {tab === "docs" && (
-            <TabErrorBoundary
-              tabName="docs"
-              walletConnected={connected}
-              walletAddress={address ?? undefined}
-            >
+            <TabErrorBoundary title={t("tabError", { tab: t("tabs.docs") })}>
               <Profiled id="DocsTab">
                 <DocsTab />
               </Profiled>
@@ -735,6 +966,8 @@ export function Shell({ initialTab }: { initialTab?: Tab }) {
           </span>
         </footer>
 
+        {/* ── Guided Tour ── */}
+        <GuidedTour open={tour.open} onClose={tour.close} />
         <CommandPalette
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}

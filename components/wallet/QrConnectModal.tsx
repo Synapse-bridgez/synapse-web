@@ -59,6 +59,8 @@ function QrCode({ value }: { value: string }) {
   const matrix = useMemo(() => buildQrMatrix(value), [value]);
   const size = matrix.length;
 
+  // Fixed dark-on-white colors on purpose: QR scanners need high contrast,
+  // so this code must not follow the dark/light theme.
   return (
     <svg
       role="img"
