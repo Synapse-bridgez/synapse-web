@@ -24,7 +24,7 @@ export function StatusRatioChart({ ratios }: Props) {
                 fontSize: 9,
                 fontFamily: MONO,
                 letterSpacing: "0.1em",
-                color: STATUS_META[status].color,
+                color: STATUS_META[status]?.color ?? DIM,
               }}
             >
               {status}
@@ -50,7 +50,7 @@ export function StatusRatioChart({ ratios }: Props) {
               style={{
                 height: "100%",
                 width: `${pct}%`,
-                background: STATUS_META[status].color,
+                background: STATUS_META[status]?.color ?? DIM,
                 opacity: 0.8,
                 transition: "width 0.4s ease",
                 borderRadius: 2,
