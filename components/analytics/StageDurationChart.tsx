@@ -33,7 +33,7 @@ export function StageDurationChart({ durations }: Props) {
                 fontSize: 9,
                 fontFamily: MONO,
                 letterSpacing: "0.1em",
-                color: STATUS_META[status].color,
+                color: STATUS_META[status]?.color ?? DIM,
               }}
             >
               {status}
@@ -60,7 +60,7 @@ export function StageDurationChart({ durations }: Props) {
               style={{
                 height: "100%",
                 width: `${maxMs > 0 ? (avgMs / maxMs) * 100 : 0}%`,
-                background: STATUS_META[status].color,
+                background: STATUS_META[status]?.color ?? DIM,
                 opacity: 0.65,
                 transition: "width 0.4s ease",
                 borderRadius: 2,
