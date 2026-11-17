@@ -54,7 +54,7 @@ export default function TxReceiptPrintView({
   const statusHistory = transaction.statusHistory ?? [];
 
   return createPortal(
-    <div className="tx-receipt" role="document" aria-label="Transaction receipt">
+    <div className="tx-receipt" data-print-root="" role="document" aria-label="Transaction receipt">
       <header className="tx-receipt__header">
         <h1 className="tx-receipt__title">Transaction Receipt</h1>
         <p className="tx-receipt__subtitle">
