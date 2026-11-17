@@ -109,4 +109,10 @@ describe("TxReceiptPrintView", () => {
     fireEvent.click(screen.getByText("Print / Save as PDF"));
     expect(window.print).toHaveBeenCalledTimes(1);
   });
+
+  it("marks the portal root with data-print-root for print isolation", () => {
+    render(<TxReceiptPrintView transaction={baseTransaction} onClose={vi.fn()} />);
+    const doc = screen.getByRole("document", { name: "Transaction receipt" });
+    expect(doc).toHaveAttribute("data-print-root");
+  });
 });

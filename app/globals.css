@@ -376,10 +376,11 @@ body {
 
 @media print {
   /* Hide all normal app chrome; show only the receipt layout. */
-  body > *:not(.tx-receipt-root) {
+  body > *:not([data-print-root]):not(.tx-receipt-root) {
     display: none !important;
   }
 
+  [data-print-root],
   .tx-receipt-root {
     display: block !important;
     position: static;
@@ -390,12 +391,17 @@ body {
     margin: 0;
   }
 
+  [data-print-root] *,
   .tx-receipt-root * {
     color: #000 !important;
     background: transparent !important;
     box-shadow: none !important;
   }
 
+  .no-print {
+    display: none !important;
+  }
+  
   .tx-receipt-page {
     max-width: 100%;
     margin: 0;
