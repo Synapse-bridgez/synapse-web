@@ -4,6 +4,9 @@ import {
   isTelemetryEnabled,
   reportError,
   setTelemetryProvider,
+  resetTransportFailures,
+  transportFailureCount,
+  TRANSPORT_FAILURE_THRESHOLD,
 } from "./index";
 
 describe("scrubContext", () => {
@@ -74,6 +77,7 @@ describe("reportError", () => {
 
   afterEach(() => {
     setTelemetryProvider(null);
+    resetTransportFailures();
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
@@ -102,6 +106,30 @@ describe("reportError", () => {
     expect(provider).not.toHaveBeenCalled();
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("counts transport rejections and warns once after the threshold", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_TELEMETRY_DISABLED", "false");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    setTelemetryProvider(() => Promise.reject(new Error("transport down")));
+
+    for (let i = 0; i < TRANSPORT_FAILURE_THRESHOLD + 2; i += 1) {
+      reportError(new Error("boom"));
+    }
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(transportFailureCount).toBe(TRANSPORT_FAILURE_THRESHOLD + 2);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not throw when the transport rejects", async () => {
+    setTelemetryProvider(() => Promise.reject(new Error("transport down")));
+    expect(() => reportError(new Error("boom"))).not.toThrow();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(transportFailureCount).toBe(1);
+  });
 });
 
 describe("setTelemetryProvider", () => {
@@ -112,6 +140,7 @@ describe("setTelemetryProvider", () => {
 
   afterEach(() => {
     setTelemetryProvider(null);
+    resetTransportFailures();
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
@@ -150,10 +179,11 @@ describe("setTelemetryProvider", () => {
     expect(provider).not.toHaveBeenCalled();
   });
 
-  it("propagates errors thrown by the provider", () => {
+  it("counts synchronous provider throws without propagating", () => {
     setTelemetryProvider(() => {
       throw new Error("provider failed");
     });
-    expect(() => reportError(new Error("x"))).toThrow("provider failed");
+    expect(() => reportError(new Error("x"))).not.toThrow();
+    expect(transportFailureCount).toBe(1);
   });
 });
