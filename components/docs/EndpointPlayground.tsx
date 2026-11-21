@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ABI_ENDPOINTS, AMBER, BORDER, DIM, MONO } from "@/lib/constants";
 import { encodeArg } from "@/lib/soroban/args";
 import { simulateCall, submitCall } from "@/lib/soroban/contract";
+import { LiveRegion } from "@/components/ui/LiveRegion";
 
 const STATE_CHANGING = new Set(["one-time", "relay_signer", "admin"]);
 
@@ -58,7 +59,11 @@ export function EndpointPlayground({ endpoint }: { endpoint: (typeof ABI_ENDPOIN
           </div>
         </div>
       )}
-      {error && <pre style={{ fontFamily: MONO, fontSize: 10, color: "#EF5350", whiteSpace: "pre-wrap", margin: 0 }}>{error}</pre>}
+      {error && (
+        <LiveRegion>
+          <pre style={{ fontFamily: MONO, fontSize: 10, color: "#EF5350", whiteSpace: "pre-wrap", margin: 0 }}>{error}</pre>
+        </LiveRegion>
+      )}
       {result && <pre style={{ fontFamily: MONO, fontSize: 10, color: "#66BB6A", whiteSpace: "pre-wrap", margin: 0 }}>{result}</pre>}
     </div>
   );
