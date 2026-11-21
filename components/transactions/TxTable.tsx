@@ -1,5 +1,5 @@
 "use client";
-import { memo, useState, type CSSProperties } from "react";
+import { memo, useMemo, useState, type CSSProperties } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { AMBER, BG3, BORDER, DIM, MONO } from "@/lib/constants";
@@ -198,7 +198,10 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
 
   const totalPages = Math.max(1, Math.ceil(txs.length / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
-  const pageTxs = txs.slice(start, start + PAGE_SIZE);
+  const pageTxs = useMemo(
+    () => txs.slice(start, start + PAGE_SIZE),
+    [txs, start],
+  );
 
   return (
     <div>
@@ -239,7 +242,6 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
                     fontFamily: MONO,
                     textAlign: "left",
                     borderBottom: `1px solid ${BORDER}`,
-                    whiteSpace: "nowrap",
                   }}
                 >
                   {header}
@@ -251,80 +253,68 @@ export function TxTable({ txs, onSelect }: TxTableProps) {
             {pageTxs.map((tx) => (
               <TxRow key={tx.id} tx={tx} onSelect={onSelect} />
             ))}
-            {txs.length === 0 && (
-              <tr>
-                <td
-                  colSpan={8}
-                  style={{
-                    padding: 24,
-                    textAlign: "center",
-                    color: DIM,
-                    fontFamily: MONO,
-                    fontSize: 11,
-                  }}
-                >
-                  no transactions match filter
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
+        {txs.length === 0 && (
+          <div
+            style={{
+              padding: 24,
+              textAlign: "center",
+              color: DIM,
+              fontFamily: MONO,
+              fontSize: 11,
+            }}
+          >
+            no transactions match filter
+          </div>
+        )}
       </div>
 
-      {txs.length > PAGE_SIZE && (
+      {totalPages > 1 && (
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent: "center",
             alignItems: "center",
-            marginTop: 12,
-            paddingTop: 10,
-            borderTop: `1px solid ${BORDER}`,
+            gap: 8,
+            padding: "12px 0",
+            fontFamily: MONO,
+            fontSize: 10,
+            color: DIM,
           }}
         >
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
             style={{
-              padding: "6px 14px",
               background: "transparent",
               border: `1px solid ${BORDER}`,
-              color: page === 1 ? DIM : "#ccc",
-              cursor: page === 1 ? "not-allowed" : "pointer",
-              opacity: page === 1 ? 0.5 : 1,
+              color: page === 1 ? DIM : AMBER,
+              padding: "4px 10px",
+              cursor: page === 1 ? "default" : "pointer",
               fontFamily: MONO,
               fontSize: 10,
-              letterSpacing: "0.06em",
             }}
           >
-            ← PREV
+            prev
           </button>
-          <span
-            style={{
-              fontFamily: MONO,
-              fontSize: 10,
-              color: DIM,
-              letterSpacing: "0.06em",
-            }}
-          >
-            page {page} of {totalPages} · {txs.length} total
+          <span>
+            {page} / {totalPages}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
             style={{
-              padding: "6px 14px",
               background: "transparent",
               border: `1px solid ${BORDER}`,
-              color: page === totalPages ? DIM : "#ccc",
-              cursor: page === totalPages ? "not-allowed" : "pointer",
-              opacity: page === totalPages ? 0.5 : 1,
+              color: page === totalPages ? DIM : AMBER,
+              padding: "4px 10px",
+              cursor: page === totalPages ? "default" : "pointer",
               fontFamily: MONO,
               fontSize: 10,
-              letterSpacing: "0.06em",
             }}
           >
-            NEXT →
+            next
           </button>
         </div>
       )}
