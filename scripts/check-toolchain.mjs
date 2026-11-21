@@ -175,24 +175,32 @@ function readNpmVersion() {
 function main() {
   const pkg = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8"));
   const pinned = readPinnedEngines(pkg);
+
+  // Read the expected Node version from .nvmrc so the failure message can name it
+  // without the reader having to open the file by hand.
+  const nvmrcPath = join(REPO_ROOT, ".nvmrc");
+  const nvmrcContents = existsSync(nvmrcPath) ? readFileSync(nvmrcPath, "utf8") : "";
+  const expectedNode = stripV(nvmrcContents) || pinned.node;
+
   const checks = [
     checkPinned({
       label: "node",
       pinned: pinned.node,
       actual: process.version,
-      hint: "Local: install the pinned Node and re-run `nvm use`.",
+      hint:
+        `Expected Node ${expectedNode} (from .nvmrc); running ${stripV(process.version) || "(unknown)"}. ` +
+        `Local: install the pinned Node and re-run \`nvm use\`.`,
     }),
     checkPinned({ label: "npm", pinned: pinned.npm, actual: readNpmVersion() }),
   ];
 
-  const nvmrcPath = join(REPO_ROOT, ".nvmrc");
   if (!existsSync(nvmrcPath)) {
     checks.push({
       ok: false,
       message: ".nvmrc is missing. It must contain the exact Node version.",
     });
   } else {
-    checks.push(checkNvmrc(readFileSync(nvmrcPath, "utf8"), pinned.node));
+    checks.push(checkNvmrc(nvmrcContents, pinned.node));
   }
 
   const dockerfiles = DOCKERFILE_CANDIDATES.filter((candidate) =>
@@ -210,26 +218,20 @@ function main() {
   const failures = checks.filter((check) => !check.ok);
   // One write per stream, so the check list and the summary cannot interleave out
   // of order when stdout and stderr are both redirected to the same place (CI).
-  const lines = checks.map((check) => `- ${check.message.trim()}`).join("\n");
-  if (failures.length > 0) {
-    console.error(
-      [
-        `Toolchain check FAILED — ${failures.length} problem${failures.length === 1 ? "" : "s"}.`,
-        `Pinned: node ${pinned.node}, npm ${pinned.npm}.`,
-        "",
-        lines,
-      ].join("\n")
-    );
-    process.exit(1);
+  const lines = checks.map((check) => `- ${check.ok ? "ok" : "FAIL"}  ${check.message}`);
+  if (failures.length === 0) {
+    process.stdout.write(`${lines.join("\n")}\n`);
+    return;
   }
-  console.log([`Toolchain OK — node ${pinned.node}, npm ${pinned.npm}.`, "", lines].join("\n"));
+  process.stderr.write(
+    `${lines.join("\n")}\n\n` +
+      `Toolchain mismatch: expected Node ${expectedNode} (see .nvmrc), running ${stripV(process.version) || "(unknown)"}.\n` +
+      `Run \`nvm install && nvm use\` (reads .nvmrc) and try again.\n`
+  );
+  process.exitCode = 1;
 }
 
-if (process.argv[1]?.endsWith("check-toolchain.mjs")) {
-  try {
-    main();
-  } catch (error) {
-    console.error(`Toolchain check failed:\n  ${error?.message ?? error}`);
-    process.exit(1);
-  }
+// Only run when invoked directly, so the exported helpers stay importable by tests.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
 }
