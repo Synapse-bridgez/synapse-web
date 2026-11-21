@@ -4,15 +4,35 @@ description: How the app is put together — data flow, the mock fallback, and w
 order: 3
 ---
 
-Next.js 16 App Router, one route (`/`), no backend. Everything interesting
-happens in the browser, against Stellar Testnet.
+Next.js 16 App Router, no backend. Everything interesting happens in the
+browser, against Stellar Testnet.
+
+Each tab is its own route. `lib/tabs.ts` is the source of truth for the tab
+list: `TABS` holds `dashboard`, `transactions`, `admin` and `docs`,
+`DEFAULT_TAB` is `dashboard`, `tabPath()` returns `/<tab>`, and
+`tabFromPathname()` maps a pathname back to a tab, falling back to
+`DEFAULT_TAB` for `/`, unknown names and paths deeper than one segment.
+
+`app/[tab]/page.tsx` is the dynamic segment. `generateStaticParams()` returns
+one `{ tab }` per entry in `TABS`, so each tab is prerendered, and
+`dynamicParams = false` makes any other segment a 404. `app/page.tsx` also
+renders `<Shell />` for `/`, which shows the default tab.
+
+`components/Shell.tsx` builds its tab bar from `TABS`, passed through
+`visibleTabs()` and `resolveActiveTab()` in `lib/flags/definitions.ts`. A tab
+whose flag is off is removed from the bar, and an open tab that gets switched
+off falls back to the first visible tab. Selecting a tab calls
+`window.history.pushState()` with `tabPath()` instead of navigating, and a
+`popstate` listener follows back and forward. Only the active tab's panel is
+rendered in the body.
 
 ## Directory map
 
 ```text
 app/
   layout.tsx        Root layout: metadata, self-hosted font, provider stack
-  page.tsx          Renders <Shell />
+  page.tsx          Renders <Shell /> at `/` (default tab)
+  [tab]/page.tsx    One static page per tab; unknown segments 404
   globals.css       Design tokens and layout classes
 components/
   Shell.tsx         Header, tab bar, body, footer
@@ -24,6 +44,7 @@ components/
                     Panel, SorobanTip, TabErrorBoundary, Toast
 lib/
   constants.ts      STATUS_META, colour tokens, ABI_ENDPOINTS
+  tabs.ts           TABS, DEFAULT_TAB, tabPath, tabFromPathname
   types.ts          Transaction, ContractInfo, TxStatus, CallbackPayload
   mock-data.ts      MOCK_TXS, MOCK_CONTRACT_INFO
   utils.ts          shortId, elapsed, formatAmount
