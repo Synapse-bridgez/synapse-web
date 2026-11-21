@@ -47,6 +47,8 @@ export interface DraftPersistenceResult<T> {
   discard: () => void;
   /** Alias of `clearDraft`. */
   clear: () => void;
+  /** Last persist failure (quota exceeded, storage disabled); cleared on the next successful save. */
+  saveError: Error | null;
 }
 
 interface StoredDraft<T> {
@@ -104,19 +106,25 @@ export function useDraftPersistence<T>({
   );
 
   const hasRestoredDraft = restoredDraft !== null;
+  const [saveError, setSaveError] = useState<Error | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const valuesRef = useRef(values);
   valuesRef.current = values;
 
   const schedulePersist = useCallback(() => {
-    if (!resolvedStorage) return;
+    if (!resolvedStorage) {
+      setSaveError((prev) => prev ?? new Error("Draft storage is unavailable"));
+      return;
+    }
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       try {
         const payload: StoredDraft<T> = { values: valuesRef.current, savedAt: Date.now() };
         resolvedStorage.setItem(key, JSON.stringify(payload));
-      } catch {
-        // Storage may be unavailable or full; persistence is best-effort.
+        setSaveError(null);
+      } catch (err) {
+        // Persistence is best-effort, but the failure must be visible to callers.
+        setSaveError(err instanceof Error ? err : new Error(String(err)));
       }
     }, debounceMs);
   }, [key, debounceMs, resolvedStorage]);
@@ -171,6 +179,7 @@ export function useDraftPersistence<T>({
     save,
     discard: discardDraft,
     clear: clearDraft,
+    saveError,
   };
 }
 
