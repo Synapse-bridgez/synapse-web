@@ -10,6 +10,8 @@ import { WalletProvider } from "@/lib/wallet/WalletProvider";
 import { FlagProvider } from "@/lib/flags/FlagProvider";
 import { WebVitalsReporter } from "@/components/telemetry/WebVitalsReporter";
 import { LiveRegion } from "@/components/ui/LiveRegion";
+import { PROFILER_OVERLAY_ENABLED } from "@/lib/config/env";
+import { ProfilerOverlay } from "@/lib/dev-tools/ProfilerOverlay";
 import "./globals.css";
 
 /**
@@ -101,6 +103,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </SorobanProvider>
           </ToastProvider>
         </I18nProvider>
+        {PROFILER_OVERLAY_ENABLED ? <ProfilerOverlay /> : null}
       </body>
     </html>
   );

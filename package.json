@@ -9,13 +9,13 @@
     "lint": "eslint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
     "release": "semantic-release",
     "release:dry": "semantic-release --dry-run",
     "prepare": "husky",
     "typecheck": "tsc --noEmit",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run --config vitest.config.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,json,css,md}": "prettier --write"

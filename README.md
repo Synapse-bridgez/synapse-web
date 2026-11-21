@@ -228,3 +228,8 @@ Notable milestones on the path to a working testnet client:
 | Deploys        | Vercel Rolling Releases canary + auto-rollback                   |
 | Target network | Stellar Testnet (Soroban)                                        |
 ```
+
+## Handsoff notes
+
+<!-- handsoff-issue-474 -->
+- #474: `docs/local-development.md` still tells contributors to run `npm run dev:docker` that no longer exists
