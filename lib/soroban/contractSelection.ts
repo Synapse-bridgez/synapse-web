@@ -1,82 +1,34 @@
-export interface DeployedContract {
+export type ContractSelectionResult<T> =
+  | { status: "found"; contract: T }
+  | { status: "missing"; storedId: string }
+  | { status: "none"; contract: T | undefined };
+
+export interface SelectableContract {
   id: string;
-  name: string;
-  isCustom?: boolean;
 }
 
-const SELECTED_CONTRACT_KEY = "synapse-selected-contract-id";
-const STORED_CONTRACTS_KEY = "synapse-tracked-contracts";
-
-export function getDefaultContractId(): string | undefined {
-  return process.env.NEXT_PUBLIC_CONTRACT_ID || undefined;
-}
-
-export function getDefaultContracts(): DeployedContract[] {
-  const envId = getDefaultContractId();
-  const presets: DeployedContract[] = [];
-
-  if (envId) {
-    presets.push({
-      id: envId,
-      name: "Default (Env)",
-    });
+/**
+ * Resolve which contract should be selected given the persisted id and the
+ * freshly fetched list of contracts.
+ *
+ * - `found`: the stored id exists in the list.
+ * - `missing`: a stored id was provided but is not present in the list. The
+ *   caller must surface an explicit "not found" state instead of silently
+ *   selecting a different contract.
+ * - `none`: no stored id at all; falling back to the first contract is fine.
+ */
+export function selectContract<T extends SelectableContract>(
+  storedId: string | null | undefined,
+  contracts: readonly T[],
+): ContractSelectionResult<T> {
+  if (!storedId) {
+    return { status: "none", contract: contracts[0] };
   }
 
-  return presets;
-}
-
-export function getStoredContractId(): string | undefined {
-  if (typeof window === "undefined") return undefined;
-  try {
-    return localStorage.getItem(SELECTED_CONTRACT_KEY) ?? undefined;
-  } catch {
-    return undefined;
+  const match = contracts.find((contract) => contract.id === storedId);
+  if (match) {
+    return { status: "found", contract: match };
   }
-}
 
-export function storeSelectedContractId(id: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(SELECTED_CONTRACT_KEY, id);
-  } catch {}
-}
-
-export function clearSelectedContractId(): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.removeItem(SELECTED_CONTRACT_KEY);
-  } catch {}
-}
-
-export function getStoredContracts(): DeployedContract[] {
-  if (typeof window === "undefined") return getDefaultContracts();
-  try {
-    const raw = localStorage.getItem(STORED_CONTRACTS_KEY);
-    if (!raw) return getDefaultContracts();
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return getDefaultContracts();
-
-    const defaults = getDefaultContracts();
-    const merged = [...defaults];
-    for (const item of parsed) {
-      if (item && typeof item.id === "string" && !merged.some((m) => m.id === item.id)) {
-        merged.push({
-          id: item.id,
-          name: typeof item.name === "string" ? item.name : item.id.slice(0, 8),
-          isCustom: true,
-        });
-      }
-    }
-    return merged;
-  } catch {
-    return getDefaultContracts();
-  }
-}
-
-export function storeContracts(contracts: DeployedContract[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    const customOnly = contracts.filter((c) => c.isCustom);
-    localStorage.setItem(STORED_CONTRACTS_KEY, JSON.stringify(customOnly));
-  } catch {}
+  return { status: "missing", storedId };
 }

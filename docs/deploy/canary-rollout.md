@@ -9,6 +9,21 @@
 | [`.github/workflows/canary-override.yml`](../../.github/workflows/canary-override.yml)     | Manual "roll back now" / "promote now"                   |
 | [`vercel.json`](../../vercel.json)                                                         | Stops Vercel's Git integration deploying `main` directly |
 
+## Exit codes
+
+The controller distinguishes a deliberate "do not promote" decision from a
+broken promotion check, so CI never treats a failed check as a successful
+promotion.
+
+| Code | Meaning                                                                 |
+| ---: | ----------------------------------------------------------------------- |
+|  `0` | Rollout completed (promoted to 100%) or stopped cleanly.                |
+|  `1` | The promotion check errored (network error, missing metric, bad API).   |
+|  `2` | Deliberate "do not promote" decision — the controller rolled back.      |
+
+On exit `1` the controller prints the failing step (`[canary] promotion check
+failed: …`) so the CI log points at the cause.
+
 ## How a deploy flows
 
 ```
@@ -145,34 +160,6 @@ alone.
    Also enable **Skew Protection**, which Vercel recommends alongside Rolling
    Releases. Rolling Releases requires a Pro or Enterprise plan.
 2. Repository secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
-   (both ids are in `.vercel/project.json` after `vercel link`). Optional:
-   `CANARY_SIGNALS_TOKEN`, `VERCEL_AUTOMATION_BYPASS_SECRET`.
-3. Repository variable (optional): `CANARY_SIGNALS_URL`.
-4. Create a `production` GitHub environment to scope the secrets. Don't add
-   required reviewers to it, or the emergency override will wait for an
-   approval.
-5. `vercel.json` stops Vercel's Git integration from deploying `main` directly,
-   because that would bypass the canary. Preview deployments for other
-   branches are unaffected.
-
-## Verifying rollback (deliberate-regression drill)
-
-**Automated, on every PR.** `scripts/deploy/canary-controller.test.ts` runs the
-real controller against an in-memory Rolling Releases simulator:
-
-- A healthy canary is approved to 25% and then completed.
-- A canary whose error rate jumps to 8% at the 25% stage is rolled back to the
-  previous deployment on the first poll of that stage.
-- **Drill mode** probes a path that 404s. The canary is rolled back after 3
-  probes, 60 s of simulated time.
-- An operator abort is respected, and the RUM endpoint being down doesn't block
-  a decision.
-
-**Against the real platform.** Run **Actions → Deploy production → Run
-workflow** with **drill = true**. The deploy is real, but the controller probes
-`/__canary-drill__/intentionally-missing`. That path 404s on any build, so the
-synthetic rule has to fire, and Vercel has to move 100% of traffic back to the
-previous deployment within about 60 s. Users only ever see the healthy build:
-the drill fails the probes, not the app. Afterwards, check the job summary and
-the Vercel Deployments page, which should show the rollback with its
-description.
+   (both ids are in `.vercel/project.json`).
+3. Optional: `CANARY_SIGNALS_URL` and `CANARY_SIGNALS_TOKEN` for RUM-based
+   rules. Without them, only synthetic probes gate promotion.
