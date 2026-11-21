@@ -102,6 +102,23 @@ describe("getHealth", () => {
     expect(result.reachable).toBe(false);
     expect(result.error).toBe("a bare string");
   });
+
+  it("does not report ok when the underlying fetch rejects", async () => {
+    // Regression for #463: a rejecting fetch must surface as unhealthy, not ok.
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error("network down");
+    }) as never;
+
+    try {
+      const result = await getHealth({ rpcUrl: "https://rpc.example.com" });
+
+      expect(result.reachable).toBe(false);
+      expect(result.error).toBe("network down");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
 
 describe("withTimeout", () => {
