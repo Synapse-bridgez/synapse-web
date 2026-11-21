@@ -4,6 +4,11 @@ export interface DeployedContract {
   isCustom?: boolean;
 }
 
+export type ContractSelectionResult =
+  | { status: "selected"; contract: DeployedContract }
+  | { status: "none" }
+  | { status: "unknown"; id: string };
+
 const SELECTED_CONTRACT_KEY = "synapse-selected-contract-id";
 const STORED_CONTRACTS_KEY = "synapse-tracked-contracts";
 
@@ -79,4 +84,14 @@ export function storeContracts(contracts: DeployedContract[]): void {
     const customOnly = contracts.filter((c) => c.isCustom);
     localStorage.setItem(STORED_CONTRACTS_KEY, JSON.stringify(customOnly));
   } catch {}
+}
+
+export function resolveContractSelection(
+  contracts: DeployedContract[],
+  storedId: string | undefined,
+): ContractSelectionResult {
+  if (!storedId) return { status: "none" };
+  const contract = contracts.find((c) => c.id === storedId);
+  if (!contract) return { status: "unknown", id: storedId };
+  return { status: "selected", contract };
 }
