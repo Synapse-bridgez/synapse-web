@@ -1,48 +1,86 @@
-"use client";
+import { useEffect, useState } from 'react';
 
-import { useEffect, useState } from "react";
+export interface Contributor {
+  login: string;
+  avatar_url: string;
+  contributions: number;
+}
 
-type FundingSummary = {
-  project?: string;
-  total?: string;
-  currency?: string;
-  splits?: Array<{ name?: string; percentage?: number }>;
-};
+let contributorsPromise: Promise<Contributor[]> | null = null;
+let cachedContributors: Contributor[] | null = null;
 
-export function DripsWidget() {
-  const endpoint = process.env.NEXT_PUBLIC_DRIPS_PROJECT_API;
-  const [data, setData] = useState<FundingSummary | null>(null);
-  const [error, setError] = useState(false);
+function loadContributors(): Promise<Contributor[]> {
+  if (!contributorsPromise) {
+    contributorsPromise = fetch('/contributors.json')
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Failed to load contributors: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data: Contributor[]) => {
+        cachedContributors = data;
+        return data;
+      })
+      .catch((error) => {
+        contributorsPromise = null;
+        if (cachedContributors) {
+          return cachedContributors;
+        }
+        throw error;
+      });
+  }
+  return contributorsPromise;
+}
+
+export default function DripsWidget() {
+  const [contributors, setContributors] = useState<Contributor[]>(cachedContributors ?? []);
+  const [loading, setLoading] = useState(!cachedContributors);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!endpoint) return;
-    const controller = new AbortController();
-    fetch(endpoint, { signal: controller.signal, headers: { Accept: "application/json" } })
-      .then((response) => {
-        if (!response.ok) throw new Error("Drips request failed");
-        return response.json() as Promise<FundingSummary>;
+    let active = true;
+
+    loadContributors()
+      .then((data) => {
+        if (!active) return;
+        setContributors(data);
+        setError(null);
       })
-      .then(setData)
-      .catch((requestError: unknown) => {
-        if ((requestError as Error).name !== "AbortError") setError(true);
+      .catch(() => {
+        if (!active) return;
+        setError('Unable to load contributors.');
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
       });
-    return () => controller.abort();
-  }, [endpoint]);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (loading) {
+    return <div className="drips-widget">Loading contributors…</div>;
+  }
+
+  if (error) {
+    return <div className="drips-widget">{error}</div>;
+  }
 
   return (
-    <section aria-labelledby="drips-heading">
-      <h2 id="drips-heading">Funding transparency</h2>
-      {!endpoint && <p>Drips funding data has not been configured for this deployment.</p>}
-      {endpoint && !data && !error && <p role="status">Loading public Drips funding data…</p>}
-      {error && <p role="alert">Funding data is temporarily unavailable.</p>}
-      {data && (
-        <div>
-          <p>{data.project ?? "Synapse"}: {data.total ?? "—"} {data.currency ?? ""}</p>
-          {data.splits?.length ? (
-            <ul>{data.splits.map((split, index) => <li key={`${split.name}-${index}`}>{split.name ?? "Recipient"}: {split.percentage ?? 0}%</li>)}</ul>
-          ) : <p>No public split recipients are configured.</p>}
-        </div>
-      )}
-    </section>
+    <div className="drips-widget">
+      <h2>Contributors</h2>
+      <ul>
+        {contributors.map((contributor) => (
+          <li key={contributor.login}>
+            <img src={contributor.avatar_url} alt={contributor.login} width={24} height={24} />
+            <span>{contributor.login}</span>
+            <span>{contributor.contributions}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
