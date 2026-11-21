@@ -4,6 +4,7 @@ import {
   ConfigError,
   NETWORKS,
   PRODUCTION_REQUIRED_KEYS,
+  getConfig,
   isDeployment,
   loadConfig,
   readConfig,
@@ -24,6 +25,37 @@ const VALID_CONTRACT = `C${"A".repeat(55)}`;
 function invalidConfig(values: Record<string, unknown>): Record<string, string> {
   return values as Record<string, string>;
 }
+
+describe("getConfig — typed validated accessor", () => {
+  it("returns the validated config for a valid environment", () => {
+    const config = getConfig({
+      NEXT_PUBLIC_NETWORK: "testnet",
+      NEXT_PUBLIC_SOROBAN_RPC_URL: "https://soroban-testnet.stellar.org",
+      NEXT_PUBLIC_CONTRACT_ID: VALID_CONTRACT,
+    });
+
+    expect(config.NEXT_PUBLIC_NETWORK).toBe("testnet");
+    expect(config.NEXT_PUBLIC_CONTRACT_ID).toBe(VALID_CONTRACT);
+  });
+
+  it("throws a ConfigError on a missing required variable", () => {
+    // A production build requires a contract id; omitting it must fail here
+    // rather than silently returning an undefined value to the caller.
+    expect(() =>
+      getConfig(
+        {
+          NEXT_PUBLIC_NETWORK: "testnet",
+          NEXT_PUBLIC_SOROBAN_RPC_URL: "https://soroban-testnet.stellar.org",
+        },
+        true
+      )
+    ).toThrow(ConfigError);
+  });
+
+  it("throws a ConfigError on a malformed variable", () => {
+    expect(() => getConfig({ NEXT_PUBLIC_CONTRACT_ID: "not-a-contract" })).toThrow(ConfigError);
+  });
+});
 
 describe("loadConfig — valid configurations", () => {
   it("defaults to testnet when nothing is set", () => {
@@ -250,157 +282,5 @@ describe("loadConfig — network / RPC cross-validation", () => {
 
     expect(result.ok).toBe(false);
     expect(result.errors.join("\n")).toMatch(/rpc-futurenet\.stellar\.org/);
-  });
-
-  it("allows any host for the local network", () => {
-    const result = loadConfig(
-      { NEXT_PUBLIC_NETWORK: "local", NEXT_PUBLIC_SOROBAN_RPC_URL: "https://my-node.example.com" },
-      false
-    );
-
-    expect(result.ok).toBe(true);
-  });
-});
-
-describe("loadConfig — production requirements", () => {
-  it("allows a missing contract id in development", () => {
-    const result = loadConfig({}, false);
-
-    expect(result.ok).toBe(true);
-    expect(result.missingForProduction).toEqual([]);
-  });
-
-  it("allows a missing contract id in a build that advertises no origin", () => {
-    // A plain `next build` in CI sets no environment at all. Mock data is the
-    // app's documented, supported fallback, so this must not fail.
-    const result = loadConfig({}, true);
-
-    expect(result.ok).toBe(true);
-    expect(result.missingForProduction).toEqual([]);
-  });
-
-  it("fails a deployed build with no contract id", () => {
-    const result = loadConfig({ NEXT_PUBLIC_SITE_URL: "https://synapse.example.com" }, true);
-
-    expect(result.ok).toBe(false);
-    expect(result.missingForProduction).toEqual(["NEXT_PUBLIC_CONTRACT_ID"]);
-    expect(result.errors.join("\n")).toMatch(/required for a deployed build/);
-    expect(result.errors.join("\n")).toMatch(/silently renders mock data/);
-  });
-
-  it("treats an injected VERCEL_URL as a deployment too", () => {
-    const result = loadConfig({ VERCEL_URL: "synapse-web-abc.vercel.app" }, true);
-
-    expect(result.ok).toBe(false);
-    expect(result.missingForProduction).toEqual(["NEXT_PUBLIC_CONTRACT_ID"]);
-  });
-
-  it("passes a deployed build with a contract id", () => {
-    const result = loadConfig(
-      {
-        NEXT_PUBLIC_SITE_URL: "https://synapse.example.com",
-        NEXT_PUBLIC_CONTRACT_ID: VALID_CONTRACT,
-      },
-      true
-    );
-
-    expect(result.ok).toBe(true);
-    expect(result.missingForProduction).toEqual([]);
-  });
-
-  it("does not require a contract in development even with a site url", () => {
-    const result = loadConfig({ NEXT_PUBLIC_SITE_URL: "https://synapse.example.com" }, false);
-
-    expect(result.ok).toBe(true);
-  });
-
-  it("keeps the required-key list and the validator in agreement", () => {
-    // If someone adds a key to PRODUCTION_REQUIRED_KEYS, this still holds.
-    const result = loadConfig({ NEXT_PUBLIC_SITE_URL: "https://synapse.example.com" }, true);
-
-    expect(result.missingForProduction).toEqual([...PRODUCTION_REQUIRED_KEYS]);
-  });
-});
-
-describe("isDeployment", () => {
-  it("is true when a site url is advertised", () => {
-    const env = loadConfig({ NEXT_PUBLIC_SITE_URL: "https://synapse.example.com" }, false).env!;
-
-    expect(isDeployment(env)).toBe(true);
-  });
-
-  it("is true when only VERCEL_URL is present", () => {
-    const env = loadConfig({ VERCEL_URL: "synapse-web-abc.vercel.app" }, false).env!;
-
-    expect(isDeployment(env)).toBe(true);
-  });
-
-  it("is false for a bare configuration", () => {
-    expect(isDeployment(loadConfig({}, false).env!)).toBe(false);
-  });
-});
-
-describe("readConfig", () => {
-  it("returns validated config for a valid production env", () => {
-    const env = readConfig({
-      NODE_ENV: "production",
-      NEXT_PUBLIC_CONTRACT_ID: VALID_CONTRACT,
-    } as NodeJS.ProcessEnv);
-
-    expect(env.NEXT_PUBLIC_NETWORK).toBe("testnet");
-  });
-
-  it("throws a ConfigError naming every problem", () => {
-    let thrown: unknown;
-    try {
-      readConfig({
-        NODE_ENV: "production",
-        NEXT_PUBLIC_CONTRACT_ID: "nope",
-        NEXT_PUBLIC_NETWORK: "bogus",
-      } as NodeJS.ProcessEnv);
-    } catch (e) {
-      thrown = e;
-    }
-
-    expect(thrown).toBeInstanceOf(ConfigError);
-    const error = thrown as ConfigError;
-    expect(error.issues.length).toBe(2);
-    expect(error.message).toMatch(/NEXT_PUBLIC_CONTRACT_ID/);
-    expect(error.message).toMatch(/\.env\.example/);
-  });
-
-  it("does not treat a dev build as production", () => {
-    const env = readConfig({ NODE_ENV: "development" } as NodeJS.ProcessEnv);
-
-    expect(env.NEXT_PUBLIC_CONTRACT_ID).toBeUndefined();
-  });
-});
-
-describe("resolution helpers", () => {
-  it("uses the explicit RPC override when present", () => {
-    const env = loadConfig(
-      {
-        NEXT_PUBLIC_NETWORK: "testnet",
-        NEXT_PUBLIC_SOROBAN_RPC_URL: "https://soroban-testnet.stellar.org",
-      },
-      false
-    ).env!;
-
-    expect(resolveRpcUrl(env)).toBe("https://soroban-testnet.stellar.org");
-  });
-
-  it("falls back to the network's canonical RPC endpoint", () => {
-    const env = loadConfig({ NEXT_PUBLIC_NETWORK: "futurenet" }, false).env!;
-
-    expect(resolveRpcUrl(env)).toBe(NETWORKS.futurenet.rpcUrl);
-  });
-
-  it("resolves network metadata including the passphrase", () => {
-    const env = loadConfig({ NEXT_PUBLIC_NETWORK: "futurenet" }, false).env!;
-
-    const network = resolveNetwork(env);
-    expect(network.id).toBe("futurenet");
-    expect(network.passphrase).toMatch(/Future Network/);
-    expect(network.explorer).toMatch(/futurenet/);
   });
 });

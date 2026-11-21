@@ -81,6 +81,25 @@ export function useNotifications() {
   return useContext(NotificationContext);
 }
 
+/**
+ * Typed selector hook for the notification store.
+ *
+ * Reads the full context value and returns only the slice produced by
+ * `selector`, so consumers can subscribe to just what they need instead of
+ * the whole store. The selector should be a pure function of the context
+ * value; it is invoked on every render of the calling component.
+ *
+ * @example
+ * const unreadCount = useNotificationSelector((s) => s.unreadCount);
+ * const notifications = useNotificationSelector((s) => s.notifications);
+ */
+export function useNotificationSelector<T>(
+  selector: (state: NotificationContextValue) => T,
+): T {
+  const state = useContext(NotificationContext);
+  return selector(state);
+}
+
 function statusLabel(status?: string): string {
   if (!status) return status ?? "";
   const up = status.toUpperCase() as TxStatus;
