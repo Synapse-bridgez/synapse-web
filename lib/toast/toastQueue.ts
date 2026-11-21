@@ -129,8 +129,12 @@ export class ToastQueue {
    * Enqueue a toast. Identical rapid-fire toasts are deduplicated; the stack
    * is capped at maxVisible with overflow handled by priority so that
    * high-priority (error) toasts are never dropped for lower-priority ones.
+   *
+   * Returns the toast id, or `null` when the toast was rejected because the
+   * queue is full of equal-or-higher-priority toasts (callers can detect this
+   * to surface the message another way).
    */
-  push(type: ToastType, message: string, options: ToastOptions = {}): string {
+  push(type: ToastType, message: string, options: ToastOptions = {}): string | null {
     const now = Date.now();
     const dedupeWindow = options.dedupeWindow ?? DEDUPE_WINDOW_MS;
     const key = keyOf(type, message);
@@ -159,7 +163,13 @@ export class ToastQueue {
     };
 
     this.items.push(item);
-    this.enforceOverflow();
+    const accepted = this.enforceOverflow(item.id);
+    if (!accepted) {
+      // The new toast was itself evicted (queue full of equal/higher priority).
+      this.items = this.items.filter((i) => i.id !== item.id);
+      this.emit();
+      return null;
+    }
     this.scheduleDismiss(item);
     this.emit();
     return item.id;
@@ -184,9 +194,12 @@ export class ToastQueue {
   /**
    * Trim the stack to maxVisible. When overflowing, drop the lowest-priority
    * (and oldest) toasts first so errors survive over info/success toasts.
+   *
+   * Returns `false` when the just-pushed toast (`incomingId`) was the one
+   * evicted, i.e. the queue is full of equal-or-higher-priority toasts.
    */
-  private enforceOverflow(): void {
-    if (this.items.length <= this.maxVisible) return;
+  private enforceOverflow(incomingId?: string): boolean {
+    if (this.items.length <= this.maxVisible) return true;
 
     const overflow = this.items.length - this.maxVisible;
     const droppable = [...this.items].sort((a, b) => {
@@ -197,6 +210,8 @@ export class ToastQueue {
     const toDrop = new Set(droppable.slice(0, overflow).map((i) => i.id));
     this.items = this.items.filter((i) => !toDrop.has(i.id));
     for (const id of toDrop) this.clearTimer(id);
+
+    return incomingId === undefined || !toDrop.has(incomingId);
   }
 
   private scheduleDismiss(item: ToastItem): void {
