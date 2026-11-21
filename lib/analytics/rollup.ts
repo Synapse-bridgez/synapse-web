@@ -53,6 +53,11 @@ function buildVolumeBuckets(txs: Transaction[], now: number): VolumeBucket[] {
     return { label, count: 0, amount: 0 };
   });
 
+  // Bucket rule: each tx is counted in exactly one bucket. Bucket i covers
+  // [oldest + i*bucketMs, oldest + (i+1)*bucketMs), so a boundary timestamp
+  // goes to the later bucket, and the last bucket also takes anything at `now`.
+  // Ties (same created_at) share the same index, so they can't split across buckets.
+  // Do not add a second assignment (e.g. for edges) or totals double-count.
   for (const tx of txs) {
     const idx = Math.min(Math.floor((tx.created_at - oldest) / bucketMs), BUCKET_COUNT - 1);
     const bucket = buckets[idx];
