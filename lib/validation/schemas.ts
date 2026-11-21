@@ -78,7 +78,7 @@ export function numericParamSchema(min: number, max: number) {
     .union([z.string(), z.number()])
     .transform((v) => (typeof v === "string" ? v.trim() : v))
     .refine((v) => v !== "", "Value is required")
-    .refine((v) => !Number.isNaN(Number(v)), "Must be a valid number")
+    .refine((v) => Number.isFinite(Number(v)), "Must be a finite number (NaN and Infinity are not allowed)")
     .refine((v) => Number(v) >= min && Number(v) <= max, `Must be between ${min} and ${max}`);
 }
 
