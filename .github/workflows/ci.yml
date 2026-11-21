@@ -189,6 +189,11 @@ jobs:
       - name: Verify subresource integrity attributes
         run: node scripts/check-sri.mjs
 
+      # Spanish message catalog must have the same keys as English, or users see
+      # raw keys or English fallbacks. Key parity only; translations may be partial.
+      - name: Verify i18n key parity (es vs en)
+        run: npm run i18n:check
+
       # Production build. The output lands in `.next`, which the secret scan
       # below reads. Nothing here uploads `.next` as an artifact, so the scan is
       # the only consumer of the build output.
