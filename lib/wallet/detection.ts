@@ -19,6 +19,25 @@ type WalletWindow = Window & {
   stellar?: { freighter?: unknown; xbull?: unknown };
 };
 
+const reportedProbeFailures = new Set<string>();
+
+/**
+ * Runs a single wallet probe. A provider whose injected property throws (e.g. a
+ * throwing getter) counts as "not available" and is logged once, so it cannot
+ * abort detection for the other wallets.
+ */
+function probeWallet(name: string, probe: () => unknown): boolean {
+  try {
+    return Boolean(probe());
+  } catch (error) {
+    if (!reportedProbeFailures.has(name)) {
+      reportedProbeFailures.add(name);
+      console.warn(`Wallet detection probe for ${name} threw; treating it as unavailable.`, error);
+    }
+    return false;
+  }
+}
+
 /**
  * Checks if a specific wallet extension is injected into the global window object.
  */
@@ -35,17 +54,19 @@ export function checkInstalledExtensions(): ExtensionCheckResult {
   const win = window as WalletWindow;
 
   // Freighter detection
-  const freighter = Boolean(
-    win.freighterApi || win.freighter || (win.stellar && win.stellar.freighter)
+  const freighter = probeWallet(
+    "freighter",
+    () => win.freighterApi || win.freighter || (win.stellar && win.stellar.freighter)
   );
 
   // xBull detection
-  const xbull = Boolean(
-    win.xBull || win.xbull || win.xBullWallet || (win.stellar && win.stellar.xbull)
+  const xbull = probeWallet(
+    "xbull",
+    () => win.xBull || win.xbull || win.xBullWallet || (win.stellar && win.stellar.xbull)
   );
 
   // Albedo detection
-  const albedo = Boolean(win.albedo);
+  const albedo = probeWallet("albedo", () => win.albedo);
 
   const hasAny = freighter || xbull || albedo;
 
