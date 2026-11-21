@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { DIM, NEUTRAL } from "@/lib/constants";
 
@@ -11,11 +11,13 @@ interface CopyButtonProps {
 
 export function CopyButton({ value, label = "Value", style }: CopyButtonProps) {
   const { toast } = useToast();
+  const [pending, setPending] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering row clicks / modal closures
-    if (!value) return;
+    if (!value || pending) return;
 
+    setPending(true);
     navigator.clipboard
       .writeText(value)
       .then(() => {
@@ -24,19 +26,22 @@ export function CopyButton({ value, label = "Value", style }: CopyButtonProps) {
       .catch((err) => {
         console.error("Failed to copy text: ", err);
         toast("Failed to copy to clipboard", "error");
-      });
+      })
+      .finally(() => setPending(false));
   };
 
   return (
     <button
       onClick={handleCopy}
-      title={`Copy ${label}`}
-      aria-label={`Copy ${label}`}
+      disabled={pending}
+      aria-busy={pending}
+      title={pending ? `Copying ${label}` : `Copy ${label}`}
+      aria-label={pending ? `Copying ${label}` : `Copy ${label}`}
       style={{
         background: "none",
         border: "none",
         color: DIM,
-        cursor: "pointer",
+        cursor: pending ? "wait" : "pointer",
         padding: "2px 4px",
         display: "inline-flex",
         alignItems: "center",
