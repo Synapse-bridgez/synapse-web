@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { AMBER, BG2, DIM, MONO } from "@/lib/constants";
 import { toastQueue, type ToastItem, type ToastType } from "@/lib/toast/toastQueue";
+import { announce } from "@/lib/a11y/announce";
 
 export interface Toast {
   id: string;
@@ -41,6 +42,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     return toastQueue.subscribe(setToasts);
   }, []);
 
+  // Announce each newly enqueued toast via the live region. Visible toasts are
+  // not live regions themselves, so each message is read exactly once.
+  useEffect(() => {
+    let known = new Set<string>();
+    return toastQueue.subscribe((items) => {
+      for (const item of items) {
+        if (known.has(item.id)) continue;
+        announce(item.message, item.type === "error" ? "assertive" : "polite");
+      }
+      known = new Set(items.map((item) => item.id));
+    });
+  }, []);
+
   const toast = useCallback(
     (
       message: string,
@@ -62,7 +76,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {/* Toast container */}
       <div
         className="toast-container"
-        aria-live="assertive"
         style={{
           position: "fixed",
           bottom: 24,
