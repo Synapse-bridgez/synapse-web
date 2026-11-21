@@ -13,10 +13,9 @@ import { getHealth } from "@/lib/soroban/rpcHealth";
  *   RPC provider outage is detected here rather than being reported as the
  *   dashboard being down.
  *
- * The two are reported independently in the body, and the status code reflects
- * the app only: a reachable app with a dead RPC is still a reachable app, and
- * monitoring the deployment's availability by proxying an upstream provider's
- * uptime would produce false "site is down" pages.
+ * The two are reported independently in the body (`app.reachable` vs
+ * `rpc.reachable`), and a failed or timed-out RPC probe returns 503 with
+ * `status: "degraded"` so status-code-based monitors alert on it.
  *
  * Never cached: a cached 200 would hide exactly the outage this exists to catch.
  */
@@ -36,8 +35,7 @@ export async function GET() {
   };
 
   return NextResponse.json(body, {
-    // 200 while the app is up even if the RPC is not: see the note above.
-    status: 200,
+    status: rpc.reachable ? 200 : 503,
     headers: {
       "cache-control": "no-store, no-cache, must-revalidate",
     },

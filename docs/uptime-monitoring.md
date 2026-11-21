@@ -33,10 +33,9 @@ They are separate because they need **different responses**:
 | `app.reachable: false` | the deployment is not serving          | hosting / DNS / deploy       |
 | `rpc.reachable: false` | the app is up, the RPC provider is not | provider, or a config change |
 
-**The endpoint returns 200 whenever the app itself is serving**, even when the
-RPC is unreachable. Folding RPC health into the status code would mean an upstream
-provider outage reports the dashboard as down and sends someone to the wrong
-incident. Consumers read `rpc.reachable` to tell the two apart.
+**The endpoint returns 503 with `status: "degraded"` when the RPC probe fails or
+times out**, and 200 only when the RPC answers in time. Consumers read
+`app.reachable` and `rpc.reachable` in the body to tell the two failures apart.
 
 `getHealth` is used rather than a transaction simulation because it needs no
 contract and no signature, so the check keeps working on a mock-data build with
@@ -88,8 +87,8 @@ Configure the service of your choice against:
 
 - **URL:** `https://<deployment>/api/health`
 - **Interval:** 5 minutes
-- **Alert when:** HTTP status is not 200 (the app is down), **or** the JSON body's
-  `rpc.reachable` is `false` (the provider is down)
+- **Alert when:** HTTP status is not 200 (the app or the RPC provider is down;
+  the JSON body's `rpc.reachable` says which)
 - **Alert after:** 2 consecutive failures, to sit alongside the workflow's 3
 
 UptimeRobot, BetterStack, and Checkly all support a JSON body assertion of this
@@ -104,9 +103,8 @@ step:
    Expect `app.reachable: false` and no `200` from the route.
 2. **RPC down** — deploy with a deliberately unreachable endpoint, for example
    `NEXT_PUBLIC_SOROBAN_RPC_URL=https://127.0.0.1:1`, or point the host at a
-   network that blackholes the provider. Expect `200` with
-   `rpc.reachable: false` and `status: "degraded"`. This is the case that must
-   _not_ read as "the site is down".
+   network that blackholes the provider. Expect `503` with
+   `rpc.reachable: false` and `status: "degraded"`.
 3. **Recovery** — restore the endpoint and confirm the next check reports
    `status: "ok"`.
 
