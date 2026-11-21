@@ -24,5 +24,13 @@
       "error": "error",
       "errorWithDetail": "error · {detail}"
     }
+  },
+  "Notifications": {
+    "label": "NOTIFICACIONES",
+    "panelLabel": "Notificaciones",
+    "empty": "sin notificaciones",
+    "clear": "borrar todo",
+    "unreadOne": "1 notificación sin leer",
+    "unreadOther": "{count} notificaciones sin leer"
   }
 }
