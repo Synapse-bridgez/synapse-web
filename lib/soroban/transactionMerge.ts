@@ -17,6 +17,19 @@ function toTxStatus(value: unknown): TxStatus | null {
 }
 
 /**
+ * Oldest-first order. Ties break on ledger, then tx id, then event id, so the
+ * fold does not depend on the order the RPC returned events.
+ */
+function compareEvents(a: NormalizedSorobanEvent, b: NormalizedSorobanEvent): number {
+  if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+  if (a.ledger !== b.ledger) return a.ledger - b.ledger;
+  const aTx = a.txId ?? "";
+  const bTx = b.txId ?? "";
+  if (aTx !== bTx) return aTx < bTx ? -1 : 1;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/**
  * Folds live contract events over the mock baseline: `TransactionRegistered`
  * inserts a placeholder row for an unseen id, and `StatusChanged` updates the
  * status of a known row. Events for unknown ids are ignored.
@@ -25,7 +38,7 @@ export function mergeTransactionEvents(events: NormalizedSorobanEvent[]): Transa
   const result: Transaction[] = MOCK_TXS.map((tx) => ({ ...tx }));
   const index = new Map(result.map((tx, i) => [tx.id, i]));
 
-  for (const event of events) {
+  for (const event of [...events].sort(compareEvents)) {
     if (!event.txId) continue;
 
     if (event.type === "TransactionRegistered") {
