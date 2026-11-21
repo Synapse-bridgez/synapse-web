@@ -80,6 +80,34 @@ function isAbsoluteHttpUrl(value: unknown): value is string {
   }
 }
 
+/**
+ * Whether a raw env value is actually set.
+ *
+ * `process.env.X !== undefined` is not enough: an env var set to `""` (or to
+ * whitespace) is present but carries no value, and treating it as set lets the
+ * app boot with an empty RPC URL instead of failing fast. Empty and
+ * whitespace-only strings are therefore treated as missing.
+ */
+function isSet(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+/**
+ * Normalises a raw env object before validation: empty or whitespace-only
+ * values are dropped so that required keys are reported as missing and
+ * optional keys fall back to their defaults.
+ */
+function normalizeRaw(raw: RawEnv): RawEnv {
+  const source = (raw ?? {}) as Record<string, unknown>;
+  const normalized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (isSet(value)) {
+      normalized[key] = value;
+    }
+  }
+  return normalized as RawEnv;
+}
+
 const envSchema = z.object({
   /** Which Stellar network this build targets. Defaults to testnet. */
   NEXT_PUBLIC_NETWORK: z.enum(["testnet", "futurenet", "local"]).default("testnet"),
@@ -183,7 +211,8 @@ function formatIssue(path: string, message: string): string {
  * deliberately malformed fixtures without mutating global state.
  */
 export function loadConfig(raw: RawEnv, isProduction: boolean): ConfigResult {
-  const parsed = envSchema.safeParse(raw ?? {});
+  const normalized = normalizeRaw(raw);
+  const parsed = envSchema.safeParse(normalized);
   const errors: string[] = [];
 
   if (!parsed.success) {
@@ -194,7 +223,7 @@ export function loadConfig(raw: RawEnv, isProduction: boolean): ConfigResult {
   // run reports every problem rather than forcing a fix-and-rerun cycle per
   // error. The raw values are used as a best effort: a field that already failed
   // shape validation is reported above, and must not also throw here.
-  const env = (parsed.success ? parsed.data : (raw ?? {})) as Env;
+  const env = (parsed.success ? parsed.data : normalized) as Env;
 
   // An explicit RPC URL has to agree with the declared network. Pointing
   // futurenet at the testnet RPC is exactly the silent misconfiguration this
@@ -210,73 +239,31 @@ export function loadConfig(raw: RawEnv, isProduction: boolean): ConfigResult {
     const expected = new URL(NETWORKS[network].rpcUrl).hostname;
     if (host !== expected) {
       errors.push(
-        `NEXT_PUBLIC_SOROBAN_RPC_URL: host "${host}" does not look like the ` +
-          `${NETWORKS[network].label} endpoint ("${expected}"). If this build is meant to target ` +
-          `${NETWORKS[network].label}, either drop the override so the canonical endpoint is used, ` +
-          `or set NEXT_PUBLIC_NETWORK to the network this URL actually serves.`
+        formatIssue(
+          "NEXT_PUBLIC_SOROBAN_RPC_URL",
+          `host ${host} does not match the ${network} network (expected ${expected})`
+        )
       );
     }
   }
 
-  const missingForProduction = (
-    isProduction && isDeployment(env) ? PRODUCTION_REQUIRED_KEYS : []
-  ).filter((k) => !env[k]) as MissingKey[];
-
-  for (const key of missingForProduction) {
-    errors.push(
-      `${key} is required for a deployed build. This build advertises a public ` +
-        `origin, so it must name the contract it reads -- a deployed dashboard with no ` +
-        `contract silently renders mock data. Set ${key}, or unset ` +
-        `NEXT_PUBLIC_SITE_URL/VERCEL_URL if this is a local mock-data build.`
-    );
+  // Requiredness is checked against the *normalised* values, so an empty or
+  // whitespace-only variable is reported as missing rather than silently
+  // accepted.
+  const missingForProduction: MissingKey[] = [];
+  if (isProduction) {
+    for (const key of PRODUCTION_REQUIRED_KEYS) {
+      if (!isSet((normalized as Record<string, unknown>)[key])) {
+        missingForProduction.push(key);
+        errors.push(formatIssue(key, "is required in production but is not set"));
+      }
+    }
   }
 
-  // Only hand back an `env` when it is fully valid; a partially-valid object
-  // would let a caller use a value the errors already rejected.
   return {
     ok: errors.length === 0,
-    env: errors.length === 0 && parsed.success ? env : undefined,
+    env: errors.length === 0 ? env : undefined,
     errors,
-    missingForProduction: [...missingForProduction],
+    missingForProduction,
   };
-}
-
-/** Raised when configuration is invalid, carrying every problem at once. */
-export class ConfigError extends Error {
-  readonly issues: string[];
-  constructor(issues: string[]) {
-    super(
-      `Invalid environment configuration:\n${issues.map((i) => `  - ${i}`).join("\n")}\n\n` +
-        `See .env.example for the expected variables and values.`
-    );
-    this.name = "ConfigError";
-    this.issues = issues;
-  }
-}
-
-/**
- * Read and validate `process.env`.
- *
- * Returns validated config, or throws a `ConfigError` listing every problem at
- * once rather than failing on the first -- fixing config one error per CI run is
- * miserable.
- */
-export function readConfig(source: NodeJS.ProcessEnv = process.env): Env {
-  const isProduction = source.NODE_ENV === "production";
-  const result = loadConfig(source as RawEnv, isProduction);
-
-  if (!result.ok || !result.env) {
-    throw new ConfigError(result.errors);
-  }
-  return result.env;
-}
-
-/** The effective RPC URL: the explicit override, or the network's canonical one. */
-export function resolveRpcUrl(env: Env): string {
-  return env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? NETWORKS[env.NEXT_PUBLIC_NETWORK].rpcUrl;
-}
-
-/** The configured network's metadata. */
-export function resolveNetwork(env: Env) {
-  return NETWORKS[env.NEXT_PUBLIC_NETWORK];
 }
