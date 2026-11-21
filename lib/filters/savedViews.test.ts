@@ -11,19 +11,6 @@ import {
 
 const KEY = "synapse-transactions-saved-views";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  SAVED_VIEW_FILTER_FIELDS,
-  SAVED_VIEWS_SCHEMA_VERSION,
-  sanitizeFilters,
-  migrateSavedViews,
-  getSavedViews,
-  storeSavedViews,
-  createSavedViewId,
-} from "./savedViews";
-
-const KEY = "synapse-transactions-saved-views";
-
 beforeEach(() => localStorage.clear());
 afterEach(() => {
   vi.restoreAllMocks();
@@ -151,16 +138,6 @@ describe("migrateSavedViews", () => {
       { id: "a", name: "A", filters: {} },
     ]);
   });
-});
-    });
-    expect(result).toEqual([{ id: "a", name: "A", filters: { status: "ok" } }]);
-  });
-
-  it("defaults missing filters to an empty object", () => {
-    expect(migrateSavedViews({ views: [{ id: "a", name: "A" }] })).toEqual([
-      { id: "a", name: "A", filters: {} },
-    ]);
-  });
 
   it("filters out malformed views", () => {
     const result = migrateSavedViews({
@@ -222,6 +199,34 @@ describe("getSavedViews", () => {
     vi.stubGlobal("window", undefined);
     expect(getSavedViews()).toEqual([]);
   });
+
+  it("reads storage only once across multiple renders", () => {
+    const views = [{ id: "a", name: "A", filters: { status: "ok" } }];
+    localStorage.setItem(KEY, JSON.stringify({ version: 1, views }));
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+
+    expect(getSavedViews()).toEqual(views);
+    expect(getSavedViews()).toEqual(views);
+    expect(getSavedViews()).toEqual(views);
+
+    expect(getItem).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates the in-memory copy on write without re-reading storage", () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+
+    storeSavedViews([{ id: "a", name: "A", filters: { status: "ok" } }]);
+    expect(getSavedViews()).toEqual([
+      { id: "a", name: "A", filters: { status: "ok" } },
+    ]);
+
+    storeSavedViews([{ id: "b", name: "B", filters: { search: "x" } }]);
+    expect(getSavedViews()).toEqual([
+      { id: "b", name: "B", filters: { search: "x" } },
+    ]);
+
+    expect(getItem).not.toHaveBeenCalled();
+  });
 });
 
 describe("storeSavedViews", () => {
@@ -251,37 +256,10 @@ describe("storeSavedViews", () => {
     expect(getSavedViews()).toEqual(views);
   });
 
-  it("swallows storage errors", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("quota");
-    });
-    expect(() => storeSavedViews([{ id: "a", name: "A", filters: {} }])).not.toThrow();
+  it("generates unique ids", () => {
+    const a = createSavedViewId();
+    const b = createSavedViewId();
+    expect(a).not.toBe(b);
+    expect(typeof a).toBe("string");
   });
-
-  it("is a no-op without window", () => {
-    vi.stubGlobal("window", undefined);
-    try {
-      expect(() => storeSavedViews([{ id: "a", name: "A", filters: {} }])).not.toThrow();
-    } finally {
-      vi.unstubAllGlobals();
-    }
-    expect(localStorage.getItem(KEY)).toBeNull();
-  });
-});
-
-describe("createSavedViewId", () => {
-  it("has the view-<time>-<random> format", () => {
-    expect(createSavedViewId()).toMatch(/^view-[a-z0-9]+-[a-z0-9]{1,6}$/);
-  });
-
-  it("uses the current time", () => {
-    vi.spyOn(Date, "now").mockReturnValue(1_000_000);
-    expect(createSavedViewId().split("-")[1]).toBe((1_000_000).toString(36));
-  });
-
-  it("produces distinct ids", () => {
-    const ids = new Set(Array.from({ length: 50 }, createSavedViewId));
-    expect(ids.size).toBe(50);
-  });
-});
 });

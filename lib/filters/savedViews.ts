@@ -34,6 +34,13 @@ interface PersistedSavedViews {
   views: SavedView[];
 }
 
+/**
+ * In-memory cache of the parsed saved views. `null` means "not loaded yet";
+ * once populated it is the single source of truth and is updated on every
+ * write so storage is only read once per session.
+ */
+let cachedSavedViews: SavedView[] | null = null;
+
 function isKnownFilterField(field: string): field is SavedViewFilterField {
   return (SAVED_VIEW_FILTER_FIELDS as readonly string[]).includes(field);
 }
@@ -82,7 +89,7 @@ export function migrateSavedViews(payload: unknown): SavedView[] {
     .filter((view): view is SavedView => view !== undefined);
 }
 
-export function getSavedViews(): SavedView[] {
+function readSavedViewsFromStorage(): SavedView[] {
   if (typeof window === "undefined") return [];
   try {
     const stored = localStorage.getItem(SAVED_VIEWS_KEY);
@@ -93,20 +100,37 @@ export function getSavedViews(): SavedView[] {
   }
 }
 
+/**
+ * Return the saved views, reading and parsing storage only on the first call.
+ * Subsequent calls return the in-memory copy, which is kept in sync by
+ * `storeSavedViews`.
+ */
+export function getSavedViews(): SavedView[] {
+  if (cachedSavedViews === null) {
+    cachedSavedViews = readSavedViewsFromStorage();
+  }
+  return cachedSavedViews;
+}
+
 export function storeSavedViews(views: SavedView[]): void {
+  const sanitized = views.flatMap((view) => {
+    const name = savedViewNameSchema.safeParse(view.name);
+    if (!name.success) return [];
+    return [{
+      id: view.id,
+      name: name.data,
+      filters: sanitizeFilters(view.filters),
+    }];
+  });
+
+  // Keep the in-memory copy authoritative so reads never hit storage again.
+  cachedSavedViews = sanitized;
+
   if (typeof window === "undefined") return;
   try {
     const payload: PersistedSavedViews = {
       version: SAVED_VIEWS_SCHEMA_VERSION,
-      views: views.flatMap((view) => {
-        const name = savedViewNameSchema.safeParse(view.name);
-        if (!name.success) return [];
-        return [{
-        id: view.id,
-        name: name.data,
-        filters: sanitizeFilters(view.filters),
-        }];
-      }),
+      views: sanitized,
     };
     localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(payload));
   } catch {}
