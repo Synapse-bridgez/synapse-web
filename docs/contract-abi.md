@@ -1,6 +1,6 @@
 ---
 title: Contract ABI reference
-description: Every Synapse Core contract endpoint, generated from lib/constants.ts at build time.
+description: The ContractInfo shape returned by lib/soroban/contract.ts, matching lib/soroban/types.ts.
 order: 4
 generated: abi-reference
 ---
@@ -9,23 +9,41 @@ generated: abi-reference
 
 ## How to read this
 
-**Access** says who can meaningfully call the endpoint from the dashboard:
-
-- `public` — read-only simulation. No wallet signature is requested, and the
-  transaction is never submitted. Safe to call at any time.
-- `relay_signer` — requires a signature from the account configured as the
-  contract's relay signer. The dashboard prompts for it; the extension decides
-  whether to grant it.
-- `admin` — requires the current admin address. Irreversible if you pick the
-  wrong value, which is why the admin tab requires you to retype the target
-  address before confirming.
-- `one-time` — bootstrap only. Reverts once the contract is initialized, so
-  calling it a second time is harmless but pointless.
+This page documents the `ContractInfo` object that
+`lib/soroban/contract.ts` returns after parsing a contract's on-chain state.
+The authoritative type lives in `lib/soroban/types.ts`; if the two ever
+disagree, the type wins.
 
 On-chain reads all go through
 `SorobanRpc.Server.simulateTransaction()`. Writes go through
 `TransactionBuilder` → sign → `submitTransaction()`. The wallet integration is
 `@creit-tech/stellar-wallets-kit` (Freighter / xBull).
+
+## ContractInfo fields
+
+| Field | Type | Optional | Notes |
+| --- | --- | --- | --- |
+| `address` | `string` | no | The contract ID the info was parsed from. |
+| `admin` | `string` | no | Current admin address. |
+| `relaySigner` | `string` | no | Account allowed to submit relayed transactions. |
+| `paused` | `boolean` | no | Whether the contract is currently paused. |
+| `initialized` | `boolean` | no | `false` until the one-time bootstrap has run. |
+| `version` | `string` | no | Contract version string reported by the contract. |
+
+## Example
+
+```ts
+import type { ContractInfo } from "@/lib/soroban/types";
+
+const info: ContractInfo = {
+  address: "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+  admin: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+  relaySigner: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+  paused: false,
+  initialized: true,
+  version: "1.0.0",
+};
+```
 
 ## Try them
 

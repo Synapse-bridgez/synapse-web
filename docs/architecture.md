@@ -27,6 +27,7 @@ lib/
   types.ts          Transaction, ContractInfo, TxStatus, CallbackPayload
   mock-data.ts      MOCK_TXS, MOCK_CONTRACT_INFO
   utils.ts          shortId, elapsed, formatAmount
+  config/           index.ts (public surface), env.ts (env parsing)
   wallet/           kit.ts, storage.ts, WalletProvider.tsx
   soroban/          args.ts, contract.ts, events.ts, SorobanProvider.tsx,
                     transactionMerge.ts, useLiveTransactions.ts,
@@ -35,6 +36,25 @@ docs/               Documentation-site source (Markdown)
 scripts/docs/       Documentation-site build (no framework, no new deps)
 e2e/                Playwright specs
 ```
+
+## The config layer
+
+`lib/config/index.ts` is the single entry point for configuration. It draws a
+line between the **public surface** and **internal helpers**:
+
+- **Public** — `config` (the validated, frozen config object) and
+  `environment` (the resolved environment name). These are the only exports
+  other modules should import, and they are the ones covered by the stability
+  contract: their shape will not change without a documented migration.
+- **Internal** — everything else re-exported from `lib/config/env.ts`
+  (raw env parsing helpers, defaults, and types). They stay available for
+  in-repo use but are marked `@internal` in the source and may change at any
+  time. Do not import them from outside `lib/config/`.
+
+`lib/config/env.ts` owns the actual parsing and validation; `index.ts` only
+re-exports and documents the contract. When adding a new export, decide
+explicitly whether it belongs to the public surface or is internal, and label
+it accordingly.
 
 ## The provider stack
 

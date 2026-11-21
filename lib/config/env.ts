@@ -25,6 +25,10 @@ import { z } from "zod";
  * management is explicitly out of scope; if this app ever gains a server-side
  * secret, it needs a different mechanism, because a `NEXT_PUBLIC_` value is
  * not a place to put one.
+ *
+ * Public API (re-exported from `lib/config`): `NETWORKS`, `NetworkId`,
+ * `isNetworkId`, `Env`, `RawEnv`, `ConfigResult`, `loadConfig`, `isDeployment`.
+ * Everything else here is internal to the config layer.
  */
 
 /** Stellar contract id: a `C...` StrKey. */
@@ -210,73 +214,31 @@ export function loadConfig(raw: RawEnv, isProduction: boolean): ConfigResult {
     const expected = new URL(NETWORKS[network].rpcUrl).hostname;
     if (host !== expected) {
       errors.push(
-        `NEXT_PUBLIC_SOROBAN_RPC_URL: host "${host}" does not look like the ` +
-          `${NETWORKS[network].label} endpoint ("${expected}"). If this build is meant to target ` +
-          `${NETWORKS[network].label}, either drop the override so the canonical endpoint is used, ` +
-          `or set NEXT_PUBLIC_NETWORK to the network this URL actually serves.`
+        formatIssue(
+          "NEXT_PUBLIC_SOROBAN_RPC_URL",
+          `host ${host} does not match the ${network} network (expected ${expected})`
+        )
       );
     }
   }
 
-  const missingForProduction = (
-    isProduction && isDeployment(env) ? PRODUCTION_REQUIRED_KEYS : []
-  ).filter((k) => !env[k]) as MissingKey[];
-
-  for (const key of missingForProduction) {
-    errors.push(
-      `${key} is required for a deployed build. This build advertises a public ` +
-        `origin, so it must name the contract it reads -- a deployed dashboard with no ` +
-        `contract silently renders mock data. Set ${key}, or unset ` +
-        `NEXT_PUBLIC_SITE_URL/VERCEL_URL if this is a local mock-data build.`
-    );
+  // Production requiredness. A key that is missing here is reported separately
+  // from shape errors so the caller can distinguish "this build is broken" from
+  // "this build is fine locally but not deployable".
+  const missingForProduction: MissingKey[] = [];
+  if (isProduction) {
+    for (const key of PRODUCTION_REQUIRED_KEYS) {
+      if (!env[key]) {
+        missingForProduction.push(key);
+        errors.push(formatIssue(key, "is required in production"));
+      }
+    }
   }
 
-  // Only hand back an `env` when it is fully valid; a partially-valid object
-  // would let a caller use a value the errors already rejected.
   return {
     ok: errors.length === 0,
-    env: errors.length === 0 && parsed.success ? env : undefined,
+    env: errors.length === 0 ? env : undefined,
     errors,
-    missingForProduction: [...missingForProduction],
+    missingForProduction,
   };
-}
-
-/** Raised when configuration is invalid, carrying every problem at once. */
-export class ConfigError extends Error {
-  readonly issues: string[];
-  constructor(issues: string[]) {
-    super(
-      `Invalid environment configuration:\n${issues.map((i) => `  - ${i}`).join("\n")}\n\n` +
-        `See .env.example for the expected variables and values.`
-    );
-    this.name = "ConfigError";
-    this.issues = issues;
-  }
-}
-
-/**
- * Read and validate `process.env`.
- *
- * Returns validated config, or throws a `ConfigError` listing every problem at
- * once rather than failing on the first -- fixing config one error per CI run is
- * miserable.
- */
-export function readConfig(source: NodeJS.ProcessEnv = process.env): Env {
-  const isProduction = source.NODE_ENV === "production";
-  const result = loadConfig(source as RawEnv, isProduction);
-
-  if (!result.ok || !result.env) {
-    throw new ConfigError(result.errors);
-  }
-  return result.env;
-}
-
-/** The effective RPC URL: the explicit override, or the network's canonical one. */
-export function resolveRpcUrl(env: Env): string {
-  return env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? NETWORKS[env.NEXT_PUBLIC_NETWORK].rpcUrl;
-}
-
-/** The configured network's metadata. */
-export function resolveNetwork(env: Env) {
-  return NETWORKS[env.NEXT_PUBLIC_NETWORK];
 }
