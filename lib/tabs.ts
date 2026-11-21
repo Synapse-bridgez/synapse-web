@@ -74,3 +74,50 @@ export function tabPath(tab: Tab): string {
  * tabs the app actually ships, without paying for a build step in CI.
  */
 export const TAB_ROUTES: readonly string[] = TABS.map(tabPath);
+
+/**
+ * A single entry in the command palette's command list.
+ *
+ * `available` is the only availability-dependent field: it is recomputed on
+ * each open (see `CommandPalette`), while the rest of the command — its id,
+ * label, and target tab — is static and built once.
+ */
+export interface TabCommand {
+  id: string;
+  label: string;
+  tab: Tab;
+  available: boolean;
+}
+
+/**
+ * Builds the static portion of the command list exactly once.
+ *
+ * The palette used to rebuild this array from scratch on every open, even
+ * though nothing in it changes between opens. Hoisting it to module scope
+ * means the array is allocated a single time for the lifetime of the module
+ * and reused across every open; only the `available` flags are recomputed.
+ */
+export const TAB_COMMANDS: readonly Omit<TabCommand, "available">[] = TABS.map(
+  (tab) => ({
+    id: `tab:${tab}`,
+    label: tab.charAt(0).toUpperCase() + tab.slice(1),
+    tab,
+  }),
+);
+
+/**
+ * Applies availability to the static command list.
+ *
+ * This is the only part of the command list that depends on runtime state, so
+ * it is the only part the palette recomputes (memoized on the availability
+ * inputs). The static {@link TAB_COMMANDS} array is never rebuilt.
+ */
+export function withAvailability(
+  commands: readonly Omit<TabCommand, "available">[],
+  isAvailable: (tab: Tab) => boolean,
+): TabCommand[] {
+  return commands.map((command) => ({
+    ...command,
+    available: isAvailable(command.tab),
+  }));
+}
