@@ -26,6 +26,25 @@ export interface TelemetryContext {
 }
 
 /**
+ * Union of the metric names declared in `webVitals.ts` and `alertRules.ts`.
+ *
+ * Registering a new metric in those modules is the only way to add an event
+ * name; see `lib/telemetry/README.md`. This keeps typos and undeclared
+ * metrics from compiling.
+ */
+export type TelemetryMetricName =
+  // Web vitals (see `webVitals.ts`)
+  | "web_vital_lcp"
+  | "web_vital_fid"
+  | "web_vital_cls"
+  | "web_vital_fcp"
+  | "web_vital_ttfb"
+  | "web_vital_inp"
+  // Alert rules (see `alertRules.ts`)
+  | "alert_triggered"
+  | "alert_resolved";
+
+/**
  * Keys that must never be reported. Matching is case-insensitive and
  * substring-based so variants like `privateKey`, `secret_key`, or
  * `signedXdr` are all caught.
@@ -121,9 +140,35 @@ export function reportError(error: unknown, context: TelemetryContext = {}): voi
   console.error("[telemetry] unhandled error", error, scrubbed);
 }
 
+/**
+ * Emit a named metric event to the telemetry provider.
+ *
+ * The event name is restricted to `TelemetryMetricName` so only metrics
+ * declared in `webVitals.ts` / `alertRules.ts` can be emitted. Context is
+ * scrubbed of sensitive fields before dispatch, and the call is a no-op in
+ * local development.
+ */
+export function track(name: TelemetryMetricName, context: TelemetryContext = {}): void {
+  if (!isTelemetryEnabled()) {
+    return;
+  }
+
+  const scrubbed = scrubContext(context as Record<string, unknown>);
+
+  const metricProvider = getMetricProvider();
+  if (metricProvider) {
+    metricProvider(name, scrubbed);
+    return;
+  }
+
+  console.info("[telemetry] metric", name, scrubbed);
+}
+
 type TelemetryProvider = (error: unknown, context: Record<string, unknown>) => void;
+type MetricProvider = (name: TelemetryMetricName, context: Record<string, unknown>) => void;
 
 let provider: TelemetryProvider | null = null;
+let metricProvider: MetricProvider | null = null;
 
 /**
  * Register the underlying telemetry provider (e.g. a Sentry wrapper).
@@ -133,6 +178,18 @@ export function setTelemetryProvider(next: TelemetryProvider | null): void {
   provider = next;
 }
 
+/**
+ * Register the underlying metric provider (e.g. a Sentry metrics wrapper).
+ * Keeps the SDK swappable without touching call sites.
+ */
+export function setMetricProvider(next: MetricProvider | null): void {
+  metricProvider = next;
+}
+
 function getProvider(): TelemetryProvider | null {
   return provider;
+}
+
+function getMetricProvider(): MetricProvider | null {
+  return metricProvider;
 }

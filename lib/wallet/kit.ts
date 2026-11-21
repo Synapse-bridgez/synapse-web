@@ -114,6 +114,22 @@ export interface AccountBalancesResult {
   balances: AccountBalance[];
 }
 
+/**
+ * Canonical wallet connection status shared across the wallet layer.
+ * Defined here (the lower-level module) so consumers have a single source.
+ */
+export type WalletStatus = "disconnected" | "connecting" | "connected" | "error";
+
+/**
+ * Canonical wallet connection state shared across the wallet layer.
+ */
+export interface WalletState {
+  status: WalletStatus;
+  address: string | null;
+  walletId: SupportedWalletId | null;
+  error: string | null;
+}
+
 const HORIZON_URLS: Record<WalletNetwork, string> = {
   TESTNET: "https://horizon-testnet.stellar.org",
   PUBLIC: "https://horizon.stellar.org",
