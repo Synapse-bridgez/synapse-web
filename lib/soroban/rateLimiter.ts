@@ -1,200 +1,157 @@
 /**
- * Token-bucket rate limiter for outbound Soroban RPC calls.
+ * RPC rate limiter with exponential backoff for rate-limited (429) calls.
  *
- * Wraps all RPC invocations so that no matter how many features trigger reads
- * concurrently, the total request rate never exceeds `tokensPerInterval`
- * requests per `intervalMs`.
- *
- * When the bucket is empty, new requests are queued and drained as tokens
- * become available. A console.warn is emitted the first time a request is
- * queued in each throttle window so that the telemetry signal is clear without
- * being spammy.
+ * The limiter is a token bucket: callers `acquire()` a token before hitting
+ * the RPC endpoint. When the endpoint rejects with a 429, `withRateLimit`
+ * retries the call using exponential backoff (capped) instead of re-queueing
+ * immediately, so a burst of 429s does not turn into a tight retry loop.
  */
 
-/** Deferred promise helpers — kept local to avoid external dependencies. */
-interface Deferred<T> {
-  promise: Promise<T>;
-  resolve: (value: T | PromiseLike<T>) => void;
-  reject: (reason?: unknown) => void;
+export interface RateLimiterOptions {
+  /** Base delay (ms) for the first backoff step. */
+  baseDelayMs?: number;
+  /** Maximum delay (ms) between retries. */
+  maxDelayMs?: number;
+  /** Maximum number of retry attempts after the initial call. */
+  maxAttempts?: number;
+  /** Injectable sleep so tests can use fake timers without real waiting. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
-function createDeferred<T>(): Deferred<T> {
-  let resolve!: Deferred<T>["resolve"];
-  let reject!: Deferred<T>["reject"];
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
+const DEFAULT_BASE_DELAY_MS = 100;
+const DEFAULT_MAX_DELAY_MS = 5_000;
+const DEFAULT_MAX_ATTEMPTS = 5;
+
+function defaultSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ---------------------------------------------------------------------------
-// RpcRateLimiter
-// ---------------------------------------------------------------------------
+function isRateLimitError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const status = (error as { status?: number; statusCode?: number }).status ??
+    (error as { statusCode?: number }).statusCode;
+  if (status === 429) return true;
+  const message = (error as { message?: string }).message ?? "";
+  return /429|rate.?limit|too many requests/i.test(message);
+}
+
+/**
+ * Computes the backoff delay for a given attempt (0-based).
+ * Exponential with a cap.
+ */
+export function computeBackoffDelay(
+  attempt: number,
+  baseDelayMs: number = DEFAULT_BASE_DELAY_MS,
+  maxDelayMs: number = DEFAULT_MAX_DELAY_MS
+): number {
+  const delay = baseDelayMs * Math.pow(2, attempt);
+  return Math.min(delay, maxDelayMs);
+}
 
 export class RpcRateLimiter {
-  /** Tokens currently available in the bucket. */
   private tokens: number;
-  /** Maximum tokens (= tokensPerInterval after each refill). */
   private readonly capacity: number;
-  /** Milliseconds between refills. */
   private readonly intervalMs: number;
-  /** Timer handle for the periodic refill. */
-  private refillTimer: ReturnType<typeof setInterval> | null = null;
-
-  /** Total requests accepted since construction. */
-  private totalRequests = 0;
-  /** Total requests that were throttled (had to wait in the queue). */
-  private throttledRequests = 0;
-
-  /**
-   * Queue of deferred resolve-functions waiting for a token.
-   * Each entry corresponds to one waiting `acquire()` call.
-   */
-  private readonly queue: Array<Deferred<void>> = [];
-
-  /**
-   * Whether at least one warn has been emitted in the current refill window.
-   * Resets each time the bucket is refilled so the signal stays visible across
-   * windows without repeating for every queued call in one burst.
-   */
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private queue: Array<() => void> = [];
+  private total = 0;
+  private throttled = 0;
   private warnedThisWindow = false;
 
-  constructor(tokensPerInterval: number, intervalMs: number) {
-    if (tokensPerInterval < 1) {
-      throw new RangeError("tokensPerInterval must be ≥ 1");
-    }
-    if (intervalMs < 1) {
-      throw new RangeError("intervalMs must be ≥ 1");
-    }
-
-    this.capacity = tokensPerInterval;
-    this.tokens = tokensPerInterval;
+  constructor(capacity: number, intervalMs: number) {
+    if (capacity <= 0) throw new RangeError("capacity must be > 0");
+    if (intervalMs <= 0) throw new RangeError("intervalMs must be > 0");
+    this.capacity = capacity;
+    this.tokens = capacity;
     this.intervalMs = intervalMs;
-
-    this.startRefillLoop();
-  }
-
-  // -------------------------------------------------------------------------
-  // Public API
-  // -------------------------------------------------------------------------
-
-  /**
-   * Acquire a token, waiting in the queue if none are available.
-   *
-   * Resolves immediately when a token is available; otherwise queues the
-   * caller and resolves once the next refill grants it a token.
-   */
-  acquire(): Promise<void> {
-    this.totalRequests++;
-
-    if (this.tokens > 0) {
-      this.tokens--;
-      return Promise.resolve();
-    }
-
-    // No tokens — queue the request and warn.
-    this.throttledRequests++;
-
-    if (!this.warnedThisWindow) {
-      this.warnedThisWindow = true;
-      console.warn(
-        `[RPC Rate Limiter] Throttling RPC requests — bucket exhausted. ` +
-          `Queue depth: ${this.queue.length + 1}. ` +
-          `Stats: ${this.totalRequests} total, ${this.throttledRequests} throttled ` +
-          `(${this.capacityLabel()}).`
-      );
-    }
-
-    const deferred = createDeferred<void>();
-    this.queue.push(deferred);
-    return deferred.promise;
-  }
-
-  /**
-   * Returns current telemetry snapshot without side effects.
-   */
-  stats(): { tokens: number; queued: number; total: number; throttled: number } {
-    return {
-      tokens: this.tokens,
-      queued: this.queue.length,
-      total: this.totalRequests,
-      throttled: this.throttledRequests,
-    };
-  }
-
-  /**
-   * Stop the background refill loop.
-   * Call this in tests or when tearing down to avoid leaked timers.
-   */
-  destroy(): void {
-    if (this.refillTimer !== null) {
-      clearInterval(this.refillTimer);
-      this.refillTimer = null;
+    this.timer = setInterval(() => this.refill(), intervalMs);
+    // Do not keep the process alive solely for the refill timer.
+    if (typeof this.timer === "object" && this.timer && "unref" in this.timer) {
+      (this.timer as { unref?: () => void }).unref?.();
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Internal helpers
-  // -------------------------------------------------------------------------
-
-  private startRefillLoop(): void {
-    this.refillTimer = setInterval(() => this.refill(), this.intervalMs);
-  }
-
-  /**
-   * Refill the bucket to capacity and drain as many queued requests as
-   * possible. Called on each interval tick.
-   */
   private refill(): void {
     this.tokens = this.capacity;
     this.warnedThisWindow = false;
-
-    const drained = Math.min(this.queue.length, this.tokens);
-
-    if (drained > 0) {
+    if (this.queue.length > 0) {
       console.warn(
-        `[RPC Rate Limiter] Refilled — draining ${drained} queued request(s). ` +
-          `Stats: ${this.totalRequests} total, ${this.throttledRequests} throttled ` +
-          `(${this.capacityLabel()}).`
+        `[RPC Rate Limiter] Draining ${this.queue.length} queued request(s) after refill`
       );
-    }
-
-    for (let i = 0; i < drained; i++) {
-      const deferred = this.queue.shift()!;
-      this.tokens--;
-      deferred.resolve();
+      const pending = this.queue;
+      this.queue = [];
+      for (const resolve of pending) resolve();
     }
   }
 
-  private capacityLabel(): string {
-    return `capacity ${this.capacity} req/${this.intervalMs}ms`;
+  acquire(): Promise<void> {
+    this.total += 1;
+    if (this.tokens > 0) {
+      this.tokens -= 1;
+      return Promise.resolve();
+    }
+    this.throttled += 1;
+    if (!this.warnedThisWindow) {
+      this.warnedThisWindow = true;
+      console.warn(
+        `[RPC Rate Limiter] Throttling requests — bucket empty, queuing until next refill`
+      );
+    }
+    return new Promise<void>((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  stats(): { tokens: number; total: number; throttled: number; queued: number } {
+    return {
+      tokens: this.tokens,
+      total: this.total,
+      throttled: this.throttled,
+      queued: this.queue.length,
+    };
+  }
+
+  destroy(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    this.queue = [];
   }
 }
 
-// ---------------------------------------------------------------------------
-// Singleton — 30 requests per 10 s (matches Horizon / Soroban RPC guidance)
-// ---------------------------------------------------------------------------
-
-export const rpcRateLimiter = new RpcRateLimiter(30, 10_000);
-
-// ---------------------------------------------------------------------------
-// withRateLimit helper
-// ---------------------------------------------------------------------------
+/** Shared singleton used by the Soroban callers. */
+export const rpcRateLimiter = new RpcRateLimiter(10, 1_000);
 
 /**
- * Wraps an async `fn` with the singleton rate limiter.
- *
- * Usage:
- *
- * ```ts
- * const result = await withRateLimit(() => rpc.getTransaction(hash));
- * ```
- *
- * The call will block until a token is available, then invoke `fn` and return
- * its resolved value (or rethrow its rejection).
+ * Runs `fn` under the shared rate limiter, retrying rate-limited (429)
+ * failures with capped exponential backoff. After `maxAttempts` retries the
+ * original error is surfaced to the caller.
  */
-export async function withRateLimit<T>(fn: () => Promise<T>): Promise<T> {
-  await rpcRateLimiter.acquire();
-  return fn();
+export async function withRateLimit<T>(
+  fn: () => Promise<T>,
+  options: RateLimiterOptions = {}
+): Promise<T> {
+  const {
+    baseDelayMs = DEFAULT_BASE_DELAY_MS,
+    maxDelayMs = DEFAULT_MAX_DELAY_MS,
+    maxAttempts = DEFAULT_MAX_ATTEMPTS,
+    sleep = defaultSleep,
+  } = options;
+
+  let attempt = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    await rpcRateLimiter.acquire();
+    try {
+      return await fn();
+    } catch (error) {
+      if (!isRateLimitError(error) || attempt >= maxAttempts) {
+        throw error;
+      }
+      const delay = computeBackoffDelay(attempt, baseDelayMs, maxDelayMs);
+      attempt += 1;
+      await sleep(delay);
+    }
+  }
 }
