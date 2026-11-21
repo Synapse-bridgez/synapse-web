@@ -4,6 +4,11 @@ description: Tests, CI expectations, PR conventions, and how the documentation s
 order: 5
 ---
 
+> **This page is a pointer.** The canonical contributing guide — including
+> branch naming and the enforced commit message format — lives in
+> [`CONTRIBUTING.md`](../CONTRIBUTING.md) at the repository root. Follow that
+> file for branches and commits; this page only covers docs-site specifics.
+
 ## Before you open a PR
 
 Run the same four gates CI runs:
@@ -23,7 +28,7 @@ formatting problems rarely reach review.
 Two suites, two runners, two CI jobs.
 
 | Suite          | Runner         | Location                 | What it covers                       |
-| -------------- | -------------- | ------------------------ | ------------------------------------ |
+| ---------------------- | -------------- | ------------------------ | ------------------------------------ |
 | `npm run test` | Vitest + jsdom | `*.test.ts(x)` colocated | Logic and component behaviour        |
 | `npm run e2e`  | Playwright     | `e2e/*.spec.ts`          | The built app in each browser engine |
 

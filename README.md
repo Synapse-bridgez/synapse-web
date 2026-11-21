@@ -2,7 +2,8 @@
 
 **Community:** [public roadmap](https://github.com/orgs/Synapse-bridgez/projects) ·
 [recommended entry issues](docs/community/good-first-issues.md) ·
-[RFC process](docs/rfc-process.md)
+[RFC process](docs/rfc-process.md) ·
+[contributing guide](CONTRIBUTING.md)
 
 A Soroban transaction-lifecycle dashboard built with Next.js 16 and React 19.
 
@@ -136,11 +137,8 @@ npm run perf:record  # Append Lighthouse metrics to the committed history file
 npm run format       # Prettier (writes)
 npm run format:check # Prettier (CI check)
 npx tsc --noEmit     # Type-check without emitting
-```
-
-npm run release # Cut a release from conventional commits
-npm run release:dry # Report the version/notes without publishing
-
+npm run release      # Cut a release from conventional commits
+npm run release:dry  # Report the version/notes without publishing
 ```
 
 ### Releases
@@ -165,66 +163,6 @@ setup and how to verify a deliberate outage.
 
 GitHub Actions runs lint, typecheck, tests, build, and the initial-route JavaScript budget before deployment. PRs from branches in this repository receive an automatically updated Vercel preview comment; external-fork PRs run the quality gates but do not receive deployment credentials or an automated preview. Preview builds use Stellar Testnet and an empty contract ID, so they render mock data by default.
 
-Configure `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as GitHub environment secrets for `preview`, `staging`, and `production`. Pushes to a `staging` branch run the full quality gate and deploy using the `staging` environment's `NEXT_PUBLIC_CONTRACT_ID` and `NEXT_PUBLIC_SOROBAN_RPC_URL` variables. To promote a verified staging revision, manually dispatch the deployment workflow from `staging`; it reruns the quality gate and waits at the `production` environment. Add required reviewers to that GitHub environment to enforce approval; keep production contract and RPC values scoped to it. Set the staging contract to a Testnet deployment, never a production contract. Enable read/write workflow permissions for `GITHUB_TOKEN` so the performance workflow can update its history file.
+Configure `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as GitHub environment secrets for `preview`, `staging`, and `production`. Pushes to a `staging` branch run the full quality gate and deploy using the `staging` environment's `NEXT_PUBLIC_CONTRACT_ID` and `NEXT_PUBLIC_SOROBAN_RPC_URL` variables. To promote a verified staging revision, manually dispatch the deployment workflow from `staging`; it reruns the quality gate and waits at the `production` environment. Add required reviewers to that GitHub environment to enforce approval; keep production contract and RPC values sc
 
-The [performance history](/performance) page charts Lighthouse score, LCP, and initial-route JavaScript size, and lists CLS and TBT for the latest 30 successful main-branch CI runs. `public/performance/history.json` is appended automatically after each successful run. TBT is a lab proxy, not field INP; field INP requires real-user monitoring. The chart remains empty until a successful main-branch run records the first sample.
-
----
-
-## CI gates and deploys
-
-| Gate / pipeline            | Workflow                                  | Docs                                                           |
-| -------------------------- | ----------------------------------------- | -------------------------------------------------------------- |
-| Dependency vulnerabilities | `.github/workflows/dependency-audit.yml`  | [docs/ci/dependency-audit.md](docs/ci/dependency-audit.md)     |
-| SBOM (CycloneDX)           | `.github/workflows/sbom.yml`              | [docs/ci/sbom.md](docs/ci/sbom.md)                             |
-| Bundle size + Lighthouse   | `.github/workflows/performance.yml`       | [docs/ci/performance-gates.md](docs/ci/performance-gates.md)   |
-| Canary production deploy   | `.github/workflows/deploy-production.yml` | [docs/deploy/canary-rollout.md](docs/deploy/canary-rollout.md) |
-
----
-
-## Adding a new tab
-
-1. Create `components/<name>/<Name>Tab.tsx` and export a `<NameTab />` component.
-2. Add the tab key to the `TABS` array in `components/Shell.tsx`.
-3. Add a matching `{tab === "<name>" && <NameTab />}` render block in `Shell.tsx`.
-4. Wrap it in `<TabErrorBoundary>` like the existing tabs.
-
----
-
-## Roadmap / open issues
-
-Remaining backend and contract-ABI work is tracked in the upstream repo's issue
-tracker:
-
-- [Synapse-bridgez/synapse-web — open issues](https://github.com/Synapse-bridgez/synapse-web/issues)
-
-Notable milestones on the path to a working testnet client:
-
-- [x] Replace `alert()` stubs across `AdminTab`, `TxDetailModal`, and `TransactionsTab` with real
-      `TransactionBuilder` + sign + submit calls (`lib/soroban/contract.ts`)
-- [x] Wire `MOCK_TXS` / `MOCK_CONTRACT_INFO` to live `rpc.Server` reads (`useLiveTransactions`,
-      `useLiveContractInfo`), falling back to mock data when no wallet/contract is configured
-- [x] Integrate `@creit.tech/stellar-wallets-kit` (Freighter / xBull) for wallet connection
-      (`lib/wallet/`)
-- [ ] Backend relay service for `register_transaction`, `start_processing`, `complete_transaction`,
-      `fail_transaction`, and `register_callback` webhooks
-- [ ] Fetch `admin` / `relay_signer` from the deployed contract once it exposes a getter for them
-      (currently sourced from `lib/mock-data.ts` / env, since the ABI has none)
-
----
-
-## Tech stack
-
-|                |                                                                  |
-| -------------- | ---------------------------------------------------------------- |
-| Framework      | Next.js 16 (App Router)                                          |
-| UI             | React 19, inline styles + Tailwind CSS v4                        |
-| Font           | IBM Plex Mono                                                    |
-| Language       | TypeScript 5                                                     |
-| Linting        | ESLint + Prettier + Husky pre-commit                             |
-| Testing        | Vitest + Testing Library                                         |
-| CI             | GitHub Actions (lint → typecheck → test → build → bundle budget) |
-| Quality gates  | Dependency audit, SBOM, bundle budget, Lighthouse                |
-| Deploys        | Vercel Rolling Releases canary + auto-rollback                   |
-| Target network | Stellar Testnet (Soroban)                                        |
-```
+/* … truncated 3983 chars — edit only what you need near the top … */

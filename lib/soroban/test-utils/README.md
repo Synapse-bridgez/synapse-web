@@ -28,6 +28,15 @@ withMockSorobanProvider({ address: "G..." }, (ctx) => {
 });
 ```
 
+## Exports
+
+`index.ts` re-exports the following helpers:
+
+- `buildMockTx`
+- `buildMockEvent`
+- `buildMockSorobanContext`
+- `withMockSorobanProvider`
+
 ## Keeping mocks in sync with `lib/types.ts`
 
 The module exports an `AssertAssignable<T, U>` type-level guard. If the canonical

@@ -2,11 +2,15 @@
 
 Thanks for your interest in contributing! This guide covers everything you need to go from "I want to help" to a merged pull request. If you are new here, welcome — we are glad you found us.
 
+> **This is the canonical contributing guide.** The file at [`docs/contributing.md`](./docs/contributing.md) is a short pointer to this document. If you find any other contributing guide that disagrees with this one, treat this file as the source of truth and open a PR to fix the mismatch.
+
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
 - [Ways to Contribute](#ways-to-contribute)
 - [Local Setup](#local-setup)
+- [Branch Naming](#branch-naming)
+- [Commit Messages](#commit-messages)
 - [Coding Conventions](#coding-conventions)
 - [Adding a New Tab](#adding-a-new-tab)
 - [Testing & Coverage Expectations](#testing--coverage-expectations)
@@ -38,7 +42,7 @@ If you are unsure where to start, look for issues labeled `good first issue` or 
 
 2. **Install dependencies** using the package manager declared in the repository (see `package.json` / lockfile). Do not commit lockfile churn unrelated to your change.
 
-3. **Create a branch** off the default branch with a descriptive name:
+3. **Create a branch** off the default branch with a descriptive name (see [Branch Naming](#branch-naming)):
 
    ```bash
    git checkout -b fix/short-description
@@ -46,11 +50,46 @@ If you are unsure where to start, look for issues labeled `good first issue` or 
 
 4. **Run the app locally** using the scripts defined in `package.json` (for example `dev`, `start`, or `build`). Refer to the [README](./README.md) for the canonical, up-to-date commands — this guide intentionally does not duplicate them so the two stay in sync.
 
+## Branch Naming
+
+Branch names follow the same `type/short-description` shape as commit messages, where `type` is one of the commit types listed below:
+
+- `feat/short-description` — a new feature
+- `fix/short-description` — a bug fix
+- `docs/short-description` — documentation only
+- `chore/short-description` — tooling, deps, or maintenance
+- `refactor/short-description` — a change that neither fixes a bug nor adds a feature
+- `test/short-description` — adding or fixing tests
+
+Use lowercase words separated by hyphens, and keep the description short but specific (for example `docs/single-contributing-guide`).
+
+## Commit Messages
+
+The commit message format is enforced by `release.config.js` and the hooks in `.husky/`. Commits that do not match are rejected, so please follow it exactly:
+
+```
+<type>(<scope>): <subject>
+```
+
+- `type` is one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, or `revert`.
+- `scope` is optional and names the area you touched (for example `contributing`).
+- `subject` is a short, imperative description with no trailing period.
+
+Examples:
+
+```
+feat(tabs): add a settings tab
+docs(contributing): make one guide the source of truth for branches and commits
+fix(parser): handle empty input
+```
+
+Do not change the enforced format in `release.config.js` or `.husky/` to match a commit — instead, adjust your commit message to match the enforced format.
+
 ## Coding Conventions
 
 - Match the existing style, structure, and naming in the files you touch. When in doubt, follow the surrounding code.
 - Keep changes surgical: solve the issue at hand and avoid unrelated refactors or formatting churn.
-- Prefer small, focused commits with clear messages.
+- Prefer small, focused commits with clear messages (see [Commit Messages](#commit-messages)).
 - Do not commit secrets, tokens, or credentials. See [`docs/security/threat-model.md`](./docs/security/threat-model.md) for how we handle sensitive material.
 - Keep documentation and code in sync. If you change behavior, update the relevant docs.
 

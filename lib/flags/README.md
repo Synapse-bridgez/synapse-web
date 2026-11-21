@@ -32,6 +32,12 @@ is what keeps hydration consistent.
 
 ## Declaring a flag
 
+A flag is only ever evaluated if it is present in the `FLAGS` registry in
+`definitions.ts`. `evaluate.ts` resolves flags by looking each key up in that
+registry; a key that is not in `FLAGS` is ignored, even if it appears in the
+remote payload or in a `NEXT_PUBLIC_FEATURE_FLAG_<KEY>` env var. There is no
+separate registration step — adding the entry to `FLAGS` _is_ the registration.
+
 Add an entry to `FLAGS` in `definitions.ts`:
 
 ```ts
@@ -42,6 +48,11 @@ Add an entry to `FLAGS` in `definitions.ts`:
   owner: "core",
 },
 ```
+
+The `key` field must match the object key exactly. `evaluate.ts` builds the
+env-var name from `key` (`NEXT_PUBLIC_FEATURE_FLAG_<KEY>`, uppercased with
+non-alphanumerics replaced by `_`), so a mismatch between the object key and
+`key` means the flag resolves under one name and is overridden under another.
 
 ### The default is the whole design
 

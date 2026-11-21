@@ -1,5 +1,10 @@
 import { writeFile } from "node:fs/promises";
 
+// Usage: node scripts/generate-entry-issues.mjs [--dry-run]
+// Pass --dry-run to print each target path and a short preview of the content
+// that would be written, without writing anything.
+const dryRun = process.argv.slice(2).includes("--dry-run");
+
 const repository = process.env.GITHUB_REPOSITORY ?? "Synapse-bridgez/synapse-web";
 const token = process.env.GITHUB_TOKEN;
 if (!token) throw new Error("GITHUB_TOKEN is required");
@@ -14,4 +19,13 @@ const rows = issues.map((issue) => {
   return { number: issue.number, title: issue.title, url: issue.html_url, dependencies: [...new Set(references)] };
 }).sort((left, right) => left.dependencies.length - right.dependencies.length || left.number - right.number);
 const lines = ["# Recommended entry issues", "", "Generated from open `drips-wave` issues. Official complexity remains unchanged; ordering uses unresolved dependency count only.", "", "| Issue | Dependencies |", "|---|---:|", ...rows.map((row) => `| [#${row.number} ${row.title.replaceAll("|", "\\|")}](${row.url}) | ${row.dependencies.length} |`), ""];
-await writeFile("docs/community/good-first-issues.md", lines.join("\n"));
+const target = "docs/community/good-first-issues.md";
+const content = lines.join("\n");
+if (dryRun) {
+  const preview = content.split("\n").slice(0, 5).join("\n");
+  console.log(`[dry-run] would write ${target}`);
+  console.log(preview);
+  console.log("[dry-run] no files written");
+} else {
+  await writeFile(target, content);
+}
