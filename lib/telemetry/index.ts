@@ -96,6 +96,13 @@ export function isTelemetryEnabled(): boolean {
 }
 
 /**
+ * Whether the current environment is local development.
+ */
+export function isDevelopment(): boolean {
+  return typeof process !== "undefined" && !!process.env && process.env.NODE_ENV === "development";
+}
+
+/**
  * Report an unhandled error to the telemetry provider.
  *
  * This is a no-op in local development. Only unhandled crashes should call
@@ -119,6 +126,35 @@ export function reportError(error: unknown, context: TelemetryContext = {}): voi
   // Fallback: surface to the console so errors are not silently dropped when
   // no provider is configured in a non-development environment.
   console.error("[telemetry] unhandled error", error, scrubbed);
+}
+
+/**
+ * Report a handled, non-fatal issue (e.g. a malformed event that was skipped).
+ *
+ * Unlike {@link reportError}, this is not gated on production: in local
+ * development it emits a console warning so the problem is visible while
+ * iterating, and in other environments it dispatches through the provider
+ * (falling back to a console warning when no provider is configured).
+ */
+export function reportWarning(message: string, context: TelemetryContext = {}): void {
+  const scrubbed = scrubContext(context as Record<string, unknown>);
+
+  if (isDevelopment()) {
+    console.warn(`[telemetry] ${message}`, scrubbed);
+    return;
+  }
+
+  if (!isTelemetryEnabled()) {
+    return;
+  }
+
+  const provider = getProvider();
+  if (provider) {
+    provider(new Error(message), scrubbed);
+    return;
+  }
+
+  console.warn(`[telemetry] ${message}`, scrubbed);
 }
 
 type TelemetryProvider = (error: unknown, context: Record<string, unknown>) => void;
