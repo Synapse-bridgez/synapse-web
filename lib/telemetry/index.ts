@@ -121,6 +121,33 @@ export function reportError(error: unknown, context: TelemetryContext = {}): voi
   console.error("[telemetry] unhandled error", error, scrubbed);
 }
 
+/**
+ * Report a web vitals metric to the telemetry provider.
+ *
+ * Kept in this module so the reporter can load it lazily via dynamic import,
+ * keeping alert rules and transport out of the initial bundle.
+ */
+export function reportWebVital(metric: {
+  name: string;
+  value: number;
+  rating?: string;
+  id?: string;
+}): void {
+  if (!isTelemetryEnabled()) {
+    return;
+  }
+
+  const scrubbed = scrubContext(metric as unknown as Record<string, unknown>);
+
+  const provider = getProvider();
+  if (provider) {
+    provider(metric, scrubbed);
+    return;
+  }
+
+  console.info("[telemetry] web vital", scrubbed);
+}
+
 type TelemetryProvider = (error: unknown, context: Record<string, unknown>) => void;
 
 let provider: TelemetryProvider | null = null;
