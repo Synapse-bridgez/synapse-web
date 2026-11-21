@@ -25,6 +25,13 @@ export const WEB_VITALS_THRESHOLDS = {
 } as const;
 
 /**
+ * Union of the Web Vital metric names declared in WEB_VITALS_THRESHOLDS.
+ * Registering a new metric here (and in the thresholds map) is the only way
+ * to add a new accepted telemetry event name.
+ */
+export type WebVitalsMetricName = keyof typeof WEB_VITALS_THRESHOLDS;
+
+/**
  * Classifies a Web Vital metric value against defined Core Web Vitals thresholds.
  */
 export function getMetricRating(
