@@ -8,23 +8,12 @@ import {
   getStoredWalletId,
   isWalletConnectModule,
 } from "./kit";
+import type { WalletError, WalletErrorKind } from "./kit";
 import { appConfig } from "@/lib/config";
 
-/**
- * Typed set of wallet connection failure modes. Each maps to distinct,
- * actionable recovery copy in the connection-error UI.
- */
-export type WalletErrorKind = "not-installed" | "locked" | "rejected" | "wrong-network" | "unknown";
-
-export interface WalletError {
-  kind: WalletErrorKind;
-  /** Human-readable, actionable message for the user. */
-  message: string;
-  /** Install page for the specific wallet, when kind is "not-installed". */
-  installUrl?: string;
-  /** Raw underlying error message, for diagnostics. */
-  raw?: string;
-}
+// Wallet types are canonically defined in `lib/wallet/kit.ts`; re-export them
+// here so existing consumers keep working while there is a single source.
+export type { WalletError, WalletErrorKind } from "./kit";
 
 /**
  * Install pages for the wallets we support. Used to give the "not installed"
@@ -242,128 +231,7 @@ async function getPairingUri(): Promise<string | null> {
       if (qr && typeof qr === "object" && typeof qr.uri === "string") return qr.uri;
     }
   } catch {
-    // Module doesn't expose a pairing URI; nothing to render.
+    // Module doesn't expose a pairing URI; fall through.
   }
   return null;
-}
-
-export function WalletProvider({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<string | null>(null);
-  const [accounts, setAccounts] = useState<string[]>([]);
-  const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState<WalletError | null>(null);
-  const [pairing, setPairing] = useState(false);
-  const [pairingUri, setPairingUri] = useState<string | null>(null);
-  const [provider, setProvider] = useState<string | null>(null);
-  const [lastSubmittedAt, setLastSubmittedAt] = useState<number | null>(null);
-  const [mode, setMode] = useState<"wallet" | "watch">("wallet");
-
-  useEffect(() => {
-    ensureWalletKitInitialized();
-    if (!getStoredWalletId()) return;
-
-    let cancelled = false;
-    StellarWalletsKit.getAddress()
-      .then(async ({ address: restoredAddress }) => {
-        if (cancelled) return;
-        setAddress(restoredAddress);
-        const enumerated = await enumerateAccounts(restoredAddress);
-        if (!cancelled) setAccounts(enumerated);
-      })
-      .catch(() => {
-        // Session expired or relay disconnected: clear the stale session and
-        // surface a reconnect prompt instead of silently failing.
-        clearSelectedWalletId();
-        if (!cancelled) {
-          setError({
-            kind: "unknown",
-            message: "Wallet session expired. Please reconnect.",
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const connect = useCallback(async () => {
-    ensureWalletKitInitialized();
-    setConnecting(true);
-    setError(null);
-    setPairingUri(null);
-    try {
-      await StellarWalletsKit.authModal({});
-      const selected = StellarWalletsKit.selectedModule;
-      const walletConnect = isWalletConnectModule(selected);
-      if (walletConnect) {
-        setPairing(true);
-        setPairingUri(await getPairingUri());
-      }
-      const { address: connectedAddress } = await StellarWalletsKit.getAddress();
-      setAddress(connectedAddress);
-      setAccounts(await enumerateAccounts(connectedAddress));
-      storeSelectedWalletId(selected.productId);
-      setProvider(selected.productName ?? selected.productId);
-      setMode("wallet");
-    } catch (err) {
-      setError(classifyWalletError(err));
-    } finally {
-      setPairing(false);
-      setPairingUri(null);
-      setConnecting(false);
-    }
-  }, []);
-
-  const disconnect = useCallback(async () => {
-    try {
-      await StellarWalletsKit.disconnect();
-    } catch {
-      // Some modules don't implement disconnect(); local state is cleared regardless.
-    }
-    clearSelectedWalletId();
-    setAddress(null);
-    setAccounts([]);
-    setPairing(false);
-    setPairingUri(null);
-    setProvider(null);
-    setMode("wallet");
-  }, []);
-
-  const watchAddress = useCallback((watched: string) => {
-    setAddress(watched);
-    setAccounts([watched]);
-    setProvider(null);
-    setMode("watch");
-  }, []);
-
-  const markSubmitted = useCallback(() => setLastSubmittedAt(Date.now()), []);
-
-  const switchAccount = useCallback((account: string) => {
-    setAccounts((current) => (current.includes(account) ? current : [...current, account]));
-    setAddress(account);
-  }, []);
-
-  return (
-    <WalletContext.Provider
-      value={{
-        address,
-        accounts,
-        connecting,
-        error,
-        pairing,
-        pairingUri,
-        provider,
-        network: appConfig.network.id,
-        lastSubmittedAt,
-        markSubmitted,
-        mode,
-        watchAddress,
-        connect,
-        disconnect,
-        switchAccount,
-      }}
-    >
-      {children}
-    </WalletContext.Provider>
-  );
 }
