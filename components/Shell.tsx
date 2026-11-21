@@ -192,18 +192,6 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  // Cmd/Ctrl+K opens the command palette.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setPaletteOpen((open) => !open);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   const prevAddress = useRef<string | null>(null);
   useEffect(() => {
     if (address && !prevAddress.current) {
@@ -970,6 +958,7 @@ export function Shell({ initialTab = "dashboard" }: { initialTab?: Tab }) {
         <GuidedTour open={tour.open} onClose={tour.close} />
         <CommandPalette
           open={paletteOpen}
+          onOpen={() => setPaletteOpen(true)}
           onClose={() => setPaletteOpen(false)}
           commands={commands}
         />
