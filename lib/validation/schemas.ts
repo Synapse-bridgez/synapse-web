@@ -66,11 +66,17 @@ export const stellarAddressSchema = z
   .min(1, "Address is required")
   .refine(isValidStellarAddress, "Invalid Stellar address (checksum failed)");
 
+/** Inferred type for a required Stellar address. */
+export type StellarAddress = z.infer<typeof stellarAddressSchema>;
+
 /** Zod schema for an optional Stellar address (empty string allowed). */
 export const optionalStellarAddressSchema = z
   .string()
   .trim()
   .refine((v) => v === "" || isValidStellarAddress(v), "Invalid Stellar address (checksum failed)");
+
+/** Inferred type for an optional Stellar address. */
+export type OptionalStellarAddress = z.infer<typeof optionalStellarAddressSchema>;
 
 /** Zod schema for a required numeric parameter within an inclusive range. */
 export function numericParamSchema(min: number, max: number) {
@@ -82,6 +88,9 @@ export function numericParamSchema(min: number, max: number) {
     .refine((v) => Number(v) >= min && Number(v) <= max, `Must be between ${min} and ${max}`);
 }
 
+/** Inferred type for a numeric parameter value. */
+export type NumericParam = z.infer<ReturnType<typeof numericParamSchema>>;
+
 /** Zod schema for a required non-empty text parameter. */
 export const requiredTextSchema = z
   .string()
@@ -90,6 +99,9 @@ export const requiredTextSchema = z
   .max(256, "Value must be at most 256 characters")
   .refine((value) => !/[<>\u0000-\u001f]/.test(value), "Value contains unsafe characters");
 
+/** Inferred type for a required text parameter. */
+export type RequiredText = z.infer<typeof requiredTextSchema>;
+
 export const labelSchema = z
   .string()
   .trim()
@@ -97,7 +109,13 @@ export const labelSchema = z
   .max(80, "Label must be at most 80 characters")
   .regex(/^[\p{L}\p{N} _.,'()-]+$/u, "Label contains unsupported characters");
 
+/** Inferred type for a label. */
+export type Label = z.infer<typeof labelSchema>;
+
 export const savedViewNameSchema = labelSchema.max(60, "Name must be at most 60 characters");
+
+/** Inferred type for a saved view name. */
+export type SavedViewName = z.infer<typeof savedViewNameSchema>;
 
 export const safeHttpUrlSchema = z
   .string()
@@ -116,6 +134,9 @@ export const safeHttpUrlSchema = z
       return z.NEVER;
     }
   });
+
+/** Inferred type for a safe HTTP(S) URL. */
+export type SafeHttpUrl = z.infer<typeof safeHttpUrlSchema>;
 
 /**
  * Build a validation schema for an entrypoint's parameter set.
@@ -147,3 +168,6 @@ export function buildParamSchema(specs: ParamSpec[]) {
   }
   return z.object(shape);
 }
+
+/** Inferred type for a built parameter set. */
+export type ParamValues = z.infer<ReturnType<typeof buildParamSchema>>;
