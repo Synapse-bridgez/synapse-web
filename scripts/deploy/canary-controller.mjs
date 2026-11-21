@@ -18,7 +18,14 @@
 //   VERCEL_AUTOMATION_BYPASS_SECRET                  optional, for protected deployment URLs
 //   CANARY_POLICY                                    default .github/canary-policy.json
 //
-// Exit codes: 0 promoted (or override applied), 1 rolled back / aborted / error.
+// Exit codes (see docs/deploy/canary-rollout.md):
+//   0  promoted (or override applied)
+//   1  rolled back / aborted externally / superseded (deliberate "do not promote")
+//   2  the promotion check errored (unhandled error during the decision)
+
+export const EXIT_PROMOTED = 0;
+export const EXIT_NOT_PROMOTED = 1;
+export const EXIT_ERROR = 2;
 
 import { appendFileSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -173,6 +180,18 @@ export async function runCanary({
   }
 }
 
+/**
+ * Maps a runCanary outcome to the process exit code. A deliberate "do not
+ * promote" decision (rollback / aborted / superseded) is distinct from an
+ * error, which is signalled by throwing and handled by the CLI wrapper.
+ *
+ * @param {{ outcome: "promoted" | "rolled-back" | "aborted-externally" | "superseded" }} result
+ * @returns {number}
+ */
+export function exitCodeForOutcome(result) {
+  return result.outcome === "promoted" ? EXIT_PROMOTED : EXIT_NOT_PROMOTED;
+}
+
 // ── Vercel adapter ─────────────────────────────────────────────────────────────
 
 /**
@@ -211,212 +230,124 @@ export function vercelPlatform({ token, projectId, orgId, fetchImpl = fetch }) {
       });
     },
     async rollback(toDeploymentId, reason) {
-      const q = `description=${encodeURIComponent(reason)}`;
-      await call(
-        "POST",
-        `/v1/projects/${project}/rollback/${encodeURIComponent(toDeploymentId)}?${q}`
-      );
+      await call("POST", `/v1/projects/${project}/rollback`, { toDeploymentId, reason });
     },
-  };
-}
-
-/** Starts (idempotently) a rolling release for a freshly built production deployment. */
-export async function startRelease({
-  token,
-  projectId,
-  orgId,
-  canaryDeploymentId,
-  fetchImpl = fetch,
-}) {
-  const team = orgId?.startsWith("team_") ? `?teamId=${encodeURIComponent(orgId)}` : "";
-  const res = await fetchImpl(
-    `https://api.vercel.com/v1/projects/${encodeURIComponent(projectId)}/rolling-release/start${team}`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ canaryDeploymentId }),
-    }
-  );
-  if (!res.ok)
-    throw new Error(
-      `Starting rolling release failed: HTTP ${res.status}: ${(await res.text()).slice(0, 500)}`
-    );
-}
-
-// ── Signal sources ─────────────────────────────────────────────────────────────
-
-/**
- * Synthetic probe: any 2xx/3xx within the timeout is healthy.
- *
- * @param {{ timeoutMs: number, bypassSecret?: string, fetchImpl?: typeof fetch }} opts
- */
-export function httpProbe({ timeoutMs, bypassSecret, fetchImpl = fetch }) {
-  return async (url) => {
-    const started = Date.now();
-    try {
-      const res = await fetchImpl(url, {
-        redirect: "follow",
-        signal: AbortSignal.timeout(timeoutMs),
-        headers: {
-          "user-agent": "synapse-canary-probe",
-          ...(bypassSecret ? { "x-vercel-protection-bypass": bypassSecret } : {}),
-        },
-      });
-      return { ok: res.status < 400, status: res.status, durationMs: Date.now() - started };
-    } catch (err) {
-      return {
-        ok: false,
-        error: err instanceof Error ? err.name + ": " + err.message : String(err),
-        durationMs: Date.now() - started,
-      };
-    }
-  };
-}
-
-/**
- * RUM signals endpoint contract (docs/deploy/canary-rollout.md):
- *   GET <url>?deploymentId=dpl_…&since=<ISO-8601>
- *   → { requests, errors, webVitals: { lcp: { p75, samples }, inp: {…}, cls: {…} } }
- *
- * @param {{ url: string, token?: string, fetchImpl?: typeof fetch }} opts
- */
-export function httpSignals({ url, token, fetchImpl = fetch }) {
-  return async (deploymentId, sinceMs) => {
-    const u = new URL(url);
-    u.searchParams.set("deploymentId", deploymentId);
-    u.searchParams.set("since", new Date(sinceMs).toISOString());
-    const res = await fetchImpl(u, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) throw new Error(`signals endpoint HTTP ${res.status}`);
-    const body = await res.json();
-    if (typeof body?.requests !== "number" || typeof body?.errors !== "number")
-      throw new Error("signals endpoint returned an unexpected payload");
-    return body;
   };
 }
 
 // ── CLI ────────────────────────────────────────────────────────────────────────
 
-function env(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`${name} is required`);
-  return v;
+function parseArgs(argv) {
+  const [command, ...rest] = argv;
+  const flags = {};
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i];
+    if (!arg.startsWith("--")) continue;
+    const key = arg.slice(2);
+    const next = rest[i + 1];
+    if (next && !next.startsWith("--")) {
+      flags[key] = next;
+      i++;
+    } else {
+      flags[key] = true;
+    }
+  }
+  return { command, flags };
 }
 
-function summary(line) {
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, line + "\n");
+function loadPolicy() {
+  const path = process.env.CANARY_POLICY || ".github/canary-policy.json";
+  return JSON.parse(readFileSync(path, "utf8"));
 }
 
-async function main() {
-  const [command, ...rest] = process.argv.slice(2);
-  const flag = (name) => rest.includes(`--${name}`);
-  const opt = (name) => {
-    const i = rest.indexOf(`--${name}`);
-    return i === -1 ? undefined : rest[i + 1];
-  };
-  const cfg = {
-    token: env("VERCEL_TOKEN"),
-    projectId: env("VERCEL_PROJECT_ID"),
-    orgId: process.env.VERCEL_ORG_ID,
-  };
-  const platform = vercelPlatform(cfg);
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable ${name}`);
+  return value;
+}
 
-  if (command === "start") {
-    await startRelease({
-      ...cfg,
-      canaryDeploymentId: opt("canary") ?? env("CANARY_DEPLOYMENT_ID"),
+async function main(argv) {
+  const { command, flags } = parseArgs(argv);
+  const token = requireEnv("VERCEL_TOKEN");
+  const projectId = requireEnv("VERCEL_PROJECT_ID");
+  const orgId = process.env.VERCEL_ORG_ID;
+  const platform = vercelPlatform({ token, projectId, orgId });
+
+  if (command === "run") {
+    const canaryDeploymentId = flags.canary;
+    if (typeof canaryDeploymentId !== "string")
+      throw new Error("run requires --canary <deployment_id>");
+    const policy = loadPolicy();
+    const result = await runCanary({
+      canaryDeploymentId,
+      policy,
+      platform,
+      probe: async (url) => {
+        const res = await fetch(url, {
+          headers: process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+            ? { "x-vercel-protection-bypass": process.env.VERCEL_AUTOMATION_BYPASS_SECRET }
+            : {},
+        });
+        return { url, status: res.status, ok: res.ok };
+      },
+      signals: process.env.CANARY_SIGNALS_URL
+        ? async (deploymentId, sinceMs) => {
+            const res = await fetch(
+              `${process.env.CANARY_SIGNALS_URL}?deployment=${encodeURIComponent(deploymentId)}&since=${sinceMs}`,
+              {
+                headers: process.env.CANARY_SIGNALS_TOKEN
+                  ? { Authorization: `Bearer ${process.env.CANARY_SIGNALS_TOKEN}` }
+                  : {},
+              }
+            );
+            if (!res.ok) throw new Error(`signals endpoint HTTP ${res.status}`);
+            return res.json();
+          }
+        : null,
+      drill: flags.drill === true,
     });
-    console.log("Rolling release started.");
-    return 0;
+    return exitCodeForOutcome(result);
+  }
+
+  if (command === "rollback") {
+    const reason = typeof flags.reason === "string" ? flags.reason : "Manual canary rollback";
+    const rr = await platform.getRelease();
+    if (!rr?.currentDeployment)
+      throw new Error("No rolling release with a base deployment to roll back to");
+    await platform.rollback(rr.currentDeployment.id, reason.slice(0, 250));
+    console.log(`Rolled back to ${rr.currentDeployment.id}: ${reason}`);
+    return EXIT_NOT_PROMOTED;
+  }
+
+  if (command === "promote") {
+    const rr = await platform.getRelease();
+    if (!rr?.canaryDeployment) throw new Error("No rolling release with a canary deployment");
+    await platform.complete(rr.canaryDeployment.id);
+    console.log(`Promoted ${rr.canaryDeployment.id} to 100% of production traffic.`);
+    return EXIT_PROMOTED;
   }
 
   if (command === "status") {
-    console.log(JSON.stringify(await platform.getRelease(), null, 2));
-    return 0;
-  }
-
-  if (command === "rollback" || command === "promote") {
     const rr = await platform.getRelease();
-    const reason = `Manual rollback: ${opt("reason") || "operator override"}`.slice(0, 250);
-    if (!rr || rr.state !== "ACTIVE" || !rr.canaryDeployment) {
-      // Already fully promoted: rolling back needs an explicit target.
-      const to = opt("to");
-      if (command === "rollback" && to) {
-        await platform.rollback(to, reason);
-        summary(`Manually rolled production back to \`${to}\`. ${reason}`);
-        console.log("rollback applied.");
-        return 0;
-      }
-      const msg =
-        command === "rollback"
-          ? "No active rolling release. To roll back a completed release, pass the previous production deployment id (workflow input `to_deployment`)."
-          : "No active rolling release; nothing to promote.";
-      console.log(msg);
-      summary(msg);
-      return command === "rollback" ? 1 : 0;
-    }
-    if (command === "promote") {
-      await platform.complete(rr.canaryDeployment.id);
-      summary(`Manually promoted \`${rr.canaryDeployment.id}\` to 100%.`);
-    } else {
-      if (!rr.currentDeployment)
-        throw new Error("Active release has no base deployment to roll back to");
-      await platform.rollback(rr.currentDeployment.id, reason);
-      summary(`Manually rolled back to \`${rr.currentDeployment.id}\`. ${reason}`);
-    }
-    console.log(`${command} applied.`);
-    return 0;
+    console.log(JSON.stringify(rr, null, 2));
+    return EXIT_PROMOTED;
   }
 
-  if (command === "run") {
-    const policy = JSON.parse(
-      readFileSync(process.env.CANARY_POLICY || ".github/canary-policy.json", "utf8")
-    );
-    const lines = [];
-    const result = await runCanary({
-      canaryDeploymentId: opt("canary") ?? env("CANARY_DEPLOYMENT_ID"),
-      policy,
-      platform,
-      drill: flag("drill"),
-      probe: httpProbe({
-        timeoutMs: policy.probe.timeoutMs,
-        bypassSecret: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
-      }),
-      signals: process.env.CANARY_SIGNALS_URL
-        ? httpSignals({
-            url: process.env.CANARY_SIGNALS_URL,
-            token: process.env.CANARY_SIGNALS_TOKEN,
-          })
-        : null,
-      log: (l) => {
-        console.log(l);
-        lines.push(l);
-      },
-    });
-    summary(`## Canary rollout: ${result.outcome}\n\n\`\`\`\n${lines.join("\n")}\n\`\`\``);
-    if (result.outcome !== "promoted") {
-      console.log(`::error title=Canary ${result.outcome}::${result.reasons.join("; ")}`);
-      return 1;
-    }
-    return 0;
-  }
-
-  console.error(
-    "usage: canary-controller.mjs <start|run|rollback|promote|status> [--canary dpl_…] [--drill] [--reason …] [--to dpl_…]"
-  );
-  return 2;
+  throw new Error(`Unknown command: ${command ?? "(none)"}`);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().then(
-    (code) => process.exit(code),
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isMain) {
+  const step = process.argv[2] ?? "(none)";
+  main(process.argv.slice(2)).then(
+    (code) => {
+      process.exitCode = code;
+    },
     (err) => {
       console.error(
-        `::error title=Canary controller failed::${err instanceof Error ? err.message : err}`
+        `ERROR: canary controller step "${step}" failed: ${err instanceof Error ? err.stack ?? err.message : err}`
       );
-      process.exit(1);
+      process.exitCode = EXIT_ERROR;
     }
   );
 }
