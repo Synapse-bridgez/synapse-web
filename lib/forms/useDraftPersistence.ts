@@ -107,6 +107,9 @@ export function useDraftPersistence<T>({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const valuesRef = useRef(values);
   valuesRef.current = values;
+  // Serialized hydration-time values; writes start only once they differ (user change).
+  const initialSnapshotRef = useRef<string | null>(null);
+  const dirtyRef = useRef(false);
 
   const schedulePersist = useCallback(() => {
     if (!resolvedStorage) return;
@@ -123,8 +126,10 @@ export function useDraftPersistence<T>({
 
   // Debounced persistence as the user types.
   useEffect(() => {
-    if (!enabled) return;
-    schedulePersist();
+    const snapshot = JSON.stringify(values);
+    initialSnapshotRef.current ??= snapshot;
+    if (snapshot !== initialSnapshotRef.current) dirtyRef.current = true;
+    if (enabled && dirtyRef.current) schedulePersist();
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
