@@ -56,6 +56,21 @@ export function getAppConfig(): AppConfig {
 }
 
 /**
+ * Typed, validated accessor for the environment.
+ *
+ * This is the public surface callers should use instead of reading
+ * `process.env` directly. It returns the validated `Env` object (matching the
+ * variable names documented in `docs/local-development.md` and `.env.example`),
+ * so a missing or malformed variable fails here — at one place — rather than
+ * silently propagating an `undefined` through the app.
+ *
+ * Memoised via `getAppConfig()`; validation runs once per process.
+ */
+export function getConfig(): Env {
+  return getAppConfig().env;
+}
+
+/**
  * Eagerly-resolved config for module-scope constants.
  *
  * Convenient at import time, which is where the existing call sites need it

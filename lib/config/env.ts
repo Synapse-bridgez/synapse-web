@@ -210,73 +210,59 @@ export function loadConfig(raw: RawEnv, isProduction: boolean): ConfigResult {
     const expected = new URL(NETWORKS[network].rpcUrl).hostname;
     if (host !== expected) {
       errors.push(
-        `NEXT_PUBLIC_SOROBAN_RPC_URL: host "${host}" does not look like the ` +
-          `${NETWORKS[network].label} endpoint ("${expected}"). If this build is meant to target ` +
-          `${NETWORKS[network].label}, either drop the override so the canonical endpoint is used, ` +
-          `or set NEXT_PUBLIC_NETWORK to the network this URL actually serves.`
+        formatIssue(
+          "NEXT_PUBLIC_SOROBAN_RPC_URL",
+          `host '${host}' does not match the '${network}' network (expected '${expected}'); set NEXT_PUBLIC_NETWORK to match or fix the URL`
+        )
       );
     }
   }
 
-  const missingForProduction = (
-    isProduction && isDeployment(env) ? PRODUCTION_REQUIRED_KEYS : []
-  ).filter((k) => !env[k]) as MissingKey[];
-
-  for (const key of missingForProduction) {
-    errors.push(
-      `${key} is required for a deployed build. This build advertises a public ` +
-        `origin, so it must name the contract it reads -- a deployed dashboard with no ` +
-        `contract silently renders mock data. Set ${key}, or unset ` +
-        `NEXT_PUBLIC_SITE_URL/VERCEL_URL if this is a local mock-data build.`
-    );
+  // Production requiredness. Only reported when the build is a deployment, so
+  // the documented mock-data state stays valid.
+  const missingForProduction: MissingKey[] = [];
+  if (isProduction && isDeployment(env)) {
+    for (const key of PRODUCTION_REQUIRED_KEYS) {
+      if (!env[key]) {
+        missingForProduction.push(key);
+        errors.push(formatIssue(key, "is required for a production deployment"));
+      }
+    }
   }
 
-  // Only hand back an `env` when it is fully valid; a partially-valid object
-  // would let a caller use a value the errors already rejected.
   return {
     ok: errors.length === 0,
-    env: errors.length === 0 && parsed.success ? env : undefined,
+    env: errors.length === 0 ? env : undefined,
     errors,
-    missingForProduction: [...missingForProduction],
+    missingForProduction,
   };
 }
 
-/** Raised when configuration is invalid, carrying every problem at once. */
-export class ConfigError extends Error {
-  readonly issues: string[];
-  constructor(issues: string[]) {
-    super(
-      `Invalid environment configuration:\n${issues.map((i) => `  - ${i}`).join("\n")}\n\n` +
-        `See .env.example for the expected variables and values.`
-    );
-    this.name = "ConfigError";
-    this.issues = issues;
-  }
-}
-
 /**
- * Read and validate `process.env`.
+ * The validated configuration, as a typed object.
  *
- * Returns validated config, or throws a `ConfigError` listing every problem at
- * once rather than failing on the first -- fixing config one error per CI run is
- * miserable.
+ * This is the public surface callers should use instead of reading
+ * `process.env` directly. It runs the same validation as the build-time check
+ * and throws on any problem, so a missing or malformed variable fails at one
+ * place rather than silently producing `undefined` at a call site.
+ *
+ * The result is memoised: validation is deterministic for a given process, and
+ * re-parsing on every call would be wasteful in render paths.
  */
-export function readConfig(source: NodeJS.ProcessEnv = process.env): Env {
-  const isProduction = source.NODE_ENV === "production";
-  const result = loadConfig(source as RawEnv, isProduction);
+let cachedConfig: Env | undefined;
 
-  if (!result.ok || !result.env) {
-    throw new ConfigError(result.errors);
+export function getConfig(): Env {
+  if (cachedConfig) {
+    return cachedConfig;
   }
-  return result.env;
-}
 
-/** The effective RPC URL: the explicit override, or the network's canonical one. */
-export function resolveRpcUrl(env: Env): string {
-  return env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? NETWORKS[env.NEXT_PUBLIC_NETWORK].rpcUrl;
-}
+  const result = loadConfig(process.env as RawEnv, process.env.NODE_ENV === "production");
+  if (!result.ok || !result.env) {
+    throw new Error(
+      `Invalid environment configuration:\n${result.errors.map((e) => `  - ${e}`).join("\n")}`
+    );
+  }
 
-/** The configured network's metadata. */
-export function resolveNetwork(env: Env) {
-  return NETWORKS[env.NEXT_PUBLIC_NETWORK];
+  cachedConfig = result.env;
+  return cachedConfig;
 }
