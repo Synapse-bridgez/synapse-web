@@ -16,7 +16,14 @@ export function EndpointPlayground({ endpoint }: { endpoint: (typeof ABI_ENDPOIN
   const params = endpoint.params ?? [];
 
   function buildArgs() {
-    return params.map((parameter) => encodeArg(parameter.type, values[parameter.name] ?? ""));
+    return params.map((parameter) => {
+      try {
+        return encodeArg(parameter.type, values[parameter.name] ?? "");
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : String(caught);
+        throw new Error(`Argument "${parameter.name}": ${message}`);
+      }
+    });
   }
 
   async function execute(action: "simulate" | "submit") {

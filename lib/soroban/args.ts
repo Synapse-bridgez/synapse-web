@@ -40,8 +40,13 @@ export function encodeArg(type: string, value: string): xdr.ScVal {
       return u32Arg(Number(value));
     case "i128":
       return i128Arg(value.trim());
-    case "bool":
-      return boolArg(value.trim().toLowerCase() === "true");
+    case "bool": {
+      const normalized = value.trim().toLowerCase();
+      if (normalized !== "true" && normalized !== "false") {
+        throw new Error(`Invalid boolean "${value}": expected "true" or "false".`);
+      }
+      return boolArg(normalized === "true");
+    }
     case "struct": {
       let parsed: unknown;
       try {
