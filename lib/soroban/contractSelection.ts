@@ -34,10 +34,19 @@ export function getStoredContractId(): string | undefined {
   }
 }
 
+export class InvalidContractIdError extends Error {
+  constructor() {
+    super("Contract ID must not be empty or whitespace-only");
+    this.name = "InvalidContractIdError";
+  }
+}
+
 export function storeSelectedContractId(id: string): void {
+  const trimmed = id.trim();
+  if (!trimmed) throw new InvalidContractIdError();
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(SELECTED_CONTRACT_KEY, id);
+    localStorage.setItem(SELECTED_CONTRACT_KEY, trimmed);
   } catch {}
 }
 
