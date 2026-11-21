@@ -51,15 +51,20 @@ function persist(entries: AddressBookEntry[]): void {
 
 /**
  * Add or update an entry. Addresses are unique; saving an existing address
- * updates its label. Invalid addresses are rejected (returns current list).
+ * updates its label. Throws a descriptive Error for an invalid address or label.
  */
 export function saveAddress(
   entries: AddressBookEntry[],
   entry: AddressBookEntry
 ): AddressBookEntry[] {
   const address = entry.address.trim();
+  if (!isValidAddress(address)) {
+    throw new Error("Invalid Stellar address (checksum failed)");
+  }
   const parsedLabel = labelSchema.safeParse(entry.label);
-  if (!isValidAddress(address) || !parsedLabel.success) return entries;
+  if (!parsedLabel.success) {
+    throw new Error(parsedLabel.error.issues[0]?.message ?? "Invalid label");
+  }
   const label = parsedLabel.data;
 
   const next = entries.filter((e) => e.address !== address);
