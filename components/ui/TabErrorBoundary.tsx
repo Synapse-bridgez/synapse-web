@@ -19,6 +19,50 @@ interface TabErrorBoundaryState {
   hasError: boolean;
 }
 
+interface FallbackBoundaryState {
+  hasError: boolean;
+}
+
+/**
+ * Nested boundary that guards the fallback UI itself. If the fallback throws
+ * (e.g. a missing translation key), we degrade to a plain-text message with a
+ * retry button instead of leaving the tab blank.
+ */
+class FallbackBoundary extends React.Component<
+  { onRetry: () => void; children: React.ReactNode },
+  FallbackBoundaryState
+> {
+  state: FallbackBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): FallbackBoundaryState {
+    return { hasError: true };
+  }
+
+  render(): React.ReactNode {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Something went wrong while displaying this error.
+          </p>
+          <button
+            type="button"
+            className="rounded-md border px-3 py-1.5 text-sm"
+            onClick={() => {
+              this.setState({ hasError: false });
+              this.props.onRetry();
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 /**
  * Contains crashes inside a tab and reports them to telemetry with enough
  * context (tab name, wallet-connected state, contract ID) to debug production
@@ -44,23 +88,29 @@ export class TabErrorBoundary extends React.Component<
     });
   }
 
+  private handleRetry = (): void => {
+    this.setState({ hasError: false });
+  };
+
   render(): React.ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
-          <h2 className="text-lg font-semibold">Something went wrong</h2>
-          <p className="text-sm text-muted-foreground">
-            This tab encountered an unexpected error. The issue has been
-            reported.
-          </p>
-          <button
-            type="button"
-            className="rounded-md border px-3 py-1.5 text-sm"
-            onClick={() => this.setState({ hasError: false })}
-          >
-            Try again
-          </button>
-        </div>
+        <FallbackBoundary onRetry={this.handleRetry}>
+          <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+            <h2 className="text-lg font-semibold">Something went wrong</h2>
+            <p className="text-sm text-muted-foreground">
+              This tab encountered an unexpected error. The issue has been
+              reported.
+            </p>
+            <button
+              type="button"
+              className="rounded-md border px-3 py-1.5 text-sm"
+              onClick={this.handleRetry}
+            >
+              Try again
+            </button>
+          </div>
+        </FallbackBoundary>
       );
     }
 

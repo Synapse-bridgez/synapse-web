@@ -111,4 +111,21 @@ describe("TabErrorBoundary", () => {
     expect(screen.getByText("recovered")).toBeInTheDocument();
     expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
   });
+
+  it("degrades to a plain-text message with retry when the fallback itself throws", () => {
+    function ThrowingFallback(): React.ReactNode {
+      throw new Error("fallback boom");
+    }
+
+    render(
+      <TabErrorBoundary fallback={<ThrowingFallback />}>
+        <Boom />
+      </TabErrorBoundary>,
+    );
+
+    expect(
+      screen.getByText("Something went wrong while displaying this tab."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  });
 });

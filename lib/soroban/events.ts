@@ -1,4 +1,5 @@
 import { rpc } from "@stellar/stellar-sdk";
+import { trackEvent } from "@/lib/telemetry";
 
 export const DEFAULT_RPC_URL = "https://soroban-testnet.stellar.org";
 const CURSOR_STORAGE_KEY = "soroban-event-cursor";
@@ -98,6 +99,23 @@ function storeCursor(contractId: string | undefined, cursor: string): void {
   } catch {}
 }
 
+/**
+ * Reports a single event that failed to parse. Uses the shared telemetry entry
+ * point when available, and falls back to a dev-only console warning so a
+ * contract-side schema change is never silently swallowed.
+ */
+function reportParseFailure(eventId: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  try {
+    trackEvent("soroban_event_parse_failed", { eventId, error: message });
+  } catch {
+    // Telemetry must never break the poll loop.
+  }
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(`[soroban] failed to parse event ${eventId}: ${message}`);
+  }
+}
+
 export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contractId?: string) {
   const server = new rpc.Server(rpcUrl);
   let cursor: string | null = getStoredCursor(contractId);
@@ -125,39 +143,35 @@ export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contr
   }
 
   function normalizeEvent(raw: rpc.Api.EventResponse): NormalizedSorobanEvent | null {
-    try {
-      const topics = raw.topic ?? [];
-      const typeStr = topics[0]?.toString() ?? "";
-      const timestamp = raw.ledgerClosedAt ? new Date(raw.ledgerClosedAt).getTime() : Date.now();
+    const topics = raw.topic ?? [];
+    const typeStr = topics[0]?.toString() ?? "";
+    const timestamp = raw.ledgerClosedAt ? new Date(raw.ledgerClosedAt).getTime() : Date.now();
 
-      if (typeStr.includes("TransactionRegistered")) {
-        return {
-          id: raw.id,
-          type: "TransactionRegistered",
-          txId: topics[1]?.toString(),
-          timestamp,
-          ledger: raw.ledger,
-          raw,
-        };
-      }
-
-      if (typeStr.includes("StatusChanged")) {
-        return {
-          id: raw.id,
-          type: "StatusChanged",
-          txId: topics[1]?.toString(),
-          fromStatus: topics[2]?.toString(),
-          toStatus: topics[3]?.toString(),
-          timestamp,
-          ledger: raw.ledger,
-          raw,
-        };
-      }
-
-      return null;
-    } catch {
-      return null;
+    if (typeStr.includes("TransactionRegistered")) {
+      return {
+        id: raw.id,
+        type: "TransactionRegistered",
+        txId: topics[1]?.toString(),
+        timestamp,
+        ledger: raw.ledger,
+        raw,
+      };
     }
+
+    if (typeStr.includes("StatusChanged")) {
+      return {
+        id: raw.id,
+        type: "StatusChanged",
+        txId: topics[1]?.toString(),
+        fromStatus: topics[2]?.toString(),
+        toStatus: topics[3]?.toString(),
+        timestamp,
+        ledger: raw.ledger,
+        raw,
+      };
+    }
+
+    return null;
   }
 
   async function poll(): Promise<void> {
@@ -182,8 +196,13 @@ export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contr
       if (response && response.events) {
         const normalized: NormalizedSorobanEvent[] = [];
         for (const event of response.events) {
-          const n = normalizeEvent(event);
-          if (n) normalized.push(n);
+          try {
+            const n = normalizeEvent(event);
+            if (n) normalized.push(n);
+          } catch (err) {
+            // One malformed event must not abort the batch; report and continue.
+            reportParseFailure(event?.id ?? "unknown", err);
+          }
         }
 
         const lastEvent = response.events[response.events.length - 1];
@@ -267,29 +286,5 @@ export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contr
     };
   }
 
-  function getHealth(): RpcHealth {
-    return { ...health };
-  }
-
-  function getCursor(): string | null {
-    return cursor;
-  }
-
-  function resetCursor(): void {
-    cursor = null;
-    storeCursor(contractId, "");
-  }
-
-  return {
-    start,
-    stop,
-    poll,
-    onHealth,
-    onEvents,
-    getHealth,
-    getCursor,
-    resetCursor,
-  };
+  return { start, stop, onHealth, onEvents, poll, health };
 }
-
-export type SorobanEventPoller = ReturnType<typeof createSorobanEventPoller>;
