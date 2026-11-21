@@ -5,6 +5,7 @@ import {
   useReducer,
   useCallback,
   useEffect,
+  useMemo,
   type ReactNode,
 } from "react";
 import { useSorobanEvents } from "@/lib/soroban/SorobanProvider";
@@ -133,12 +134,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const dismiss = useCallback((id: string) => dispatch({ type: "DISMISS", id }), []);
   const clearAll = useCallback(() => dispatch({ type: "CLEAR_ALL" }), []);
 
-  const unreadCount = state.notifications.filter((n) => !n.read).length;
+  const notifications = useMemo(() => state.notifications, [state.notifications]);
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications],
+  );
+
+  const value = useMemo<NotificationContextValue>(
+    () => ({ notifications, unreadCount, markAllRead, dismiss, clearAll }),
+    [notifications, unreadCount, markAllRead, dismiss, clearAll],
+  );
 
   return (
-    <NotificationContext.Provider
-      value={{ notifications: state.notifications, unreadCount, markAllRead, dismiss, clearAll }}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );
