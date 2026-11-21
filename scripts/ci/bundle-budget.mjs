@@ -45,8 +45,9 @@ export function initialAssets(html) {
 /**
  * @param {string} distDir
  * @param {string[]} routes
+ * @param {{ totalJs?: number }} [budget]
  */
-export function measureBuild(distDir, routes) {
+export function measureBuild(distDir, routes, budget = {}) {
   const staticDir = path.join(distDir, "static");
   const cache = new Map();
   const sizeOf = (asset) => {
@@ -84,10 +85,18 @@ export function measureBuild(distDir, routes) {
         const size = gzipSize(readFileSync(full));
         totalJs += size;
         if (size > largestChunk.size) largestChunk = { file: path.relative(staticDir, full), size };
+        // Short-circuit: once the running total is already over budget, stop
+        // reading and parsing further chunks. The offending chunk is reported
+        // immediately via the returned measurement.
+        if (budget.totalJs != null && totalJs > budget.totalJs) {
+          return { routes: routeSizes, totalJs, largestChunk, overBudget: true };
+        }
       }
     }
+    return null;
   };
-  walk(chunksDir);
+  const early = walk(chunksDir);
+  if (early) return early;
 
   return { routes: routeSizes, totalJs, largestChunk };
 }
@@ -151,7 +160,7 @@ function main() {
     return i === -1 ? fallback : argv[i + 1];
   };
   const budget = JSON.parse(readFileSync(opt("budget", "bundle-budget.json"), "utf8"));
-  const measured = measureBuild(opt("dir", ".next"), Object.keys(budget.routes ?? {}));
+  const measured = measureBuild(opt("dir", ".next"), Object.keys(budget.routes ?? {}), budget);
   const result = checkBudget(measured, budget);
   const summary = formatSummary(result);
   console.log(summary);
