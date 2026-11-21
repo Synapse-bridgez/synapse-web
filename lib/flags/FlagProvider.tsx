@@ -61,6 +61,7 @@ export interface FlagContextValue {
   readonly status: "loading" | "ready";
   readonly source: "remote" | "cache" | "empty";
   readonly stale: boolean;
+  readonly lastSuccessAt?: number;
   readonly lastError?: string;
   readonly refresh: () => void;
 }
@@ -81,6 +82,7 @@ export function FlagProvider({ children, url, fetchImpl, timeoutMs }: FlagProvid
   const [meta, setMeta] = useState<{
     source: FlagContextValue["source"];
     stale: boolean;
+    lastSuccessAt?: number;
     error?: string;
   }>({
     source: "empty",
@@ -113,7 +115,12 @@ export function FlagProvider({ children, url, fetchImpl, timeoutMs }: FlagProvid
       .then((result) => {
         if (cancelled) return;
         setOverrides(result.overrides);
-        setMeta({ source: result.source, stale: result.stale, error: result.error });
+        setMeta({
+          source: result.source,
+          stale: result.stale,
+          lastSuccessAt: result.lastSuccessAt,
+          error: result.error,
+        });
         setStatus("ready");
       })
       .catch((error: unknown) => {
@@ -154,10 +161,11 @@ export function FlagProvider({ children, url, fetchImpl, timeoutMs }: FlagProvid
       status,
       source: meta.source,
       stale: meta.stale,
+      lastSuccessAt: meta.lastSuccessAt,
       lastError: meta.error,
       refresh,
     }),
-    [flags, status, meta.source, meta.stale, meta.error, refresh]
+    [flags, status, meta.source, meta.stale, meta.lastSuccessAt, meta.error, refresh]
   );
 
   return <FlagContext.Provider value={value}>{children}</FlagContext.Provider>;
