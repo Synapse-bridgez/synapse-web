@@ -1,4 +1,4 @@
-import type { FlagDefinition, FlagOverride, ResolvedFlag } from "./types";
+import type { FlagDefinition, FlagOverride, FlagValue, ResolvedFlag } from "./types";
 
 /**
  * Pure flag evaluation. No network, no storage, no React — every function here
@@ -96,10 +96,10 @@ export function resolveFlag(flag: FlagDefinition, options: ResolveOptions): Reso
   const remoteHasValue = typeof remote?.value === "boolean";
   const envOn = env !== undefined && env !== "" && env !== "0" && env !== "false";
 
-  let value: boolean;
+  let value: FlagValue;
   let source: ResolvedFlag["source"];
   if (remoteHasValue) {
-    value = remote!.value as boolean;
+    value = remote!.value as FlagValue;
     source = "remote";
   } else if (env !== undefined && env !== "") {
     value = envOn;

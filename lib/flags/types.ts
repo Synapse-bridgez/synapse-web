@@ -7,8 +7,14 @@
  * where it is.
  */
 
-/** What a flag resolves to at runtime. */
-export type FlagValue = boolean | number | string;
+/**
+ * What a flag resolves to at runtime.
+ *
+ * Flags are strictly boolean: there are no variant strings or typed payloads.
+ * This is the single source of truth for the value shape — the registry,
+ * evaluator, remote overrides, and consumers all use it rather than guessing.
+ */
+export type FlagValue = boolean;
 
 /**
  * A remotely-supplied override for one flag.
@@ -24,7 +30,7 @@ export interface FlagOverride {
    * `{ "value": false }` turns the flag off for everyone regardless of any
    * rollout percentage.
    */
-  value?: boolean;
+  value?: FlagValue;
   /**
    * Percentage of subjects the flag applies to, 0–100. Narrows an already-on
    * flag: it is only consulted when the resolved value is `true`. A rollout of
@@ -48,7 +54,7 @@ export interface FlagDefinition {
    * something already shipped an instant kill-switch, and should be removed
    * once the feature is fully rolled out.
    */
-  readonly defaultValue: boolean;
+  readonly defaultValue: FlagValue;
   /**
    * Optional build-time rollout, in percent. `defaultValue: true` with
    * `rollout: { percentage: 25 }` means "on for a quarter of users by default",
@@ -76,7 +82,7 @@ export type FlagSource = "remote" | "cache" | "env" | "default";
 /** The result of resolving one flag. */
 export interface ResolvedFlag {
   readonly key: string;
-  readonly value: boolean;
+  readonly value: FlagValue;
   readonly source: FlagSource;
   /** The percentage actually applied, or `null` for a plain on/off. */
   readonly percentage: number | null;
