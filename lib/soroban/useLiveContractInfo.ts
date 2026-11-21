@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { scValToNative } from "@stellar/stellar-sdk";
-import { simulateContractCall } from "./contract";
+import { getCachedContractAbi, simulateContractCall } from "./contract";
 import { useSoroban } from "./SorobanProvider";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { MOCK_CONTRACT_INFO } from "@/lib/mock-data";
@@ -17,6 +17,9 @@ const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-test
  *
  * When contractId changes, previous live readings are wiped immediately
  * to prevent stale information from persisting into the newly selected contract.
+ *
+ * Resolved readings are cached per contract id so switching tabs back and
+ * forth does not re-run the resolve path for an already-seen contract id.
  */
 export function useLiveContractInfo(): ContractInfo {
   const { contractId } = useSoroban();
@@ -31,12 +34,14 @@ export function useLiveContractInfo(): ContractInfo {
 
     async function readField(method: "health" | "version") {
       try {
-        const simulated = await simulateContractCall(RPC_URL, contractId!, address!, method);
-        if (cancelled || !simulated.result) return;
-        const value = scValToNative(simulated.result.retval);
-        if (typeof value === "string") {
-          setLive((prev) => ({ ...prev, [method]: value }));
-        }
+        const value = await getCachedContractAbi(`${contractId}:${method}`, async () => {
+          const simulated = await simulateContractCall(RPC_URL, contractId!, address!, method);
+          if (!simulated.result) return undefined;
+          const native = scValToNative(simulated.result.retval);
+          return typeof native === "string" ? native : undefined;
+        });
+        if (cancelled || typeof value !== "string") return;
+        setLive((prev) => ({ ...prev, [method]: value }));
       } catch {
         // Leave the mock value in place; this is best-effort.
       }
