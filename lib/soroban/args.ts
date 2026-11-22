@@ -14,12 +14,32 @@ export function structArg(value: Record<string, unknown>) {
   return nativeToScVal(value);
 }
 
+const U32_MAX = 0xffffffff;
+const I128_MAX = (BigInt(1) << BigInt(127)) - BigInt(1);
+const I128_MIN = -(BigInt(1) << BigInt(127));
+
 export function u32Arg(value: number) {
+  // Number.isInteger rejects NaN, Infinity and fractions; the range check rejects negatives.
+  if (!Number.isInteger(value) || value < 0 || value > U32_MAX) {
+    throw new Error(`u32 value must be an integer between 0 and ${U32_MAX}, got ${value}.`);
+  }
   return nativeToScVal(value, { type: "u32" });
 }
 
 export function i128Arg(value: bigint | number | string) {
-  return nativeToScVal(BigInt(value), { type: "i128" });
+  if (typeof value === "string" && value.trim() === "") {
+    throw new Error("i128 value must not be empty.");
+  }
+  let n: bigint;
+  try {
+    n = BigInt(value);
+  } catch {
+    throw new Error(`i128 value must be an integer, got ${value}.`);
+  }
+  if (n < I128_MIN || n > I128_MAX) {
+    throw new Error(`i128 value must be between ${I128_MIN} and ${I128_MAX}, got ${value}.`);
+  }
+  return nativeToScVal(n, { type: "i128" });
 }
 
 export function boolArg(value: boolean) {
@@ -37,7 +57,7 @@ export function encodeArg(type: string, value: string): xdr.ScVal {
     case "string":
       return stringArg(value);
     case "u32":
-      return u32Arg(Number(value));
+      return u32Arg(Number(value.trim() || NaN));
     case "i128":
       return i128Arg(value.trim());
     case "bool":
