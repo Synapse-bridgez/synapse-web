@@ -112,6 +112,22 @@ export function storeSavedViews(views: SavedView[]): void {
   } catch {}
 }
 
+/**
+ * Behaviour on name collision: names are compared case-insensitively and a
+ * duplicate is REJECTED (never silently overwritten). Callers should surface
+ * the returned error to the user. Stored serialisation is unchanged.
+ */
+export function addSavedView(
+  views: SavedView[],
+  view: SavedView,
+): { views: SavedView[]; error?: string } {
+  const key = view.name.trim().toLowerCase();
+  if (views.some((v) => v.name.trim().toLowerCase() === key)) {
+    return { views, error: `A view named "${view.name.trim()}" already exists` };
+  }
+  return { views: [...views, view] };
+}
+
 export function createSavedViewId(): string {
   return `view-${Date.now().toString(36)}-${Math.random()
     .toString(36)
