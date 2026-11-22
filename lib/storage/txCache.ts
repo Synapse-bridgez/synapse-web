@@ -130,11 +130,19 @@ export class TxCache {
       const store = tx.objectStore(STORE_NAME);
       for (const record of normalized) store.put(record);
       await transactionDone(tx);
-      await this.evictDb(db);
-    } catch {
-      // Fall back to memory if the write fails for any reason.
+    } catch (err) {
+      // Fall back to memory if the write fails for any reason (e.g. quota).
+      console.warn("txCache: write failed, using in-memory fallback", err);
       for (const record of normalized) this.memory.set(record.id, record);
       this.evictMemory();
+      return;
+    }
+
+    // Eviction is best-effort: a failure here must not discard a successful write.
+    try {
+      await this.evictDb(db);
+    } catch (err) {
+      console.warn("txCache: eviction failed", err);
     }
   }
 
