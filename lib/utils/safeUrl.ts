@@ -38,6 +38,11 @@ export function isSafeHttpUrl(value: unknown): value is string {
     return false;
   }
 
+  // Embedded credentials would leak into logs and rendered links.
+  if (parsed.username !== '' || parsed.password !== '') {
+    return false;
+  }
+
   return SAFE_URL_SCHEMES.includes(parsed.protocol);
 }
 
