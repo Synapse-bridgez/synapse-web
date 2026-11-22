@@ -45,6 +45,17 @@ nothing deployed.
 The response is sent with `cache-control: no-store`. A cached `200` would hide
 precisely the outage this exists to catch.
 
+## Query parameters
+
+`page` and `limit` are accepted for pagination-style callers, with these rules:
+
+- Both must be integers. Anything else returns `400` with `{ "error": "page and limit must be integers" }`.
+- `page` is clamped to a minimum of `1`. Default: `1`.
+- `limit` is clamped to `1`–`100`. Default: `100`.
+
+The body has no list to page yet, so the values are validated but do not change
+the response.
+
 ## Scheduled check
 
 `.github/workflows/uptime-check.yml` runs every 10 minutes and on manual
