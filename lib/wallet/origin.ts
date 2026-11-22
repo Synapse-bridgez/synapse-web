@@ -58,8 +58,25 @@ export interface OriginEnvironment {
 /** Hosts that count as local development, where signing is never financially real. */
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0"]);
 
+/** Lowercases a hostname and strips one trailing dot: `Example.com.` is the same host as `example.com`. */
+function normalizeHostname(hostname: string): string {
+  return hostname.toLowerCase().replace(/\.$/, "");
+}
+
 function isLocalHost(hostname: string): boolean {
-  return LOCAL_HOSTS.has(hostname.toLowerCase()) || hostname.toLowerCase().endsWith(".localhost");
+  const host = normalizeHostname(hostname);
+  return LOCAL_HOSTS.has(host) || host.endsWith(".localhost");
+}
+
+/** Canonical comparable form of an origin, or null if it cannot be parsed (e.g. opaque `"null"`). */
+function normalizeOrigin(origin: string): string | null {
+  try {
+    const url = new URL(origin);
+    url.hostname = normalizeHostname(url.hostname);
+    return url.origin;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -70,7 +87,7 @@ function isLocalHost(hostname: string): boolean {
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i;
 
 function isPlausibleHost(hostname: string): boolean {
-  return HOSTNAME_RE.test(hostname) || isLocalHost(hostname);
+  return HOSTNAME_RE.test(normalizeHostname(hostname)) || isLocalHost(hostname);
 }
 
 /** Reduces each known-URL env value to a bare origin, ignoring anything unparsable. */
@@ -96,6 +113,7 @@ export function parseOrigins(values: (string | undefined)[]): string[] {
       }
 
       if (!isPlausibleHost(url.hostname)) continue;
+      url.hostname = normalizeHostname(url.hostname);
       origins.add(url.origin);
     }
   }
@@ -160,7 +178,7 @@ export function classifyOrigin(
   // otherwise anyone who can run a local server can advertise a trusted
   // origin. `dev` is checked before `allowedOrigins` for that reason.
   else if (isLocalHost(hostname)) classification = "dev";
-  else if (allowedOrigins.includes(origin)) classification = "genuine";
+  else if (allowedOrigins.includes(normalizeOrigin(origin) ?? origin)) classification = "genuine";
   else classification = "unknown";
 
   return {
