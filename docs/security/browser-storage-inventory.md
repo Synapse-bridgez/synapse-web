@@ -18,7 +18,7 @@ payloads are prohibited.
 | feature-flag subject/config keys | localStorage | Anonymous configuration | Random subject ID and validated public flag overrides (`lib/flags`) |
 | theme key | localStorage | UI preference | Light/dark theme (`components/Shell.tsx`) |
 | onboarding completion key | localStorage | UI preference | Guided-tour completion boolean |
-| transaction cache | IndexedDB | Public chain data | Public transaction records (`lib/storage/txCache.ts`) |
+| transaction cache | IndexedDB | Public chain data | Public transaction records (`lib/storage/txCache.ts`); capped at 5000 entries, oldest evicted first |
 
 There are no file uploads or user-served assets. Static files are build-owned and Next.js assigns
 their MIME types; every response also receives `X-Content-Type-Options: nosniff`.
