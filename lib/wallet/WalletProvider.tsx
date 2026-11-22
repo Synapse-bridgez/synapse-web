@@ -9,12 +9,19 @@ import {
   isWalletConnectModule,
 } from "./kit";
 import { appConfig } from "@/lib/config";
+import { SigningSessionExpiredError } from "./signingQueue";
 
 /**
  * Typed set of wallet connection failure modes. Each maps to distinct,
  * actionable recovery copy in the connection-error UI.
  */
-export type WalletErrorKind = "not-installed" | "locked" | "rejected" | "wrong-network" | "unknown";
+export type WalletErrorKind =
+  | "not-installed"
+  | "locked"
+  | "rejected"
+  | "wrong-network"
+  | "session-expired"
+  | "unknown";
 
 export interface WalletError {
   kind: WalletErrorKind;
@@ -60,6 +67,9 @@ function detectWalletId(raw: string): string | null {
  * messages), so we normalize to a string and match on well-known signals.
  */
 export function classifyWalletError(err: unknown): WalletError {
+  if (err instanceof SigningSessionExpiredError) {
+    return { kind: "session-expired", message: err.message, raw: err.message };
+  }
   const raw =
     err instanceof Error
       ? err.message
