@@ -14,6 +14,7 @@ export function ShellTabButton({ tab, active, mobile, onSelect, onKeyDown }: She
   return (
     <button
       id={`tab-${tab}`}
+      className="shell-tab"
       role="tab"
       aria-selected={active}
       aria-controls={`tabpanel-${tab}`}
