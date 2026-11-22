@@ -9,7 +9,7 @@ import {
   createSavedViewId,
 } from "./savedViews";
 
-const KEY = "synapse-transactions-saved-views";
+const KEY = "synapse-transactions-saved-views.v1";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -22,7 +22,7 @@ import {
   createSavedViewId,
 } from "./savedViews";
 
-const KEY = "synapse-transactions-saved-views";
+const KEY = "synapse-transactions-saved-views.v1";
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {

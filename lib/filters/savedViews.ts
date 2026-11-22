@@ -1,4 +1,4 @@
-const SAVED_VIEWS_KEY = "synapse-transactions-saved-views";
+const SAVED_VIEWS_KEY = "synapse-transactions-saved-views.v1";
 
 /**
  * Current schema version for persisted saved views. Bump this whenever the
