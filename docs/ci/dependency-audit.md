@@ -54,9 +54,9 @@ Rules the gate enforces:
   fails the gate. It is never silently ignored.
 - `package` is optional. When set, the exception covers the advisory only in
   that package.
-- **Expiry is enforced.** Once `expires` passes, the entry stops applying and
-  the build fails again, which forces a re-review instead of letting a
-  permanent exception accumulate. Keep expiries to 30 days or less where
+- **Expiry is enforced.** Once `expires` passes, the gate fails on that entry
+  even if its advisory has since been fixed, and the entry stops applying. This
+  forces a re-review instead of letting a permanent exception accumulate. Keep expiries to 30 days or less where
   practical.
 - Exceptions that no longer match any advisory are listed as "unused" in the
   job summary. Delete them.
