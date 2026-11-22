@@ -9,9 +9,12 @@ import {
   PLACEHOLDER_MARKER,
 } from "./transactionMerge";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { toast } from "@/lib/toast/toastQueue";
 import type { Transaction } from "@/lib/types";
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org";
+const RATE_LIMIT_PATTERN = /rate.?limit|429|too many requests/i;
+const RATE_LIMIT_TOAST_WINDOW_MS = 30_000;
 
 /**
  * Adaptive backoff polling controller for live transaction updates.
@@ -109,8 +112,17 @@ export function useLiveTransactions(): Transaction[] {
           const native = scValToNative(simulated.result.retval);
           setEnriched((prev) => ({ ...prev, [tx.id]: nativeToTransaction(tx.id, native, tx) }));
         })
-        .catch(() => {
+        .catch((err: unknown) => {
           // Leave the placeholder row in place; enrichment is best-effort.
+          const message = err instanceof Error ? err.message : String(err);
+          if (!RATE_LIMIT_PATTERN.test(message)) return;
+          // Allow a later update to retry this transaction instead of dropping it.
+          fetchedIds.current.delete(tx.id);
+          toast.infoThrottled(
+            "live-tx-rate-limit",
+            "Transaction details are rate limited. They will retry on the next update.",
+            RATE_LIMIT_TOAST_WINDOW_MS
+          );
         });
     }
   }, [baseline, address, contractId, paused, pollDelay]);

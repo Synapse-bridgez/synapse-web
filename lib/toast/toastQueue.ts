@@ -79,6 +79,7 @@ export class ToastQueue {
   private listeners = new Set<(items: ToastItem[]) => void>();
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private lastSeen = new Map<string, number>();
+  private throttleSeen = new Map<string, number>();
   private maxVisible: number;
 
   constructor(maxVisible: number = DEFAULT_MAX_VISIBLE) {
@@ -123,6 +124,18 @@ export class ToastQueue {
 
   info(message: string, options?: ToastOptions): string {
     return this.push("info", message, options);
+  }
+
+  /**
+   * Enqueue an info toast at most once per `windowMs` for `key`, so a burst of
+   * related failures shows one message. Returns null when suppressed.
+   */
+  infoThrottled(key: string, message: string, windowMs: number): string | null {
+    const now = Date.now();
+    const last = this.throttleSeen.get(key);
+    if (last !== undefined && now - last < windowMs) return null;
+    this.throttleSeen.set(key, now);
+    return this.info(message);
   }
 
   /**
@@ -232,6 +245,8 @@ export const toast = {
   success: (message: string, options?: ToastOptions) => toastQueue.success(message, options),
   error: (message: string, options?: ToastOptions) => toastQueue.error(message, options),
   info: (message: string, options?: ToastOptions) => toastQueue.info(message, options),
+  infoThrottled: (key: string, message: string, windowMs: number) =>
+    toastQueue.infoThrottled(key, message, windowMs),
   dismiss: (id: string) => toastQueue.dismiss(id),
   clear: () => toastQueue.clear(),
 };
