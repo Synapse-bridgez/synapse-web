@@ -1,7 +1,17 @@
 import { StellarWalletsKit } from "./kit";
 
 export type SigningRequestStatus =
-  "pending" | "signing" | "signed" | "cancelled" | "stale" | "failed";
+  "pending" | "signing" | "signed" | "cancelled" | "stale" | "failed" | "expired";
+
+/** Rejection reason for a request whose wallet session expired mid-queue. */
+export class SigningSessionExpiredError extends Error {
+  constructor(message = "Wallet session expired. Reconnect your wallet and try again.") {
+    super(message);
+    this.name = "SigningSessionExpiredError";
+  }
+}
+
+const SESSION_EXPIRED_PATTERN = /session (has )?expired|session.*disconnected|relay (disconnected|closed)/i;
 
 export interface SigningRequest<T = string> {
   id: string;
@@ -56,6 +66,7 @@ class SigningQueue {
         i.status === "signed" ||
         i.status === "stale" ||
         i.status === "failed" ||
+        i.status === "expired" ||
         i.status === "cancelled"
     ).length;
     return {
@@ -153,10 +164,17 @@ class SigningQueue {
           this.settle(next);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          const stale = /stale|expired|not found|invalid|tx_bad|timebound/i.test(message);
-          next.status = stale ? "stale" : "failed";
-          next.error = stale ? "Transaction is no longer valid and was skipped" : message;
-          this.settle(next, new Error(next.error));
+          // Reject this item with a typed error; the loop continues with the rest of the queue.
+          if (SESSION_EXPIRED_PATTERN.test(message)) {
+            next.status = "expired";
+            next.error = new SigningSessionExpiredError().message;
+            this.settle(next, new SigningSessionExpiredError());
+          } else {
+            const stale = /stale|expired|not found|invalid|tx_bad|timebound/i.test(message);
+            next.status = stale ? "stale" : "failed";
+            next.error = stale ? "Transaction is no longer valid and was skipped" : message;
+            this.settle(next, new Error(next.error));
+          }
         }
         this.emit();
       }
