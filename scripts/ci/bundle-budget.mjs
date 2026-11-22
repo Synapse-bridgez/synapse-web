@@ -16,7 +16,10 @@
 // across webpack and Turbopack, whose manifest formats differ.
 //
 // Usage: node scripts/ci/bundle-budget.mjs [--budget bundle-budget.json]
-//          [--dir .next] [--json out.json] [--summary file]
+//          [--dir .next] [--json out.json] [--summary file] [--dry-run]
+//
+// --dry-run prints each over-budget metric with its overage and exits 0, so a
+// developer can preview the diff locally without failing the check.
 
 import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -159,11 +162,14 @@ function main() {
   if (jsonOut) writeFileSync(jsonOut, JSON.stringify({ measured, result }, null, 2));
   const summaryFile = opt("summary");
   if (summaryFile) appendFileSync(summaryFile, summary + "\n");
+  const dryRun = argv.includes("--dry-run");
   for (const r of result.rows.filter((row) => !row.ok))
     console.log(
-      `::error title=Bundle budget exceeded::${r.metric}: ${kb(r.actual)} > ${kb(r.limit)}`
+      dryRun
+        ? `Over budget: ${r.metric}: ${kb(r.actual)} > ${kb(r.limit)} (+${kb(r.actual - r.limit)})`
+        : `::error title=Bundle budget exceeded::${r.metric}: ${kb(r.actual)} > ${kb(r.limit)}`
     );
-  process.exit(result.ok ? 0 : 1);
+  process.exit(result.ok || dryRun ? 0 : 1);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();

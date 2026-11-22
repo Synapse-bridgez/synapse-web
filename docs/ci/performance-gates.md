@@ -21,6 +21,14 @@ budget a new static route, add it under `routes` in `bundle-budget.json`. The
 gate fails if a budgeted route wasn't prerendered, so a typo can't silently
 pass.
 
+To preview overages locally without failing, pass `--dry-run`. Each metric over
+budget is printed with its size, limit, and overage, and the exit code is 0.
+CI does not pass the flag, so the gate still fails as before:
+
+```bash
+npm run build && node scripts/ci/bundle-budget.mjs --dry-run
+```
+
 **Raising a budget** is a normal change to `bundle-budget.json` in the PR that
 needs the headroom. Say in the PR description what was added and why.
 
