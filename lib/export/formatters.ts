@@ -14,9 +14,16 @@ const CSV_HEADERS = [
   "timestamp",
 ];
 
-/** Escapes a single CSV field per RFC 4180. */
+/**
+ * Escapes a single CSV field per RFC 4180, and neutralises spreadsheet formula
+ * injection by prefixing values that start with = + - @ with a single quote.
+ */
 export function escapeCsvField(value: string | number): string {
-  const str = String(value);
+  let str = String(value);
+  // shortcut: leading-quote prefix also hits negative numbers (e.g. "-5" -> "'-5"); acceptable for export-only data
+  if (/^[=+\-@]/.test(str)) {
+    str = `'${str}`;
+  }
   // Wrap in quotes if the field contains a comma, quote, newline, or carriage return
   if (/[",\r\n]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;
