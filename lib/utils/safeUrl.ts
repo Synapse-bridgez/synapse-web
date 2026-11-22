@@ -38,7 +38,8 @@ export function isSafeHttpUrl(value: unknown): value is string {
     return false;
   }
 
-  return SAFE_URL_SCHEMES.includes(parsed.protocol);
+  // Lowercase explicitly so the allowlist never depends on parser normalization.
+  return SAFE_URL_SCHEMES.includes(parsed.protocol.toLowerCase());
 }
 
 /**

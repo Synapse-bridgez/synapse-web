@@ -117,3 +117,7 @@ gap is closed, update its row to **Mitigated** and reference the closing PR.
 - **When closing a gap:** update §4 and §5 and link the closing PR.
 - **Review cadence:** re-review this document whenever a change touches `TB1` or
   `TB4`.
+
+## URL scheme allowlist
+
+User- and chain-supplied URLs must pass `isSafeHttpUrl` / `toSafeHttpUrl` in `lib/utils/safeUrl.ts` before being rendered as an `href`. Only `http:` and `https:` are allowed; the scheme is compared case-insensitively, so `JavaScript:` and `DATA:` are rejected like their lowercase forms.
