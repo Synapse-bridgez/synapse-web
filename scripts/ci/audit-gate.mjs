@@ -141,7 +141,7 @@ export function evaluateAudit({
   const unused = active.filter((e) => !matchedIds.has(e.id));
 
   return {
-    ok: failures.length === 0 && invalid.length === 0,
+    ok: failures.length === 0 && invalid.length === 0 && expired.length === 0,
     failures,
     allowlisted: findings.filter((f) => f.allowlisted),
     belowThreshold: findings.filter((f) => !f.blocking),
@@ -222,7 +222,7 @@ function main() {
       `::error title=Vulnerable ${f.scope} dependency::${f.severity} ${f.id} in ${f.packageName}: ${f.title}`
     );
   for (const e of result.expired)
-    console.log(`::warning title=Expired audit exception::${e.id} expired on ${e.expires}`);
+    console.log(`::error title=Expired audit exception::${e.id} expired on ${e.expires}`);
   process.exit(result.ok ? 0 : 1);
 }
 
