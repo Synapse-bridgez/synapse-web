@@ -4,6 +4,14 @@ description: Run Synapse Core locally, configure it, and understand the mock-dat
 order: 2
 ---
 
+## Prerequisites
+
+Use Node 20, the version pinned in [`.nvmrc`](../.nvmrc):
+
+```bash
+nvm install && nvm use   # reads .nvmrc
+```
+
 ## Run it locally
 
 ```bash
