@@ -7,7 +7,7 @@ payloads are prohibited.
 | Key / database | Backend | Classification | Contents / owner |
 |---|---|---|---|
 | `handsoff.addressBook.v1` | localStorage | Public user data | Public Stellar addresses and bounded labels (`lib/wallet/addressBook.ts`) |
-| `synapse-transactions-saved-views` | localStorage | UI preference | Filter names and transaction query filters (`lib/filters/savedViews.ts`) |
+| `synapse-transactions-saved-views.v1` | localStorage | UI preference | Versioned payload `{ version, views }`: view IDs, bounded names, and transaction query filters (`lib/filters/savedViews.ts`) |
 | caller-provided draft key | localStorage | Public form draft | Admin public addresses and parameters only (`lib/forms/useDraftPersistence.ts`) |
 | dashboard layout key | localStorage | UI preference | Widget order and visibility (`lib/dashboard/layoutPreferences.ts`) |
 | wallet selection key | localStorage | Public identifier | Selected public wallet ID (`lib/wallet/storage.ts`) |
