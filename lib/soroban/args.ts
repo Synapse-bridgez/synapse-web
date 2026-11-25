@@ -27,6 +27,25 @@ export function boolArg(value: boolean) {
 }
 
 /**
+ * Parses the two literals a `bool` parameter accepts, in either case and with
+ * surrounding space.
+ *
+ * The previous rule was `value.trim().toLowerCase() === "true"`, which made
+ * every other string a silent `false`: `"1"`, `"yes"`, `"False"` and a typo
+ * like `"ture"` all encoded as `false` and were sent to the contract as a
+ * confident answer. A wrong value must be an error the caller sees, not a
+ * default.
+ */
+function parseBool(value: string): boolean {
+  const normalised = value.trim().toLowerCase();
+  if (normalised === "true") return true;
+  if (normalised === "false") return false;
+  throw new Error(
+    `Boolean arguments must be "true" or "false", not ${JSON.stringify(value)}.`,
+  );
+}
+
+/**
  * Encodes a raw form-field string into an ScVal using an ABI parameter type
  * name (as declared in ABI_ENDPOINTS). Struct values are entered as JSON.
  */
@@ -41,7 +60,7 @@ export function encodeArg(type: string, value: string): xdr.ScVal {
     case "i128":
       return i128Arg(value.trim());
     case "bool":
-      return boolArg(value.trim().toLowerCase() === "true");
+      return boolArg(parseBool(value));
     case "struct": {
       let parsed: unknown;
       try {

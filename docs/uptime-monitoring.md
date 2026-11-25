@@ -11,7 +11,22 @@ depends on is reachable. This is the synthetic check for those two things.
 ## What is checked, and why the two are separate
 
 `GET /api/health` performs a real `getHealth` call to the configured Soroban
-endpoint and reports two independent states:
+endpoint and reports two independent states. On a healthy probe:
+
+```json
+{
+  "status": "ok",
+  "app": { "reachable": true },
+  "rpc": {
+    "reachable": true,
+    "endpoint": "https://soroban-testnet.stellar.org"
+  },
+  "checkedAt": "2026-01-01T00:00:00.000Z"
+}
+```
+
+`rpc.error` is present only when `rpc.reachable` is `false`, so a monitor
+asserting on the healthy shape should not require it. When the RPC is down:
 
 ```json
 {
@@ -44,6 +59,17 @@ nothing deployed.
 
 The response is sent with `cache-control: no-store`. A cached `200` would hide
 precisely the outage this exists to catch.
+
+### Status codes
+
+| Code  | When                                                                   |
+| ----- | ---------------------------------------------------------------------- |
+| `200` | the route ran, whether the RPC was reachable or not — read `status` and `rpc.reachable` for the detail |
+| `5xx` | the route did not run: the deployment is down, or the handler itself threw. There is no JSON body to read in this case |
+
+There is no 4xx: the route takes no input. A monitor should treat "not 200" as
+the app being down and `rpc.reachable: false` as the provider being down, which
+is what the alerting rules below do.
 
 ## Scheduled check
 
