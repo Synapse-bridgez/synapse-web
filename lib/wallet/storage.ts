@@ -9,11 +9,17 @@ export function getStoredWalletId(): string | undefined {
   }
 }
 
-export function storeSelectedWalletId(id: string): void {
-  if (typeof window === "undefined") return;
+export function storeSelectedWalletId(id: string): boolean {
+  if (typeof window === "undefined") return false;
   try {
     localStorage.setItem(SELECTED_WALLET_KEY, id);
-  } catch {}
+    return true;
+  } catch (error) {
+    throw new Error(
+      `Failed to persist wallet selection: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
+    );
+  }
 }
 
 export function clearSelectedWalletId(): void {
