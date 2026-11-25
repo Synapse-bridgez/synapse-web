@@ -152,11 +152,18 @@ class SigningQueue {
           next.result = signedTxXdr as unknown as string;
           this.settle(next);
         } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+          // Guard against non-Error rejects (string, plain object, undefined).
+          const message = err instanceof Error ? err.message : String(err ?? "Unknown signer error");
           const stale = /stale|expired|not found|invalid|tx_bad|timebound/i.test(message);
           next.status = stale ? "stale" : "failed";
           next.error = stale ? "Transaction is no longer valid and was skipped" : message;
-          this.settle(next, new Error(next.error));
+          try {
+            this.settle(next, new Error(next.error));
+          } catch {
+            // settle should not throw, but guard so the queue loop always continues
+          }
+          this.emit();
+          continue;
         }
         this.emit();
       }
