@@ -121,6 +121,51 @@ schedule instead of decaying into silence.
 Thirty days is a sensible default expiry. A shorter one for anything customer
 visible. An expiry in the past at review time is a rejection, not a formality.
 
+## Adding a test to quarantine
+
+Before adding an entry, confirm the test is a genuine chronic offender (≥ 5
+flaky observations and ≥ 10 % flake rate). Run `npm run test:flake-history --
+--enforce` to see the current list.
+
+1. **Open an issue** for the underlying cause if one does not already exist.
+   The issue number is required; without it the entry is rejected by the
+   parser.
+
+2. **Add an entry** to `docs/testing/quarantine.json`. All six fields are
+   required:
+
+   ```json
+   {
+     "id": "<full test id — file path :: suite > test name>",
+     "owner": "@your-github-handle",
+     "issue": 123,
+     "addedAt": "2026-11-25T00:00:00.000Z",
+     "expiresAt": "2026-12-25T00:00:00.000Z",
+     "note": "One sentence explaining the environmental cause and what the fix requires."
+   }
+   ```
+
+   - **`id`** — copy the exact string printed by `flake-history --enforce`
+     (the format is `<file> :: <describe block> > <it block>`).
+   - **`owner`** — the GitHub handle of the person accountable for fixing it.
+   - **`issue`** — the issue number (integer, no `#`).
+   - **`addedAt`** — today's date in ISO 8601 UTC.
+   - **`expiresAt`** — at most 30 days from `addedAt`; shorter for
+     customer-visible paths. An expiry already in the past is rejected at
+     review time.
+   - **`note`** — name the environmental limit (missing jsdom API, real
+     clock, third-party race, etc.) so the next reader understands the
+     constraint without reading the test.
+
+3. **Open a PR** with the new entry. The PR description must link the
+   tracking issue. A reviewer must check that `expiresAt` is reasonable and
+   that `owner` has agreed to own the fix.
+
+4. **What happens on expiry**: when `expiresAt` passes, the entry no longer
+   covers the offender and CI blocks again. Renewing the quarantine requires a
+   new PR — there is no silent extension. See the previous section for the
+   exact CI output you will see.
+
 ## Choosing between fixing and quarantining
 
 Quarantine the test when the flake is a _known, bounded_ environment limitation —
