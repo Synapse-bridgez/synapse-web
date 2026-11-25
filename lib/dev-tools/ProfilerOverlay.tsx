@@ -95,10 +95,16 @@ export const Profiled = DevProfiler;
 
 /**
  * Toggleable dev-only overlay showing render count/duration per instrumented component.
- * Renders nothing in production builds.
+ *
+ * Off by default — set `NEXT_PUBLIC_ENABLE_PROFILER_OVERLAY=true` in your `.env.local`
+ * to opt in. This keeps a fresh dev session clean (issue #587).
+ * Renders nothing in production builds regardless of the flag.
  */
 export function ProfilerOverlay() {
   if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+  if (process.env.NEXT_PUBLIC_ENABLE_PROFILER_OVERLAY !== "true") {
     return null;
   }
   return <ProfilerOverlayInner />;

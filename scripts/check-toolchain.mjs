@@ -229,7 +229,10 @@ if (process.argv[1]?.endsWith("check-toolchain.mjs")) {
   try {
     main();
   } catch (error) {
-    console.error(`Toolchain check failed:\n  ${error?.message ?? error}`);
+    // Always print detected versions so the operator knows which Node/npm is running,
+    // even when the error originates before the check list is built (issue #584).
+    const detected = `Detected: node ${process.version}, npm (unknown — check failed before npm was read).`;
+    console.error(`Toolchain check failed:\n  ${error?.message ?? error}\n  ${detected}`);
     process.exit(1);
   }
 }

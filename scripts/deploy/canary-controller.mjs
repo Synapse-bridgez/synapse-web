@@ -371,30 +371,50 @@ async function main() {
   }
 
   if (command === "run") {
-    const policy = JSON.parse(
-      readFileSync(process.env.CANARY_POLICY || ".github/canary-policy.json", "utf8")
-    );
+    const canaryDeploymentId = opt("canary") ?? env("CANARY_DEPLOYMENT_ID");
+    let policy;
+    try {
+      policy = JSON.parse(
+        readFileSync(process.env.CANARY_POLICY || ".github/canary-policy.json", "utf8")
+      );
+    } catch (err) {
+      const msg = `Failed to load canary policy: ${err instanceof Error ? err.message : err}`;
+      console.error(`::error title=Canary controller failed::${msg}`);
+      summary(`## Canary rollout: failed\n\n${msg}`);
+      return 1;
+    }
     const lines = [];
-    const result = await runCanary({
-      canaryDeploymentId: opt("canary") ?? env("CANARY_DEPLOYMENT_ID"),
-      policy,
-      platform,
-      drill: flag("drill"),
-      probe: httpProbe({
-        timeoutMs: policy.probe.timeoutMs,
-        bypassSecret: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
-      }),
-      signals: process.env.CANARY_SIGNALS_URL
-        ? httpSignals({
-            url: process.env.CANARY_SIGNALS_URL,
-            token: process.env.CANARY_SIGNALS_TOKEN,
-          })
-        : null,
-      log: (l) => {
-        console.log(l);
-        lines.push(l);
-      },
-    });
+    let result;
+    try {
+      result = await runCanary({
+        canaryDeploymentId,
+        policy,
+        platform,
+        drill: flag("drill"),
+        probe: httpProbe({
+          timeoutMs: policy.probe.timeoutMs,
+          bypassSecret: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+        }),
+        signals: process.env.CANARY_SIGNALS_URL
+          ? httpSignals({
+              url: process.env.CANARY_SIGNALS_URL,
+              token: process.env.CANARY_SIGNALS_TOKEN,
+            })
+          : null,
+        log: (l) => {
+          console.log(l);
+          lines.push(l);
+        },
+      });
+    } catch (err) {
+      // Surface actionable context: which canary was running and what step threw (issue #583).
+      const rr = await platform.getRelease().catch(() => null);
+      const state = rr ? `state=${rr.state}, stage=${rr.activeStage?.index ?? "none"}, canary=${rr.canaryDeployment?.id ?? "none"}` : "state=unknown (could not fetch release)";
+      const msg = `Unexpected error during promotion check [${state}]: ${err instanceof Error ? err.message : err}`;
+      console.error(`::error title=Canary controller failed::${msg}`);
+      summary(`## Canary rollout: failed\n\n\`\`\`\n${lines.join("\n")}\n\`\`\`\n\n${msg}`);
+      return 1;
+    }
     summary(`## Canary rollout: ${result.outcome}\n\n\`\`\`\n${lines.join("\n")}\n\`\`\``);
     if (result.outcome !== "promoted") {
       console.log(`::error title=Canary ${result.outcome}::${result.reasons.join("; ")}`);
