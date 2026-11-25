@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { scValToNative } from "@stellar/stellar-sdk";
 import { useSoroban, useSorobanEvents } from "./SorobanProvider";
 import { simulateContractCall, stringArg } from "./contract";
@@ -49,18 +49,33 @@ export function nextPollDelay(recentEventCount: number): number {
  * When the active contractId changes, enriched state and fetch tracking are
  * cleared immediately to guarantee no stale transaction data leaks.
  */
-export function useLiveTransactions(): Transaction[] {
+export interface LiveTransactionsResult {
+  transactions: Transaction[];
+  /** Set when a fetch failed and polling was halted; null while healthy. */
+  fetchError: string | null;
+  /** Resets the error state and re-enables enrichment fetches. */
+  resetError: () => void;
+}
+
+export function useLiveTransactions(): LiveTransactionsResult {
   const events = useSorobanEvents();
   const { contractId } = useSoroban();
   const { address } = useWallet();
   const [enriched, setEnriched] = useState<Record<string, Transaction>>({});
   const fetchedIds = useRef<Set<string>>(new Set());
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Clear enriched state and fetched tracker whenever contractId changes
+  // Clear enriched state, error and fetched tracker whenever contractId changes
   useEffect(() => {
     setEnriched({});
     fetchedIds.current.clear();
+    setFetchError(null);
   }, [contractId]);
+
+  const resetError = useCallback(() => {
+    setFetchError(null);
+    fetchedIds.current.clear();
+  }, []);
 
   const baseline = useMemo(() => mergeTransactionEvents(events), [events]);
 
@@ -94,7 +109,7 @@ export function useLiveTransactions(): Transaction[] {
   }, []);
 
   useEffect(() => {
-    if (!address || !contractId || paused) return;
+    if (!address || !contractId || paused || fetchError) return;
 
     const toFetch = baseline.filter(
       (tx) => tx.asset === PLACEHOLDER_MARKER && !fetchedIds.current.has(tx.id)
@@ -109,11 +124,13 @@ export function useLiveTransactions(): Transaction[] {
           const native = scValToNative(simulated.result.retval);
           setEnriched((prev) => ({ ...prev, [tx.id]: nativeToTransaction(tx.id, native, tx) }));
         })
-        .catch(() => {
-          // Leave the placeholder row in place; enrichment is best-effort.
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          setFetchError(message);
         });
     }
-  }, [baseline, address, contractId, paused, pollDelay]);
+  }, [baseline, address, contractId, paused, pollDelay, fetchError]);
 
-  return useMemo(() => baseline.map((tx) => enriched[tx.id] ?? tx), [baseline, enriched]);
+  const transactions = useMemo(() => baseline.map((tx) => enriched[tx.id] ?? tx), [baseline, enriched]);
+  return { transactions, fetchError, resetError };
 }

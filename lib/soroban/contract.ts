@@ -265,7 +265,16 @@ export async function simulateContractCall(
   args: xdr.ScVal[] = []
 ) {
   const server = new rpc.Server(rpcUrl);
-  const account = await server.getAccount(sourceAddress);
+  let account;
+  try {
+    account = await server.getAccount(sourceAddress);
+  } catch (cause) {
+    throw new Error(
+      `RPC account lookup failed for ${sourceAddress} at ${rpcUrl}: ${cause instanceof Error ? cause.message : String(cause)}`,
+      { cause }
+    );
+  }
+
   const contract = new Contract(contractId);
 
   const tx = new TransactionBuilder(account, {
@@ -276,7 +285,16 @@ export async function simulateContractCall(
     .setTimeout(30)
     .build();
 
-  const simulated = await server.simulateTransaction(tx);
+  let simulated;
+  try {
+    simulated = await server.simulateTransaction(tx);
+  } catch (cause) {
+    throw new Error(
+      `RPC simulateTransaction failed for ${method} on ${contractId} at ${rpcUrl}: ${cause instanceof Error ? cause.message : String(cause)}`,
+      { cause }
+    );
+  }
+
   if (rpc.Api.isSimulationError(simulated)) {
     throw new Error(simulated.error);
   }

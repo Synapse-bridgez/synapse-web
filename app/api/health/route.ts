@@ -26,12 +26,31 @@ export const revalidate = 0;
 
 export async function GET() {
   // If this line runs at all, the deployment is serving.
-  const rpc = await getHealth();
+  let rpcResult: Awaited<ReturnType<typeof getHealth>>;
+  try {
+    rpcResult = await getHealth();
+  } catch (probeError) {
+    // getHealth is designed to catch internally, but guard against unexpected throws
+    // so monitoring receives a machine-readable 503 body rather than an unstructured 500.
+    const message = probeError instanceof Error ? probeError.message : String(probeError);
+    return NextResponse.json(
+      {
+        status: "error",
+        app: { reachable: true },
+        rpc: { reachable: false, error: message },
+        checkedAt: new Date().toISOString(),
+      },
+      {
+        status: 503,
+        headers: { "cache-control": "no-store, no-cache, must-revalidate" },
+      }
+    );
+  }
 
   const body = {
-    status: rpc.reachable ? "ok" : "degraded",
+    status: rpcResult.reachable ? "ok" : "degraded",
     app: { reachable: true },
-    rpc,
+    rpc: rpcResult,
     checkedAt: new Date().toISOString(),
   };
 
