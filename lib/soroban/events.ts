@@ -180,16 +180,22 @@ export function createSorobanEventPoller(rpcUrl: string = DEFAULT_RPC_URL, contr
 
       let eventCount = 0;
       if (response && response.events) {
-        const normalized: NormalizedSorobanEvent[] = [];
-        for (const event of response.events) {
-          const n = normalizeEvent(event);
-          if (n) normalized.push(n);
-        }
-
+        // Advance the cursor FIRST so a malformed event does not block later ones on retry.
         const lastEvent = response.events[response.events.length - 1];
         if (lastEvent) {
           cursor = lastEvent.id;
           storeCursor(contractId, cursor);
+        }
+
+        const normalized: NormalizedSorobanEvent[] = [];
+        for (const event of response.events) {
+          let n: NormalizedSorobanEvent | null = null;
+          try {
+            n = normalizeEvent(event);
+          } catch {
+            // Skip individual malformed events; cursor already advanced above.
+          }
+          if (n) normalized.push(n);
         }
 
         eventCount = normalized.length;

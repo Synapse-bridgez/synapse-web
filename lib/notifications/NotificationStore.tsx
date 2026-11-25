@@ -23,6 +23,30 @@ export interface AppNotification {
 }
 
 const MAX_NOTIFICATIONS = 50;
+const STORAGE_KEY = "synapse-notifications";
+
+function persistNotifications(notifications: AppNotification[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+  } catch {
+    // Storage write failed (quota exceeded, private mode, etc.).
+    // The in-memory store is NOT cleared — notifications remain visible for the session.
+  }
+}
+
+function loadPersistedNotifications(): AppNotification[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed as AppNotification[];
+  } catch {
+    return [];
+  }
+}
 
 interface State {
   notifications: AppNotification[];
@@ -89,9 +113,15 @@ function statusLabel(status?: string): string {
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, {
-    notifications: [],
+    notifications: loadPersistedNotifications(),
     seenEventIds: new Set<string>(),
   });
+
+  // Persist to storage after every change, but never lose the in-memory state
+  // when the write throws (quota exceeded, private mode, etc.).
+  useEffect(() => {
+    persistNotifications(state.notifications);
+  }, [state.notifications]);
 
   const events = useSorobanEvents();
 
