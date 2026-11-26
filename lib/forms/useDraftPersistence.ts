@@ -67,7 +67,17 @@ function getStorage(storage?: Storage): Storage | null {
   }
 }
 
-function readDraft<T>(storage: Storage | null, key: string, maxAgeMs: number): T | null {
+interface StoredDraftMeta<T> {
+  values: T;
+  savedAt: number;
+}
+
+/** Read a stored draft together with the timestamp it was saved at, or null. */
+function readStoredDraft<T>(
+  storage: Storage | null,
+  key: string,
+  maxAgeMs: number
+): StoredDraftMeta<T> | null {
   if (!storage) return null;
   try {
     const raw = storage.getItem(key);
@@ -81,10 +91,35 @@ function readDraft<T>(storage: Storage | null, key: string, maxAgeMs: number): T
       storage.removeItem(key);
       return null;
     }
-    return parsed.values;
+    return { values: parsed.values, savedAt: parsed.savedAt };
   } catch {
     return null;
   }
+}
+
+/**
+ * True when a draft holds no user input yet — null/undefined, a blank string,
+ * an empty array, or an object whose every field is itself empty. Used to tell
+ * "no in-memory draft" apart from a draft the user has actually typed into.
+ */
+function isEmptyDraft(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim() === "";
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === "object") {
+    const values = Object.values(value as Record<string, unknown>);
+    return values.length === 0 || values.every(isEmptyDraft);
+  }
+  return false;
+}
+
+/**
+ * The timestamp to treat an in-memory draft as having at mount. An empty draft
+ * has no timestamp (0); a non-empty one is treated as freshly typed (now), so a
+ * stored draft only supersedes it when saved after this moment.
+ */
+function mountSavedAt(value: unknown): number {
+  return isEmptyDraft(value) ? 0 : Date.now();
 }
 
 export function useDraftPersistence<T>({
@@ -99,9 +134,15 @@ export function useDraftPersistence<T>({
   const maxAgeMs = maxAgeOption ?? ttl ?? DEFAULT_MAX_AGE_MS;
   const resolvedStorage = getStorage(storage);
 
-  const [restoredDraft, setRestoredDraft] = useState<T | null>(() =>
-    readDraft<T>(resolvedStorage, key, maxAgeMs)
-  );
+  const [restoredDraft, setRestoredDraft] = useState<T | null>(() => {
+    const stored = readStoredDraft<T>(resolvedStorage, key, maxAgeMs);
+    if (!stored) return null;
+    // Hydrate only when there is no in-memory draft, or the stored one is newer
+    // than the in-memory draft (which is treated as freshly typed at mount).
+    if (isEmptyDraft(values)) return stored.values;
+    if (stored.savedAt > mountSavedAt(values)) return stored.values;
+    return null;
+  });
 
   const hasRestoredDraft = restoredDraft !== null;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

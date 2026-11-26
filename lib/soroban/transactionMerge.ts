@@ -162,6 +162,66 @@ export function mergeTransactions<T extends MergeableTransaction>(
   return Array.from(byId.values());
 }
 
+/** Where a transaction came from: the live feed or a cached snapshot. */
+export type TransactionSource = "live" | "cached";
+
+/** The fields the timestamp merge orders and de-duplicates on. */
+export interface TimestampMergeable {
+  id?: string;
+  timestamp: number;
+  ledger?: number;
+  source?: TransactionSource;
+}
+
+/**
+ * Comparator for merging live and cached transactions.
+ *
+ * Orders by `timestamp` descending (freshest first). On equal timestamps the
+ * live source wins over a cached one; if both are live, the higher ledger
+ * sequence wins. The result is a total order suitable for `Array.prototype.sort`.
+ */
+export function compareForTimestampMerge(a: TimestampMergeable, b: TimestampMergeable): number {
+  if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
+
+  const aLive = a.source === "live" ? 1 : 0;
+  const bLive = b.source === "live" ? 1 : 0;
+  if (aLive !== bLive) return bLive - aLive;
+
+  return (b.ledger ?? 0) - (a.ledger ?? 0);
+}
+
+/**
+ * Merge cached and live transactions into one list sorted by timestamp
+ * descending.
+ *
+ * Each item is tagged with its source (cached items default to `cached`, live
+ * items to `live`). When the same id appears more than once, the copy that
+ * sorts first under {@link compareForTimestampMerge} is kept — so a live event
+ * wins over a cached one at the same timestamp, and the higher ledger wins
+ * between two live events. Items without an id are all kept.
+ */
+export function mergeLiveAndCached<T extends TimestampMergeable>(cached: T[], live: T[]): T[] {
+  const tagged: T[] = [
+    ...cached.map((tx) => ({ ...tx, source: tx.source ?? "cached" }) as T),
+    ...live.map((tx) => ({ ...tx, source: tx.source ?? "live" }) as T),
+  ];
+
+  const byId = new Map<string, T>();
+  const withoutId: T[] = [];
+  for (const item of tagged) {
+    if (item.id === undefined || item.id === "") {
+      withoutId.push(item);
+      continue;
+    }
+    const prev = byId.get(item.id);
+    if (!prev || compareForTimestampMerge(item, prev) < 0) {
+      byId.set(item.id, item);
+    }
+  }
+
+  return [...byId.values(), ...withoutId].sort(compareForTimestampMerge);
+}
+
 /**
  * Adaptive polling interval controller.
  *

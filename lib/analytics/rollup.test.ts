@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { computeRollup } from "./rollup";
 import type { Transaction } from "@/lib/types";
 
@@ -102,5 +102,35 @@ describe("computeRollup", () => {
     const r = computeRollup(txs, now);
     const totalAmount = r.volumeBuckets.reduce((sum, b) => sum + b.amount, 0);
     expect(totalAmount).toBeCloseTo(20);
+  });
+});
+
+describe("computeRollup deduplication", () => {
+  it("counts two events that share a timestamp but have different ids", () => {
+    const txs = [
+      base({ id: "a", timestamp: 5000, created_at: 5000 }),
+      base({ id: "b", timestamp: 5000, created_at: 5000 }),
+    ];
+    expect(computeRollup(txs).totalTxs).toBe(2);
+  });
+
+  it("counts an event once when the same id appears with different timestamps", () => {
+    const txs = [
+      base({ id: "dup", timestamp: 1000, created_at: 1000 }),
+      base({ id: "dup", timestamp: 9000, created_at: 9000 }),
+    ];
+    expect(computeRollup(txs).totalTxs).toBe(1);
+  });
+
+  it("falls back to timestamp+status and warns when ids are missing", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const txs = [
+      base({ id: "", timestamp: 1000, created_at: 1000, status: "PENDING" }),
+      base({ id: "", timestamp: 1000, created_at: 1000, status: "PENDING" }),
+      base({ id: "", timestamp: 1000, created_at: 1000, status: "FAILED" }),
+    ];
+    expect(computeRollup(txs).totalTxs).toBe(2);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

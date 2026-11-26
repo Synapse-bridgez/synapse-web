@@ -29,6 +29,42 @@ export interface AnalyticsRollup {
 const BUCKET_COUNT = 12;
 
 /**
+ * Deduplicate transactions before counting.
+ *
+ * The primary key is the event `id`: two events that share a timestamp but have
+ * distinct ids are both real and must both count, while the same id seen twice
+ * (e.g. once from the live feed and once from cache) is one event. Only when an
+ * event has no usable id do we fall back to `timestamp + status`, and we warn
+ * once so the missing-id case is visible rather than silently collapsing
+ * distinct events that happen to share a millisecond.
+ */
+function dedupeTransactions(txs: Transaction[]): Transaction[] {
+  const seen = new Set<string>();
+  const out: Transaction[] = [];
+  let warnedMissingId = false;
+
+  for (const tx of txs) {
+    let key: string;
+    if (typeof tx.id === "string" && tx.id.length > 0) {
+      key = `id:${tx.id}`;
+    } else {
+      key = `ts:${tx.timestamp}:${tx.status}`;
+      if (!warnedMissingId) {
+        console.warn(
+          "[analytics/rollup] event is missing an id; falling back to timestamp+status for deduplication"
+        );
+        warnedMissingId = true;
+      }
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(tx);
+  }
+
+  return out;
+}
+
+/**
  * Buckets transactions by created_at into BUCKET_COUNT equal-width slots
  * spanning from the oldest tx to now (or a single slot when there is only
  * one data point / no spread).
@@ -119,11 +155,12 @@ function buildStageDurations(txs: Transaction[]): StageDuration[] {
  * Safe with empty arrays; produces zero-value buckets.
  */
 export function computeRollup(txs: Transaction[], now = Date.now()): AnalyticsRollup {
-  const oldest = txs.length > 0 ? Math.min(...txs.map((t) => t.created_at)) : now;
+  const deduped = dedupeTransactions(txs);
+  const oldest = deduped.length > 0 ? Math.min(...deduped.map((t) => t.created_at)) : now;
   const spanMs = now - oldest;
   const spanMin = Math.round(spanMs / 60000);
   const windowLabel =
-    txs.length === 0
+    deduped.length === 0
       ? "no data"
       : spanMin < 2
         ? "last few seconds"
@@ -132,10 +169,10 @@ export function computeRollup(txs: Transaction[], now = Date.now()): AnalyticsRo
           : `last ${Math.round(spanMin / 60)} h`;
 
   return {
-    volumeBuckets: buildVolumeBuckets(txs, now),
-    statusRatios: buildStatusRatios(txs),
-    stageDurations: buildStageDurations(txs),
-    totalTxs: txs.length,
+    volumeBuckets: buildVolumeBuckets(deduped, now),
+    statusRatios: buildStatusRatios(deduped),
+    stageDurations: buildStageDurations(deduped),
+    totalTxs: deduped.length,
     windowLabel,
   };
 }
