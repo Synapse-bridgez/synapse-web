@@ -4,6 +4,8 @@ import {
   nativeToTransaction,
   applyOptimisticOverlay,
   pruneOptimisticTransitions,
+  mergeLiveAndCached,
+  compareForTimestampMerge,
   OPTIMISTIC_TIMEOUT_MS,
   PLACEHOLDER_MARKER,
   type OptimisticTransition,
@@ -191,11 +193,7 @@ describe("applyOptimisticOverlay", () => {
   });
 
   it("rolls back after the timeout when the poller never confirms", () => {
-    const result = applyOptimisticOverlay(
-      [base],
-      [transition()],
-      1000 + OPTIMISTIC_TIMEOUT_MS + 1
-    );
+    const result = applyOptimisticOverlay([base], [transition()], 1000 + OPTIMISTIC_TIMEOUT_MS + 1);
     expect(result[0]!.status).toBe("PENDING");
   });
 
@@ -241,14 +239,66 @@ describe("pruneOptimisticTransitions", () => {
   });
 
   it("drops a failed transition", () => {
-    expect(
-      pruneOptimisticTransitions([base], [transition({ failed: true })], 1000)
-    ).toHaveLength(0);
+    expect(pruneOptimisticTransitions([base], [transition({ failed: true })], 1000)).toHaveLength(
+      0
+    );
   });
 
   it("drops a transition that has timed out", () => {
     expect(
       pruneOptimisticTransitions([base], [transition()], 1000 + OPTIMISTIC_TIMEOUT_MS + 1)
     ).toHaveLength(0);
+  });
+});
+
+describe("mergeLiveAndCached", () => {
+  interface Item {
+    id: string;
+    timestamp: number;
+    ledger?: number;
+    source?: "live" | "cached";
+  }
+
+  it("keeps the live event when a cached and a live event share a timestamp", () => {
+    const cached: Item = { id: "evt-1", timestamp: 1000, ledger: 10, source: "cached" };
+    const live: Item = { id: "evt-1", timestamp: 1000, ledger: 10, source: "live" };
+    const merged = mergeLiveAndCached([cached], [live]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]!.source).toBe("live");
+  });
+
+  it("prefers the higher ledger when both events are live and share a timestamp", () => {
+    const low: Item = { id: "evt-1", timestamp: 1000, ledger: 10, source: "live" };
+    const high: Item = { id: "evt-1", timestamp: 1000, ledger: 11, source: "live" };
+    const merged = mergeLiveAndCached([high], [low]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]!.ledger).toBe(11);
+  });
+
+  it("keeps both events with distinct ids that share a timestamp, sorted live-first", () => {
+    const cached: Item = { id: "a", timestamp: 1000, source: "cached" };
+    const live: Item = { id: "b", timestamp: 1000, source: "live" };
+    const merged = mergeLiveAndCached([cached], [live]);
+    expect(merged.map((m) => m.id)).toEqual(["b", "a"]);
+  });
+
+  it("returns the merged list sorted by timestamp descending", () => {
+    const older: Item = { id: "old", timestamp: 1000, source: "live" };
+    const newer: Item = { id: "new", timestamp: 2000, source: "live" };
+    const merged = mergeLiveAndCached([older], [newer]);
+    expect(merged.map((m) => m.id)).toEqual(["new", "old"]);
+  });
+
+  it("compareForTimestampMerge orders by timestamp desc, then live, then ledger", () => {
+    expect(compareForTimestampMerge({ timestamp: 2000 }, { timestamp: 1000 })).toBeLessThan(0);
+    expect(
+      compareForTimestampMerge(
+        { timestamp: 1000, source: "live" },
+        { timestamp: 1000, source: "cached" }
+      )
+    ).toBeLessThan(0);
+    expect(
+      compareForTimestampMerge({ timestamp: 1000, ledger: 11 }, { timestamp: 1000, ledger: 10 })
+    ).toBeLessThan(0);
   });
 });

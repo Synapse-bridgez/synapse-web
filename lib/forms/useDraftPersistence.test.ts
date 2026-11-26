@@ -100,4 +100,34 @@ describe("useDraftPersistence", () => {
     expect(result.current.draft).toBeNull();
     expect(window.localStorage.getItem(KEY)).toBeNull();
   });
+
+  it("keeps the in-memory draft when it is newer than the stored one", () => {
+    const now = Date.now();
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({ values: { address: "0xolder-stored" }, savedAt: now - 1000 })
+    );
+
+    const { result } = renderHook(() =>
+      useDraftPersistence({ key: KEY, values: { address: "0xin-memory" }, ttl: TTL })
+    );
+
+    expect(result.current.restored).toBe(false);
+    expect(result.current.draft).toBeNull();
+  });
+
+  it("hydrates the stored draft when it is newer than the in-memory one", () => {
+    const now = Date.now();
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({ values: { address: "0xnewer-stored" }, savedAt: now + 1000 })
+    );
+
+    const { result } = renderHook(() =>
+      useDraftPersistence({ key: KEY, values: { address: "0xin-memory" }, ttl: TTL })
+    );
+
+    expect(result.current.restored).toBe(true);
+    expect(result.current.draft).toEqual({ address: "0xnewer-stored" });
+  });
 });
